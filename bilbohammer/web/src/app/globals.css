@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0b0d10;
+  --card: #111418;
+  --accent: #f59e0b;
+  --muted: #94a3b8;
+}
+
+body { @apply bg-[var(--bg)] text-white; }
+.container { @apply max-w-5xl mx-auto px-4; }
+.card { @apply bg-[var(--card)] rounded-2xl shadow p-6; }
+.btn { @apply inline-flex items-center gap-2 rounded-xl px-4 py-2 font-medium border border-white/10 hover:border-white/20; }
+.btn-accent { @apply bg-[var(--accent)] text-black hover:opacity-90; }
+.link { @apply underline decoration-dotted underline-offset-4 hover:opacity-80; }

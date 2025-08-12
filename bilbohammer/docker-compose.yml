@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bilbohammer_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bh_user
+      POSTGRES_PASSWORD: bh_pass
+      POSTGRES_DB: bilbohammer
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: ./web
+    container_name: bilbohammer_web
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - ./web/.env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+  
+  # Optional SFTP service to edit files remotely (local/dev only). Uncomment to use.
+  sftp:
+    image: atmoz/sftp
+    # User "editor" with password "editor", chroot to /home/editor
+    command: editor:editor:1001
+    volumes:
+      - ./web:/home/editor/web
+    ports:
+      - "2222:22"
+
+volumes:
+  pgdata:
+
+
