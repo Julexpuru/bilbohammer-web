@@ -556,14 +556,29 @@ video {
 .grid {
   display: grid;
 }
+.hidden {
+  display: none;
+}
+.h-8 {
+  height: 2rem;
+}
+.w-auto {
+  width: auto;
+}
 .list-disc {
   list-style-type: disc;
+}
+.flex-col {
+  flex-direction: column;
 }
 .items-center {
   align-items: center;
 }
 .justify-between {
   justify-content: space-between;
+}
+.gap-2 {
+  gap: 0.5rem;
 }
 .gap-3 {
   gap: 0.75rem;
@@ -579,22 +594,13 @@ video {
   margin-top: calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(0.5rem * var(--tw-space-y-reverse));
 }
-.border-b {
-  border-bottom-width: 1px;
-}
-.border-t {
-  border-top-width: 1px;
-}
-.border-white\/10 {
-  border-color: rgb(255 255 255 / 0.1);
-}
 .py-10 {
   padding-top: 2.5rem;
   padding-bottom: 2.5rem;
 }
-.py-4 {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+.py-3 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 .py-8 {
   padding-top: 2rem;
@@ -607,6 +613,10 @@ video {
 .text-3xl {
   font-size: 1.875rem;
   line-height: 2.25rem;
+}
+.text-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
 }
 .text-sm {
   font-size: 0.875rem;
@@ -622,8 +632,8 @@ video {
 .font-semibold {
   font-weight: 600;
 }
-.text-\[var\(--accent\)\] {
-  color: var(--accent);
+.leading-none {
+  line-height: 1;
 }
 .text-\[var\(--muted\)\] {
   color: var(--muted);
@@ -632,19 +642,53 @@ video {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
 
+/* Tema por defecto: sigue el sistema; luego el toggle lo sobrescribe con data-theme */
 :root {
-  --bg: #0b0d10;
-  --card: #111418;
-  --accent: #f59e0b;
-  --muted: #94a3b8;
+  color-scheme: light dark;
 }
 
-body {
-  background-color: var(--bg);
-  --tw-text-opacity: 1;
-  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+/* LIGHT */
+:root[data-theme="light"] {
+  --bg: #f7fbff;          /* fondo */
+  --card: #ffffff;        /* tarjetas */
+  --text: #0b1216;        /* texto principal */
+  --muted: #5b6b78;       /* texto secundario */
+  /* Acento azul/teal (inspirado en el logo) */
+  --accent: #0ea5e9;      /* base (Sky 500) */
+  --accent-600: #0284c7;  /* hover/activo */
+  --accent-50: #e0f2fe;   /* chips/badges suaves */
+  --border: rgba(2, 132, 199, 0.18);
+  --hairline: rgba(2, 12, 23, 0.08);
 }
+
+/* DARK */
+:root[data-theme="dark"] {
+  --bg: #0b1216;
+  --card: #0f1f29;
+  --text: #e6f1f5;
+  --muted: #96b1c1;
+  --accent: #34b3e6;      /* base un pelín más brillante en dark */
+  --accent-600: #0ea5e9;
+  --accent-50: rgba(52, 179, 230, 0.12);
+  --border: rgba(255, 255, 255, 0.12);
+  --hairline: rgba(255, 255, 255, 0.08);
+}
+
+/* Base */
+body {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Utilidades que ya usábamos, adaptadas a variables */
 .container {
   margin-left: auto;
   margin-right: auto;
@@ -652,53 +696,95 @@ body {
   padding-left: 1rem;
   padding-right: 1rem;
 }
-.card {
-  border-radius: 1rem;
-  background-color: var(--card);
-  padding: 1.5rem;
-  --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);
-  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
-}
+.card { background: var(--card); border: 1px solid var(--hairline); border-radius: 1rem; padding: 1.5rem; --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); --tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color); box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow); }
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   border-radius: 0.75rem;
-  border-width: 1px;
-  border-color: rgb(255 255 255 / 0.1);
   padding-left: 1rem;
   padding-right: 1rem;
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
   font-weight: 500;
+  border: 1px solid var(--hairline);
 }
-.btn:hover {
-  border-color: rgb(255 255 255 / 0.2);
+.btn:hover { border-color: var(--border); }
+.btn-accent { background: var(--accent); color: #0b1216; }
+.btn-accent:hover { background: var(--accent-600); color: white; }
+.link { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; }
+.badge { background: var(--accent-50); color: var(--accent-600); border-radius: 0.5rem; padding-left: 0.5rem; padding-right: 0.5rem; padding-top: 0.25rem; padding-bottom: 0.25rem; font-size: 0.75rem; line-height: 1rem; }
+.hr { border-color: var(--hairline); }
+
+/* --- BARRA SUPERIOR / FOOTER (fijos, no dependen del tema) --- */
+:root {
+  --nav-bg: #0a2a3d;        /* azul oscuro para la barra */
+  --nav-text: #e6f1f5;      /* texto nav */
+  --nav-active: #7dd3fc;    /* acento para link activo/hover en nav */
+  --nav-hairline: rgba(255,255,255,0.12);
+
+  --footer-bg: #0b1216;     /* footer siempre oscuro */
+  --footer-text: #96b1c1;
+  --footer-hairline: rgba(255,255,255,0.10);
 }
-.btn-accent {
-  background-color: var(--accent);
-  --tw-text-opacity: 1;
-  color: rgb(0 0 0 / var(--tw-text-opacity, 1));
+
+/* Utilidades */
+.nav-bar {
+  background: var(--nav-bg);
+  color: var(--nav-text);
+  border-bottom: 1px solid var(--nav-hairline);
 }
-.btn-accent:hover {
-  opacity: 0.9;
+
+.footer-bar {
+  background: var(--footer-bg);
+  color: var(--footer-text);
+  border-top: 1px solid var(--footer-hairline);
 }
-.link {
-  text-decoration-line: underline;
-  text-decoration-style: dotted;
-  text-underline-offset: 4px;
-}
-.link:hover {
-  opacity: 0.8;
-}
+
 .hover\:opacity-90:hover {
   opacity: 0.9;
 }
+
+@media (min-width: 640px) {
+
+  .sm\:flex {
+    display: flex;
+  }
+}
+
 @media (min-width: 768px) {
+
+  .md\:inline {
+    display: inline;
+  }
+
+  .md\:h-9 {
+    height: 2.25rem;
+  }
 
   .md\:grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
 
+  .md\:flex-row {
+    flex-direction: row;
+  }
+
+  .md\:items-center {
+    align-items: center;
+  }
+
+  .md\:justify-between {
+    justify-content: space-between;
+  }
+
+  .md\:py-3\.5 {
+    padding-top: 0.875rem;
+    padding-bottom: 0.875rem;
+  }
+
+  .md\:text-xl {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+}

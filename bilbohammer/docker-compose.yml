@@ -15,6 +15,7 @@ services:
   web:
     build:
       context: ./web
+    command: npm run dev
     container_name: bilbohammer_web
     restart: unless-stopped
     depends_on:
@@ -23,14 +24,19 @@ services:
       - ./web/.env
     ports:
       - "3000:3000"
+    environment:
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+      - NEXTAUTH_URL=http://localhost:3000
     volumes:
+      # Montamos todo el proyecto web para ver cambios en tiempo real
       - ./web:/app
+      # Mantener node_modules del contenedor
       - /app/node_modules
-  
-  # Optional SFTP service to edit files remotely (local/dev only). Uncomment to use.
+    
+  # Optional SFTP service to edit files remotely (local/dev only)
   sftp:
     image: atmoz/sftp
-    # User "editor" with password "editor", chroot to /home/editor
     command: editor:editor:1001
     volumes:
       - ./web:/home/editor/web
@@ -39,5 +45,3 @@ services:
 
 volumes:
   pgdata:
-
-

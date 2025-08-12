@@ -54,3 +54,28 @@ body {
 .link { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; }
 .badge { background: var(--accent-50); color: var(--accent-600); @apply px-2 py-1 rounded-lg text-xs; }
 .hr { border-color: var(--hairline); }
+
+/* --- BARRA SUPERIOR / FOOTER (fijos, no dependen del tema) --- */
+:root {
+  --nav-bg: #0a2a3d;        /* azul oscuro para la barra */
+  --nav-text: #e6f1f5;      /* texto nav */
+  --nav-active: #7dd3fc;    /* acento para link activo/hover en nav */
+  --nav-hairline: rgba(255,255,255,0.12);
+
+  --footer-bg: #0b1216;     /* footer siempre oscuro */
+  --footer-text: #96b1c1;
+  --footer-hairline: rgba(255,255,255,0.10);
+}
+
+/* Utilidades */
+.nav-bar {
+  background: var(--nav-bg);
+  color: var(--nav-text);
+  border-bottom: 1px solid var(--nav-hairline);
+}
+
+.footer-bar {
+  background: var(--footer-bg);
+  color: var(--footer-text);
+  border-top: 1px solid var(--footer-hairline);
+}
