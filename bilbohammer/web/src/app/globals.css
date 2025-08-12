@@ -9,14 +9,13 @@
 
 /* LIGHT */
 :root[data-theme="light"] {
-  --bg: #f7fbff;          /* fondo */
-  --card: #ffffff;        /* tarjetas */
-  --text: #0b1216;        /* texto principal */
-  --muted: #5b6b78;       /* texto secundario */
-  /* Acento azul/teal (inspirado en el logo) */
-  --accent: #0ea5e9;      /* base (Sky 500) */
-  --accent-600: #0284c7;  /* hover/activo */
-  --accent-50: #e0f2fe;   /* chips/badges suaves */
+  --bg: #f7fbff;
+  --card: #ffffff;
+  --text: #0b1216;
+  --muted: #5b6b78;
+  --accent: #0ea5e9;
+  --accent-600: #0284c7;
+  --accent-50: #e0f2fe;
   --border: rgba(2, 132, 199, 0.18);
   --hairline: rgba(2, 12, 23, 0.08);
 }
@@ -27,7 +26,7 @@
   --card: #0f1f29;
   --text: #e6f1f5;
   --muted: #96b1c1;
-  --accent: #34b3e6;      /* base un pelín más brillante en dark */
+  --accent: #34b3e6;
   --accent-600: #0ea5e9;
   --accent-50: rgba(52, 179, 230, 0.12);
   --border: rgba(255, 255, 255, 0.12);
@@ -41,7 +40,7 @@ body {
   color: var(--text);
 }
 
-/* Utilidades que ya usábamos, adaptadas a variables */
+/* Utilidades */
 .container { @apply max-w-5xl mx-auto px-4; }
 .card { background: var(--card); border: 1px solid var(--hairline); @apply rounded-2xl shadow p-6; }
 .btn {
@@ -55,27 +54,99 @@ body {
 .badge { background: var(--accent-50); color: var(--accent-600); @apply px-2 py-1 rounded-lg text-xs; }
 .hr { border-color: var(--hairline); }
 
-/* --- BARRA SUPERIOR / FOOTER (fijos, no dependen del tema) --- */
+/* --- BARRA SUPERIOR / FOOTER --- */
 :root {
-  --nav-bg: #0a2a3d;        /* azul oscuro para la barra */
-  --nav-text: #e6f1f5;      /* texto nav */
-  --nav-active: #7dd3fc;    /* acento para link activo/hover en nav */
+  --nav-bg: #0a2a3d;
+  --nav-text: #e6f1f5;
+  --nav-active: #7dd3fc;
   --nav-hairline: rgba(255,255,255,0.12);
 
-  --footer-bg: #0b1216;     /* footer siempre oscuro */
+  --footer-bg: #0b1216;
   --footer-text: #96b1c1;
   --footer-hairline: rgba(255,255,255,0.10);
 }
 
-/* Utilidades */
+/* Altura del header (Nav) */
+:root {
+  --nav-h: 96px; /* antes 72px */
+}
+@media (min-width: 1024px) {
+  :root { --nav-h: 112px; } /* antes 80px */
+}
+
+/* Barra de navegación */
 .nav-bar {
   background: var(--nav-bg);
   color: var(--nav-text);
   border-bottom: 1px solid var(--nav-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* separa logo y acciones */
+  height: var(--nav-h);
+  padding: 0 1rem;
 }
 
+/* Logo dentro de la nav */
+.nav-logo img {
+  height: calc(var(--nav-h) * 0.8);
+  width: auto;
+}
+
+/* Links del nav */
+.nav-links a {
+  font-size: 1.125rem; /* text-lg */
+}
+
+/* Footer */
 .footer-bar {
   background: var(--footer-bg);
   color: var(--footer-text);
   border-top: 1px solid var(--footer-hairline);
 }
+
+/* Alturas del header y “acolchado” visual del logo */
+:root {
+  --nav-h: 88px;       /* altura header móvil/tablet */
+  --brand-pad: 12px;   /* margen interno visual del logo */
+}
+@media (min-width: 1024px) {
+  :root {
+    --nav-h: 100px;    /* altura header desktop */
+    --brand-pad: 14px;
+  }
+}
+
+/* Contenedor del top bar en 3 zonas */
+.header-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr; /* izquierda - centro - derecha */
+  align-items: center;
+  height: var(--nav-h);
+}
+
+/* Logo: ocupa la altura del header menos un pequeño margen visual */
+.brand-link {
+  display: flex;
+  align-items: center;
+  height: var(--nav-h);
+}
+.brand-container {
+  display: flex;
+  align-items: center; /* centra verticalmente */
+  margin-top: 4px;     /* margen superior */
+  margin-bottom: 4px;  /* margen inferior */
+}
+
+.brand-img {
+  height: calc(var(--nav-h) - var(--nav-h) / 2);
+  width: auto;
+}
+
+/* Tamaño base para enlaces del centro (ajústalo si quieres) */
+.center-nav a {
+  font-size: 1.0625rem; /* ~17px de base */
+}
+
+/* (Opcional) ampliar ancho del container para que el centro “respire” más */
+.container { max-width: 72rem; } /* 72rem = ~1152px (equiv a max-w-6xl) */
+

@@ -1,7 +1,7 @@
 import "./globals.css";
-import { Nav } from "@/components/Nav";
-import { Footer } from "@/components/Footer";
 import Providers from "@/providers";
+import TopBar from "@/components/TopBar";
+import { Footer } from "@/components/Footer";
 
 export const metadata = {
   title: "Bilbohammer",
@@ -10,27 +10,34 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
+        {/* Evitar flash de tema: aplica tema antes de hidratar */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
-                    (function() {
-                      try {
-                        var stored = localStorage.getItem('bh-theme');
-                        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                        var theme = stored || (prefersDark ? 'dark' : 'light');
-                        document.documentElement.setAttribute('data-theme', theme);
-                      } catch (e) {}
-                    })();
-                    `
+(function(){try{
+  var s=localStorage.getItem('bh-theme');
+  var d=window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', s || (d ? 'dark' : 'light'));
+}catch(e){}})();
+`,
           }}
         />
       </head>
-      <body>
+      <body className="min-h-screen flex flex-col">
         <Providers>
-          <Nav />
-          <main className="container py-10">{children}</main>
+          {/* Header azul fijo */}
+          <header className="nav-bar" style={{ height: "var(--nav-h)" }}>
+            <div className="container h-full">
+              <TopBar />
+            </div>
+          </header>
+
+          {/* Contenido */}
+          <main className="container py-10 flex-1">{children}</main>
+
+          {/* Footer oscuro */}
           <Footer />
         </Providers>
       </body>
