@@ -1,25 +1,141 @@
+// Prisma schema adaptada para NextAuth v5 + tus enums/campos.
+// Nota: IDs de usuario son Int autoincrement(), por lo que Account/Session usan userId Int.
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "postgresql" // ajusta si usas otro
   url      = env("DATABASE_URL")
 }
 
-enum Role {
+// ===== Enums propios =====
+enum Rol {
   ADMIN
-  BOARD
-  MEMBER
-  FRIEND
+  JUNTA
+  SOCIO
+  AMIGO
 }
 
+enum Juego {
+  W40K
+  AoS
+  ToW
+  ESDLA
+  BB
+  MARVEL
+  ROL
+  MAGIC
+  JUEGOS_DE_MESA
+  OTROS
+}
+
+enum PostType {
+  ANUNCIO
+  EVENTO
+  NOTICIA_PRIVADA
+}
+
+// ===== Modelos =====
 model User {
-  id           Int     @id @default(autoincrement())
-  email        String  @unique
-  name         String?
-  passwordHash String?
-  role         Role    @default(FRIEND)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              Int       @id @default(autoincrement())
+  // Campos esperados por NextAuth
+  name            String?
+  email           String    @unique
+  emailVerified   DateTime?
+  image           String?
+
+  // Login local
+  passwordHash    String?
+
+  // Perfil propio
+  rol             Rol       @default(AMIGO)
+  nombre          String?
+  nick            String?   @unique
+  descripcion     String?
+  juegos          Juego[]
+  etiquetas       String[]
+  avatarUrl       String?
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  membershipSince DateTime?
+  membershipUntil DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  posts           Post[]
+}
+
+model Account {
+  id                 Int     @id @default(autoincrement())
+  userId             Int
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Post {
+  id         String    @id @default(cuid())
+  title      String
+  content    String?
+  type       PostType
+  published  Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+
+  authorId   Int?
+  author     User?     @relation(fields: [authorId], references: [id])
+
+  eventId    String?
+  event      Event?    @relation(fields: [eventId], references: [id])
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  title     String
+  startsAt  DateTime
+  endsAt    DateTime
+  location  String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  posts     Post[]
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
 }

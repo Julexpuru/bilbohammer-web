@@ -1,27 +1,45 @@
-import Link from "next/link";
+// web/src/app/page.tsx
+import HeroCarousel from "@/components/home/HeroCarousel";
+import FeedTabs from "@/components/home/FeedTabs";
+import InstagramEmbed from "@/components/home/InstagramEmbed";
+import EventsCalendar from "@/components/home/EventsCalendar";
+import NoticesForMembers from "@/components/home/NoticesForMembers";
+import { auth } from "@/auth";
+// import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import InstagramFeed from "@/components/home/InstagramFeed"; 
 
-export default function Page() {
+export default async function HomePage() {
+  const session = await auth();
+  const isMember = !!session; // afinaremos por rol más adelante
+
+  // ✅ SSR: primera tanda para evitar parpadeo
+  const [anuncios, eventos] = await Promise.all([
+    prisma.post.findMany({
+      where: { published: true, type: "ANUNCIO" },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+    prisma.post.findMany({
+      where: { published: true, type: "EVENTO" },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+  ]);
+
+  const initialByType = {
+    ANUNCIO: anuncios,
+    EVENTO: eventos,
+    // NOTICIA_PRIVADA: si quieres, puedes precargar aquí cuando gestiones roles
+  } as const;
+
   return (
-    <section className="grid md:grid-cols-2 gap-6">
-      <div className="card">
-        <h1 className="text-3xl font-bold mb-2">Bienvenido a Bilbohammer</h1>
-        <p className="text-[var(--muted)] mb-4">
-          Club de juegos de mesa, wargames y buen ambiente. Aquí encontrarás
-          nuestras últimas novedades, fotos de eventos y más información sobre el club.
-        </p>
-        <div className="flex gap-3">
-          <Link href="/novedades" className="btn btn-accent">Ver Novedades</Link>
-          <Link href="/sobre-nosotros" className="btn">Sobre Nosotros</Link>
-        </div>
-      </div>
-      <div className="card">
-        <h2 className="text-xl font-semibold mb-2">Próximos pasos</h2>
-        <ul className="list-disc ml-6 space-y-2 text-[var(--muted)]">
-          <li>Publicar noticias del club en <Link href="/novedades" className="link">Novedades</Link>.</li>
-          <li>Subir fotos de partidas y torneos en <Link href="/galeria" className="link">Galería</Link>.</li>
-          <li>Gestionar miembros y roles desde <span className="text-white">Admin</span> (privado).</li>
-        </ul>
-      </div>
-    </section>
+    <>
+      <HeroCarousel />
+      {isMember && <NoticesForMembers />}
+      <FeedTabs showPrivate={isMember} initialByType={initialByType} />
+      <InstagramFeed />
+      <EventsCalendar />
+    </>
   );
 }

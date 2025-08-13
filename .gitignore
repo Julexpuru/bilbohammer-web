@@ -4,8 +4,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-package-lock.json
 *.log
+
+# Lockfile — RECOMENDACIÓN: versionarlo (quita la línea si usas npm)
+# package-lock.json
 
 # Next.js
 .next/
@@ -13,11 +15,12 @@ out/
 dist/
 .next/cache/
 
-# VS Code
+# IDE / editores
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
 !.vscode/launch.json
+.idea/
 .history/
 
 # Env files
@@ -25,17 +28,30 @@ dist/
 .env.*
 !.env.example
 
-# Docker
+# Docker (datos locales)
 **/docker-data/
 **/pgdata/
 **/tmp/
 
-# Mac / Linux / Windows junk
+# SO basura
 .DS_Store
 Thumbs.db
 
 # Prisma
-prisma/migrations/
+# RECOMENDADO: versionar migraciones
+# prisma/migrations/
 
 # Build artifacts
 *.tsbuildinfo
+
+# Herramientas/QA opcionales
+.eslintcache
+.stylelintcache
+coverage/
+.nyc_output/
+
+# E2E opcionales (si usas)
+cypress/screenshots/
+cypress/videos/
+playwright-report/
+test-results/
