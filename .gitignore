@@ -1,21 +1,37 @@
-# Node
+# ── Node ───────────────────────────────────────────────────────────────
 node_modules/
+**/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 *.log
 
-# Lockfile — RECOMENDACIÓN: versionarlo (quita la línea si usas npm)
+# ── Lockfiles (NO ignorar; deben versionarse) ─────────────────────────
 # package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
 
-# Next.js
+# ── Next.js / Build ───────────────────────────────────────────────────
 .next/
 out/
 dist/
 .next/cache/
 
-# IDE / editores
+# App en subcarpeta web/
+web/.next/
+web/out/
+web/.turbo/
+web/.swc/
+web/.vercel/
+
+# (por si añades más paquetes/apps)
+**/.next/
+**/.turbo/
+**/.swc/
+**/.vercel/
+
+# ── IDE / editores ────────────────────────────────────────────────────
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
@@ -23,34 +39,40 @@ dist/
 .idea/
 .history/
 
-# Env files
+# ── Env files ─────────────────────────────────────────────────────────
 .env
 .env.*
 !.env.example
+web/.env
+web/.env.*
+!web/.env.example
 
-# Docker (datos locales)
+# ── Docker (datos locales) ────────────────────────────────────────────
 **/docker-data/
 **/pgdata/
 **/tmp/
 
-# SO basura
+# ── SO basura ─────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-# Prisma
+# ── Prisma ────────────────────────────────────────────────────────────
 # RECOMENDADO: versionar migraciones
 # prisma/migrations/
+web/prisma/*.sqlite
+web/prisma/*.sqlite-journal
+web/prisma/*-journal
 
-# Build artifacts
+# ── Build artifacts / TS ──────────────────────────────────────────────
 *.tsbuildinfo
 
-# Herramientas/QA opcionales
+# ── Herramientas/QA opcionales ────────────────────────────────────────
 .eslintcache
 .stylelintcache
 coverage/
 .nyc_output/
 
-# E2E opcionales (si usas)
+# ── E2E (si usas) ─────────────────────────────────────────────────────
 cypress/screenshots/
 cypress/videos/
 playwright-report/
