@@ -1,5 +1,6 @@
-export { auth as middleware } from "next-auth";
+// src/middleware.ts — usa la versión Edge sin Prisma
+export { auth as middleware } from "@/lib/auth-edge";
 
 export const config = {
-  matcher: ["/panel/:path*", "/cuenta/:path*"],
+  matcher: ["/mi-perfil", "/profile", "/api/members/:path*"],
 };

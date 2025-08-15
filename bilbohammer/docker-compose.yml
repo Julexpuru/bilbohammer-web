@@ -15,7 +15,7 @@ services:
   web:
     build:
       context: ./web
-    command: npm run dev
+    command: sh -lc "npx prisma generate || true && npm run dev"
     container_name: bilbohammer_web
     restart: unless-stopped
     depends_on:

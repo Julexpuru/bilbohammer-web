@@ -1,16 +1,15 @@
+// src/app/api/members/summary/route.ts — usando auth (Node) con sesión JWT
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return new NextResponse("Unauthorized", { status: 401 });
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  const [notif, members] = await Promise.all([
-    prisma.notification.findFirst({ where: { visible: true }, orderBy: { createdAt: "desc" } }),
-    prisma.user.count(),
-  ]);
+  const userId = (session.user as any).id as string | undefined;
+  const email = session.user.email as string | undefined;
 
-  return NextResponse.json({ notification: notif, membersCount: members });
+  return NextResponse.json({ ok: true, userId, email });
 }

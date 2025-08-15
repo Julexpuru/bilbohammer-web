@@ -1,17 +1,43 @@
-# web/Dockerfile
-FROM node:20-bookworm-slim
+# Dockerfile — para proyecto con app dentro de ./web
+# Genera Prisma Client en build y garantiza generación al arrancar.
 
-# Opcional pero recomendable: utilidades que Prisma/Next suelen agradecer
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+FROM node:20-alpine AS deps
+WORKDIR /app/web
 
-WORKDIR /app
+# Copiamos package.json/lock y el schema antes de instalar para que generate funcione
+COPY web/package.json web/package-lock.json* ./
+COPY web/prisma ./prisma
 
-# Instalar deps con npm
-COPY package.json ./
-RUN npm install
+# Instala deps (incluye dev) y genera Prisma Client
+RUN npm ci
+RUN npx prisma generate
 
-# Copiar el resto del código
-COPY . .
+# ----- Builder -----
+FROM node:20-alpine AS builder
+WORKDIR /app/web
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=deps /app/web/node_modules ./node_modules
+COPY web ./
+
+RUN npm run build
+
+# ----- Runner -----
+FROM node:20-alpine AS runner
+WORKDIR /app/web
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Copiamos artefactos y deps ya resueltas
+COPY --from=builder /app/web/.next ./.next
+COPY --from=builder /app/web/public ./public
+COPY --from=builder /app/web/package.json ./package.json
+COPY --from=deps /app/web/node_modules ./node_modules
+COPY web/prisma ./prisma
+
+# Entry que vuelve a ejecutar prisma generate por si hay volúmenes que lo pisan
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 3000
-CMD ["npm", "run", "dev"]
+CMD ["/entrypoint.sh"]

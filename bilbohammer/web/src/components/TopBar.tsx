@@ -3,8 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import ThemeToggle from "@/components/ThemeToggle";
+import UserAvatarMenu from "@/components/UserAvatarMenu";
 import clsx from "clsx";
 
 const links = [
@@ -56,12 +57,7 @@ export default function TopBar() {
       <div className="justify-self-end flex items-center gap-3">
         <ThemeToggle />
         {session?.user ? (
-          <>
-            <span className="hidden lg:inline text-sm" style={{ color: "var(--nav-text)", opacity: 0.85 }}>
-              {session.user.name || session.user.email}
-            </span>
-            <button className="btn" onClick={() => signOut()}>Salir</button>
-          </>
+          <UserAvatarMenu profileHref="/mi-perfil" />
         ) : (
           <button className="btn btn-accent" onClick={() => signIn()}>Entrar</button>
         )}
