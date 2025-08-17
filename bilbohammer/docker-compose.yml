@@ -15,7 +15,8 @@ services:
   web:
     build:
       context: ./web
-    command: sh -lc "npx prisma generate || true && npm run dev"
+      dockerfile: Dockerfile
+    command: sh -lc "npx prisma generate && (npx prisma migrate deploy || npx prisma db push) && npm run dev"
     container_name: bilbohammer_web
     restart: unless-stopped
     depends_on:
@@ -25,16 +26,14 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - NODE_ENV=development
       - WATCHPACK_POLLING=true
       - CHOKIDAR_USEPOLLING=true
       - NEXTAUTH_URL=http://localhost:3000
     volumes:
-      # Montamos todo el proyecto web para ver cambios en tiempo real
-      - ./web:/app
-      # Mantener node_modules del contenedor
-      - /app/node_modules
-    
-  # Optional SFTP service to edit files remotely (local/dev only)
+      - ./web:/app          # montas el código local en /app
+      - /app/node_modules   # node_modules queda en volumen
+
   sftp:
     image: atmoz/sftp
     command: editor:editor:1001

@@ -20,8 +20,8 @@ enum Rol {
 
 enum Juego {
   W40K
-  AoS
-  ToW
+  AOS
+  TOW
   ESDLA
   BB
   MARVEL
@@ -39,15 +39,15 @@ enum PostType {
 
 // ===== Modelos =====
 model User {
-  id              Int       @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   // Campos esperados por NextAuth
-  name            String?
-  email           String    @unique
-  emailVerified   DateTime?
-  image           String?
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
 
   // Login local
-  passwordHash    String?
+  passwordHash String?
 
   // Perfil propio
   rol             Rol       @default(AMIGO)
@@ -64,24 +64,27 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  accounts        Account[]
-  sessions        Session[]
-  posts           Post[]
+  accounts      Account[]
+  sessions      Session[]
+  posts         Post[]
+  faccionesW40K FaccionesW40K[]
+  faccionesAoS  FaccionesAoS[]
+  faccionesTOW  FaccionesTOW[]
 }
 
 model Account {
-  id                 Int     @id @default(autoincrement())
-  userId             Int
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String? @db.Text
-  access_token       String? @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String? @db.Text
-  session_state      String?
+  id                Int     @id @default(autoincrement())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -106,18 +109,18 @@ model VerificationToken {
 }
 
 model Post {
-  id         String    @id @default(cuid())
-  title      String
-  content    String?
-  type       PostType
-  published  Boolean   @default(true)
-  createdAt  DateTime  @default(now())
+  id        String   @id @default(cuid())
+  title     String
+  content   String?
+  type      PostType
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
 
-  authorId   Int?
-  author     User?     @relation(fields: [authorId], references: [id])
+  authorId Int?
+  author   User? @relation(fields: [authorId], references: [id])
 
-  eventId    String?
-  event      Event?    @relation(fields: [eventId], references: [id])
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id])
 }
 
 model Event {
@@ -129,7 +132,7 @@ model Event {
   details   String?
   createdAt DateTime @default(now())
 
-  posts     Post[]
+  posts Post[]
 }
 
 model Notification {
@@ -138,4 +141,86 @@ model Notification {
   content   String
   visible   Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+// @@map("facciones_w40k") // opcional: nombre del tipo enum en la BD
+
+enum FaccionesW40K {
+  ADEPTA_SORORITAS
+  ADEPTUS_CUSTODES
+  ADEPTUS_MECHANICUS
+  AELDARI
+  ASTRA_MILITARUM
+  BLACK_TEMPLARS
+  BLOOD_ANGELS
+  CHAOS_DAEMONS
+  CHAOS_KNIGHTS
+  CHAOS_MARINES
+  DARK_ANGELS
+  DEATHWATCH
+  DEATH_GUARD
+  DRUKHARI
+  EMPERORS_CHILDREN
+  GENESTEALER_CULTS
+  GREY_KNIGHTS
+  IMPERIAL_AGENTS
+  IMPERIAL_KNIGHTS
+  LEAGUES_OF_VOTANN
+  NECRONS
+  ORKS
+  SPACE_MARINES
+  SPACE_WOLVES
+  TAU
+  THOUSAND_SONS
+  TYRANIDS
+  WORLD_EATERS
+}
+
+enum FaccionesAoS {
+  BEASTMEN
+  BLADESOFKHORNE
+  BONNEZPLITTERZ
+  CITIESOFSIGMAR
+  DAUGHTERSOFKHAINE
+  DISCIPLESOFTZEENCH
+  FLESHEATERS
+  FYRESLAYERS
+  GLOOMSPITE
+  HEDONITESOFSLAANESH
+  IDONETH
+  IRONJAWZ
+  KHARADRON
+  KRULEBOYZ
+  LUMINETH
+  MAGGOTKINOFNURGLE
+  NIGHTHAUNT
+  OGORS
+  OSSIARCHBONERIPPERS
+  SERAPHON
+  SKAVEN
+  SLAVESTODARKNESS
+  SONSOFBEHEMATH
+  SOULBLIGHT
+  STORMCAST
+  SYLVANETH
+}
+
+enum FaccionesTOW {
+  BEASTMEN
+  BRETONNIA
+  CATHAY
+  CHAOSDWARVES
+  CHAOSDAEMONS
+  DARKELVES
+  DWARVES
+  EMPIRE
+  GREENSKINS
+  HIGHELVES
+  KHEMRI
+  LIZARDMEN
+  OGRES
+  SKAVEN
+  VAMPIRECOUNTS
+  WARRIORSOFCHAOS
+  WOODELVES
 }

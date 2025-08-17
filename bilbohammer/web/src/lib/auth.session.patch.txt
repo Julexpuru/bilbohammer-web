@@ -1,0 +1,21 @@
+// Patch snippet for lib/auth.ts – add or extend your session callback to prefer avatarUrl in session.user.image
+
+// Example addition inside your NextAuth options:
+callbacks: {
+  async session({ session }) {
+    try {
+      if (session.user?.email) {
+        const u = await prisma.user.findUnique({
+          where: { email: session.user.email },
+          select: { avatarUrl: true, image: true, name: true, nick: true },
+        });
+        if (u) {
+          session.user.name = u.nick || u.name || session.user.name || null as any;
+          (session.user as any).avatarUrl = u.avatarUrl || null;
+          session.user.image = u.avatarUrl || u.image || session.user.image || null;
+        }
+      }
+    } catch {}
+    return session;
+  },
+}

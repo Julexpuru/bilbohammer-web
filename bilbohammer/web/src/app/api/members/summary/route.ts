@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 // src/app/api/members/summary/route.ts — usando auth (Node) con sesión JWT
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";

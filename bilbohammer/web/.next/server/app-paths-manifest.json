@@ -1,8 +1,8 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/mi-perfil/page": "app/mi-perfil/page.js",
   "/page": "app/page.js",
-  "/api/events/route": "app/api/events/route.js",
-  "/api/posts/route": "app/api/posts/route.js",
+  "/sobre-nosotros/page": "app/sobre-nosotros/page.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/members/summary/route": "app/api/members/summary/route.js",
-  "/mi-perfil/page": "app/mi-perfil/page.js"
+  "/api/me/profile/route": "app/api/me/profile/route.js"
 }

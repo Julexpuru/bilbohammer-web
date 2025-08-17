@@ -1,0 +1,31 @@
+# === Node / build artifacts ===
+node_modules
+.next
+dist
+.nyc_output
+coverage
+
+# === Docker / Compose files inside context ===
+Dockerfile*
+docker-compose*.yml
+
+# === VCS / IDE ===
+.git
+.gitignore
+.vscode
+.idea
+.vercel
+.turbo
+.swc
+.out
+
+# === Env files (keep example) ===
+.env
+.env.*
+!.env.example
+
+# === Logs ===
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log

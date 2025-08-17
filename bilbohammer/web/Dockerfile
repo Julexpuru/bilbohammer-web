@@ -1,43 +1,53 @@
-# Dockerfile — para proyecto con app dentro de ./web
-# Genera Prisma Client en build y garantiza generación al arrancar.
+# syntax=docker/dockerfile:1
 
+############################
+# Stage: deps
+############################
 FROM node:20-alpine AS deps
-WORKDIR /app/web
+WORKDIR /app
 
-# Copiamos package.json/lock y el schema antes de instalar para que generate funcione
-COPY web/package.json web/package-lock.json* ./
-COPY web/prisma ./prisma
-
-# Instala deps (incluye dev) y genera Prisma Client
+# Instala dependencias con lockfile si existe
+COPY package.json package-lock.json* ./
 RUN npm ci
+
+# Copia el schema de Prisma y genera el client (útil para builder/runner)
+COPY prisma ./prisma
 RUN npx prisma generate
 
-# ----- Builder -----
+############################
+# Stage: builder
+############################
 FROM node:20-alpine AS builder
-WORKDIR /app/web
+WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
-COPY --from=deps /app/web/node_modules ./node_modules
-COPY web ./
+# Trae node_modules desde deps para poder build
+COPY --from=deps /app/node_modules ./node_modules
 
+# Copia el código de la app (todo el contexto ./web)
+COPY . .
+
+# Build de Next.js
 RUN npm run build
 
-# ----- Runner -----
+############################
+# Stage: runner (producción)
+############################
 FROM node:20-alpine AS runner
-WORKDIR /app/web
+WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copiamos artefactos y deps ya resueltas
-COPY --from=builder /app/web/.next ./.next
-COPY --from=builder /app/web/public ./public
-COPY --from=builder /app/web/package.json ./package.json
-COPY --from=deps /app/web/node_modules ./node_modules
-COPY web/prisma ./prisma
+# Artefactos de build + deps ya resueltas
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+COPY --from=deps /app/node_modules ./node_modules
 
-# Entry que vuelve a ejecutar prisma generate por si hay volúmenes que lo pisan
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Prisma schema (no pesa y evita sorpresas en runtime)
+COPY prisma ./prisma
 
 EXPOSE 3000
-CMD ["/entrypoint.sh"]
+
+# En producción usaría "npm start", pero en dev lo sobreescribe docker-compose
+CMD ["npm", "start"]
