@@ -1,4 +1,6 @@
 {
   "/mi-perfil/page": "app/mi-perfil/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/me/profile/route": "app/api/me/profile/route.js",
+  "/api/upload/avatar/route": "app/api/upload/avatar/route.js"
 }

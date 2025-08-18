@@ -32,7 +32,12 @@ export default async function Page() {
     );
   }
 
-  const displayAvatar = user.avatarUrl || user.image || "/assets/img/avatar_placeholder.png";
+  const displayAvatar: string | undefined = user.avatarUrl ?? user.image ?? undefined;
+  const hasAvatar = !!displayAvatar;
+  const _memberSinceRaw = (user as any).memberSince ?? (user as any).membershipSince ?? null;
+  const memberSinceText = _memberSinceRaw
+    ? new Date(_memberSinceRaw).toLocaleDateString("es-ES", { month: "long", year: "numeric" })
+    : "—";
   const displayNick = user.nick || user.nombre || user.name || user.email;
   const memberSinceISO = user.membershipSince ? new Date(user.membershipSince).toISOString() : null;
   const description = user.descripcion ?? null;
@@ -79,7 +84,19 @@ export default async function Page() {
 
       <section className="grid grid-cols-[auto_1fr] gap-6 items-start">
         <div className="w-28 h-28 rounded-full overflow-hidden border border-white/10 bg-slate-800/40">
-          <img src={displayAvatar} alt="avatar" className="w-full h-full object-cover" />
+          {hasAvatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={displayAvatar as string} alt="avatar" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full grid place-items-center" style={{ background: "var(--card)", color: "var(--muted)" }}>
+              <svg viewBox="0 0 24 24" width="88" height="88" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" fill="currentColor" opacity="0.35" />
+                <path d="M4 20c0-4 4-6 8-6s8 2 8 6" fill="currentColor" opacity="0.35"/>
+                <circle cx="12" cy="8" r="3" fill="currentColor" />
+                <path d="M6 20c.8-2.6 3.6-4 6-4s5.2 1.4 6 4" fill="currentColor"/>
+              </svg>
+            </div>
+          )}
         </div>
         <div className="space-y-1">
           <div className="text-sm opacity-70">{user.email}</div>
@@ -94,7 +111,7 @@ export default async function Page() {
         <h2 className="text-lg font-semibold mb-2">Descripción</h2>
         <p className="text-sm opacity-80">
           <strong>Socio desde:</strong>{" "}
-          {user.membershipSince ? new Date(user.membershipSince).toLocaleDateString() : "—"}
+          {memberSinceText}
         </p>
         <div className="mt-2 text-sm whitespace-pre-wrap opacity-90">{description || "Sin descripción."}</div>
       </section>

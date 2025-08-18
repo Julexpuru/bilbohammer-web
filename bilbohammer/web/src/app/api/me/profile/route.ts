@@ -82,29 +82,43 @@ export async function PATCH(req: Request) {
     getEnumLabels("FaccionesTOW"),
   ]);
 
-  const uiJuegos = Array.isArray(body.juegos) ? body.juegos : [];
-  const enumJuegos = mapUiListToEnum(uiJuegos, allowedJuego, GAME_CANDIDATES);
+  const uiJuegos = Array.isArray(body.juegos) ? body.juegos : undefined;
+  const enumJuegos = uiJuegos ? mapUiListToEnum(uiJuegos, allowedJuego, GAME_CANDIDATES) : undefined;
 
-  const factions = body.factions || {};
-  const w40k = mapUiListToEnum((factions["w40k"] || []), allowedW40K);
-  const aos  = mapUiListToEnum((factions["aos"]  || []), allowedAoS);
-  const tow  = mapUiListToEnum((factions["tow"]  || []), allowedTOW.concat(["HIGH_ELVES","HIGHELVES"]));
+  const factions = body.factions;
+  const w40k = factions ? mapUiListToEnum((factions["w40k"] || []), allowedW40K) : undefined;
+  const aos  = factions ? mapUiListToEnum((factions["aos"]  || []), allowedAoS) : undefined;
+  const tow  = factions ? mapUiListToEnum((factions["tow"]  || []), allowedTOW.concat(["HIGH_ELVES","HIGHELVES"])) : undefined;
 
   await prisma.user.update({
-    where: { email: session.user.email },
-    data: {
-      name: body.name ?? undefined,
-      nick: body.nick ?? undefined,
-      membershipSince: body.membershipSince ? new Date(body.membershipSince) : null,
-      descripcion: body.description ?? undefined,
-      juegos: enumJuegos as any,
-      faccionesW40K: w40k as any,
-      faccionesAoS: aos as any,
-      faccionesTOW: tow as any,
-      avatarUrl: body.avatarUrl ?? undefined,
-    },
-    select: { id: true }
-  });
+  where: { email: session.user.email },
+  data: {
+    ...(body.name !== undefined ? { name: body.name } : {}),
+    ...(body.nick !== undefined ? { nick: body.nick } : {}),
+    ...(body.membershipSince !== undefined ? { membershipSince: (() => {
+      const v = body.membershipSince;
+      if (!v) return null;
+      const mmOnly = /^\d{4}-\d{2}$/.test(v) ? v.match(/^(\d{4})-(\d{2})$/)! : null;
+      if (mmOnly) {
+        const y = parseInt(mmOnly[1], 10);
+        const m = parseInt(mmOnly[2], 10) - 1;
+        return new Date(Date.UTC(y, m, 1));
+      }
+      const d = new Date(v);
+      if (!isNaN(d.getTime())) {
+        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+      }
+      return null;
+    })() } : {}),
+    ...(body.description !== undefined ? { descripcion: body.description } : {}),
+    ...(enumJuegos !== undefined ? { juegos: enumJuegos as any } : {}),
+    ...(w40k !== undefined ? { faccionesW40K: w40k as any } : {}),
+    ...(aos  !== undefined ? { faccionesAoS:  aos  as any } : {}),
+    ...(tow  !== undefined ? { faccionesTOW: tow  as any } : {}),
+    ...(Object.prototype.hasOwnProperty.call(body, 'avatarUrl') ? { avatarUrl: body.avatarUrl } : {}),
+  },
+  select: { id: true }
+});
 
   return NextResponse.json({ ok: true });
 }

@@ -22,11 +22,11 @@ export default function EditToolbar({
   const hasGoogle = (providers || []).includes("google");
 
   return (
-<div className="flex gap-2 flex-wrap items-center">
+    <div className="flex gap-2 flex-wrap items-center">
       {!editing ? (
         <button
           onClick={() => setEditing(true)}
-          className="px-3 py-1.5 rounded-md border border-white/15 bg-slate-800 hover:bh-btn text-sm"
+          className="px-3 py-1.5 rounded-md border border-white/15 bg-slate-800 hover:bg-slate-700 text-sm"
         >
           Editar mis datos
         </button>
@@ -41,7 +41,7 @@ export default function EditToolbar({
           </button>
           <button
             onClick={() => setEditing(false)}
-            className="px-3 py-1.5 rounded-md border border-white/15 bg-slate-800 hover:bh-btn text-sm"
+            className="px-3 py-1.5 rounded-md border border-white/15 bg-slate-800 hover:bg-slate-700 text-sm"
           >
             Cancelar
           </button>
@@ -50,7 +50,7 @@ export default function EditToolbar({
 
       <button
         disabled={editing}
-        className="px-3 py-1.5 rounded-md border border-white/15 bg-slate-800 hover:bh-btn text-sm disabled:opacity-50"
+        className="px-3 py-1.5 rounded-md border border-white/15 bg-slate-800 hover:bg-slate-700 text-sm disabled:opacity-50"
       >
         Editar contraseña
       </button>
@@ -58,14 +58,14 @@ export default function EditToolbar({
       {!hasGoogle ? (
         <button
           onClick={() => signIn("google", { callbackUrl: "/mi-perfil" })}
-          className="bh-btn bh-btn--primary"
+          className="px-3 py-1.5 rounded-md border border-white/15 bg-white text-slate-900 text-sm"
           disabled={editing}
           title="Conectar cuenta de Google"
         >
           Conectar cuenta de Google
         </button>
       ) : (
-        <span className="bh-btn">
+        <span className="px-3 py-1.5 rounded-md border border-green-600/30 bg-green-800 text-green-100 text-sm">
           Cuenta de Google conectada
         </span>
       )}

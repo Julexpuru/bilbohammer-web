@@ -85,9 +85,9 @@ export default function ProfileEditor({
         <h2 className="text-lg font-semibold mb-2">Descripción</h2>
         <div className="text-sm mb-2">Socio desde:</div>
         <input
-          type="date"
+          type="month"
           className="px-2 py-1 rounded bg-slate-800 border border-white/15 text-sm"
-          value={since ? since.slice(0,10) : ""}
+          value={since ? since.slice(0,7) : ""}
           onChange={(e) => setSince(e.target.value)}
         />
         <div className="mt-3 text-sm">Descripción (Markdown básico soportado):</div>
