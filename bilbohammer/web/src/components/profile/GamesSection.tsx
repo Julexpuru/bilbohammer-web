@@ -113,7 +113,7 @@ export const GamesSection: FC<{ games?: UserGame[] }> = ({ games }) => {
   ];
   // Orden fijo de subsecciones especiales (si existen, se muestran en este orden)
   const specialOrder = ["w40k", "aos", "tow"] as const;
-  const specialsSet = new Set(specialOrder);
+  const specialsSet = new Set<string>(specialOrder as readonly string[]);
 
   const specialGames = specialOrder
     .map((id) => games.find((g) => g.id === id))

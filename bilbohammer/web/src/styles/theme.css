@@ -1,0 +1,57 @@
+
+:root {
+  --bh-bg: 255 255 255;
+  --bh-fg: 15 23 42;
+  --bh-card: 248 250 252;
+  --bh-border: 226 232 240;
+  --bh-muted: 100 116 139;
+  --bh-overlay: 0 0 0 / 0.5;
+}
+:root.dark, :root[data-theme="dark"] {
+  --bh-bg: 2 6 23;
+  --bh-fg: 241 245 249;
+  --bh-card: 15 23 42;
+  --bh-border: 30 41 59;
+  --bh-muted: 148 163 184;
+  --bh-overlay: 0 0 0 / 0.7;
+}
+.bh-card {
+  background-color: rgb(var(--bh-card));
+  color: rgb(var(--bh-fg));
+  border: 1px solid var(--hairline);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+}
+.bh-card--p { padding: 1rem; }
+.bh-section-title { font-weight: 600; font-size: 1.125rem; color: rgb(var(--bh-fg)); }
+.bh-muted { color: rgb(var(--bh-muted)); }
+.bh-modal__overlay { position: fixed; inset:0; background-color: rgba(0,0,0,.6); display:flex;align-items:center;justify-content:center;z-index:50;}
+.bh-modal { width:min(900px,92vw); max-height:88vh; overflow:auto; background-color:rgb(var(--bh-bg)); color:rgb(var(--bh-fg));
+  border: 1px solid var(--hairline); border-radius:0.75rem; padding:1rem; box-shadow:0 10px 40px rgba(0,0,0,.2); }
+.bh-chip { display:inline-flex;align-items:center;gap:.5rem; border:1px solid rgb(var(--bh-border)); background:rgb(var(--bh-card));
+  padding:.375rem .625rem; border-radius:999px; white-space:nowrap; }
+
+
+/* Generic themed inputs & buttons (usable outside modal as well) */
+.bh-input {
+  background-color: rgb(var(--bh-card));
+  color: rgb(var(--bh-fg));
+  border: 1px solid rgb(var(--bh-border));
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.bh-btn{display:inline-flex;align-items:center;gap:.5rem;border:1px solid var(--hairline);background:var(--card);color:var(--text);padding:.5rem .75rem;border-radius:.625rem;font-size:.925rem}
+.bh-btn:hover{filter:brightness(0.98)}
+.bh-btn:active{transform:translateY(0.5px)}
+.bh-btn--primary{background:var(--accent-50);border-color:var(--accent-600)}
+.bh-btn--primary {
+  border-color: rgb(var(--bh-border));
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+
+/* Modal background tuned: slightly darker than page (light) and slightly darker than page (dark) */
+:root { --bh-modal-bg: color-mix(in oklab, var(--card) 94%, var(--text)); }
+:root.dark, :root[data-theme="dark"] { --bh-modal-bg: color-mix(in oklab, var(--bg) 92%, black); }
+
+.bh-hairline{border:1px solid var(--hairline);}

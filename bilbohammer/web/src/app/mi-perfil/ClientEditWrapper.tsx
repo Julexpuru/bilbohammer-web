@@ -224,7 +224,7 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
   return (
     <div>
       <div className="flex gap-2">
-        <button className="px-3 py-1 rounded bg-slate-700" onClick={() => setOpen(true)}>
+        <button className="px-3 py-1 rounded bg-amber-600 text-white hover:bg-amber-700" onClick={() => setOpen(true)}>
           Editar mis datos
         </button>
         <button className="px-3 py-1 rounded bg-slate-700 opacity-70">Editar contraseña</button>
@@ -234,21 +234,21 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
       {open && (
         <div className="fixed inset-0 bg-black/60 z-50 overflow-y-auto">
           <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="bg-slate-900 max-w-3xl w-full rounded-xl border border-white/10 overflow-hidden">
-              <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur px-4 py-3 border-b border-white/10">
+            <div className="max-w-3xl w-full rounded-xl border overflow-hidden" style={{ backgroundColor: "color-mix(in oklab, var(--card) 94%, black)", color: "var(--text)", borderColor: "var(--hairline)" }}>
+              <div className="sticky top-0 z-10 px-4 py-3 border-b backdrop-blur" style={{ backgroundColor: "color-mix(in oklab, var(--card) 92%, black)", borderColor: "var(--hairline)" }}>
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Editar perfil</h3>
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      className="px-3 py-1 rounded bg-slate-700"
+                      className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
                       onClick={() => setOpen(false)}
                     >
                       Cancelar
                     </button>
                     <button
                       type="button"
-                      className="px-3 py-1 rounded bg-blue-600 disabled:opacity-50"
+                      className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
                       disabled={saving}
                       onClick={() => onSubmit()}
                     >
@@ -289,7 +289,7 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
                   <label className="text-sm">
                     Nombre
                     <input
-                      className="w-full mt-1 px-2 py-1 rounded bg-slate-800"
+                      className="w-full mt-1 px-2 py-1 rounded border" style={{ backgroundColor: "var(--card)", color: "var(--text)", borderColor: "var(--hairline)" }}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
@@ -297,7 +297,7 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
                   <label className="text-sm">
                     Nick
                     <input
-                      className="w-full mt-1 px-2 py-1 rounded bg-slate-800"
+                      className="w-full mt-1 px-2 py-1 rounded border" style={{ backgroundColor: "var(--card)", color: "var(--text)", borderColor: "var(--hairline)" }}
                       value={nick}
                       onChange={(e) => setNick(e.target.value)}
                     />
@@ -306,7 +306,7 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
                     Socio desde
                     <input
                       type="date"
-                      className="w-full mt-1 px-2 py-1 rounded bg-slate-800"
+                      className="w-full mt-1 px-2 py-1 rounded border" style={{ backgroundColor: "var(--card)", color: "var(--text)", borderColor: "var(--hairline)" }}
                       value={memberSince?.slice(0, 10) || ""}
                       onChange={(e) => setMemberSince(e.target.value)}
                     />
@@ -314,7 +314,7 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
                   <label className="text-sm col-span-2">
                     Descripción
                     <textarea
-                      className="w-full mt-1 px-2 py-1 rounded bg-slate-800 min-h-[96px]"
+                      className="w-full mt-1 px-2 py-1 rounded border min-h-[96px]" style={{ backgroundColor: "var(--card)", color: "var(--text)", borderColor: "var(--hairline)" }}
                       value={description ?? ""}
                       onChange={(e) => setDescription(e.target.value)}
                     />
