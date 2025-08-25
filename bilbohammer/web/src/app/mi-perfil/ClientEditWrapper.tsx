@@ -10,6 +10,8 @@ import {
   factionIconPath,
 } from "@/lib/games";
 
+import EditToolbar from "@/components/profile/EditToolbar";
+
 type GameId =
   | "w40k"
   | "aos"
@@ -103,7 +105,9 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
   const [factions, setFactions] = useState<Record<string, string[]>>(
     profile.factions ?? { w40k: [], aos: [], tow: [] }
   );
-  const [avatarDraft, setAvatarDraft] = useState<string | null>(null); // solo preview + payload
+  const [avatarDraft, setAvatarDraft] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+ // solo preview + payload
 
   // Callbacks estables para que los hijos memoizados no se re-rendericen todos
   const toggleGameCb = useCallback((id: GameId) => {
@@ -241,8 +245,7 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
         <button className="px-3 py-1 rounded bg-amber-600 text-white hover:bg-amber-700" onClick={() => setOpen(true)}>
           Editar mis datos
         </button>
-        <button className="px-3 py-1 rounded bg-slate-700 opacity-70">Editar contraseña</button>
-        <button className="px-3 py-1 rounded bg-slate-700 opacity-70">Conectar cuenta de Google</button>
+                <EditToolbar editing={editing} setEditing={setEditing} />
       </div>
 
       {open && (

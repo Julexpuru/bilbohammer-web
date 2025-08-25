@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Instala dependencias con lockfile si existe
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci || npm install
 
 # Copia el schema de Prisma y genera el client (útil para builder/runner)
 COPY prisma ./prisma
