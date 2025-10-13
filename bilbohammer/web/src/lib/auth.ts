@@ -1,6 +1,7 @@
-// src/lib/auth.ts — NextAuth v5 (Node). PrismaAdapter (Int IDs) + Google + Credentials. Sesión JWT.
+﻿// src/lib/auth.ts -> NextAuth v5 (Node). PrismaAdapter (Int IDs) + Google + Credentials. Sesion JWT.
 // Corrige doble `return token` y unifica avatar (manual > Google > inicial).
 import NextAuth from "next-auth";
+import type { User } from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
@@ -8,68 +9,100 @@ import bcrypt from "bcryptjs";
 import { actualizaPerfilGoogleSiNecesario } from "@/servicios/usuario/actualiza-perfil-google";
 import { PrismaIntAdapter } from "@/lib/prisma-int-adapter";
 
+type AnyObject = Record<string, any>;
+
+const normalizeRoles = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.map((role) => String(role));
+  }
+  if (value == null) return [];
+  return [String(value)];
+};
+
 export const authConfig = {
   session: { strategy: "jwt" as const },
   adapter: PrismaIntAdapter(prisma),
   providers: [
     Google({}),
     Credentials({
-      name: "Email y contraseña",
+      name: "Email y contrasena",
       credentials: {
         email: { label: "Email", type: "email" },
-        contrasena: { label: "Contraseña", type: "password" },
+        contrasena: { label: "Contrasena", type: "password" },
       },
-      async authorize(creds) {
-        const email = (creds as any)?.email as string | undefined;
-        const contrasena = (creds as any)?.contrasena as string | undefined;
+      async authorize(creds): Promise<User | null> {
+        const email = (creds as AnyObject)?.email as string | undefined;
+        const contrasena = (creds as AnyObject)?.contrasena as string | undefined;
         if (!email || !contrasena) return null;
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user?.passwordHash) return null;
         const ok = await bcrypt.compare(contrasena, user.passwordHash);
         if (!ok) return null;
-        return {
-          id: String(user.id),
+        const roles = normalizeRoles((user as AnyObject).roles);
+        const authUser: User = {
+          id: user.id,
           email: user.email,
           name: user.name ?? user.nick ?? null,
           image: user.avatarUrl ?? user.image ?? null,
-          rol: (user as any).rol ?? null,
+          roles,
+          rol: roles[0] ?? null,
           nick: user.nick ?? null,
           avatarUrl: user.avatarUrl ?? null,
-        } as any;
+        };
+        return authUser;
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        (token as any).rol = (user as any).rol ?? null;
-        (token as any).nick = (user as any).nick ?? null;
-        (token as any).avatarUrl = (user as any).avatarUrl ?? null;
-        (token as any).oauthImage = (user as any).image ?? null;
+        const roles = normalizeRoles((user as AnyObject).roles ?? (user as AnyObject).rol);
+        (token as AnyObject).roles = roles;
+        (token as AnyObject).rol = roles[0] ?? null;
+        (token as AnyObject).nick = (user as AnyObject).nick ?? null;
+        (token as AnyObject).avatarUrl = (user as AnyObject).avatarUrl ?? null;
+        (token as AnyObject).oauthImage = (user as AnyObject).image ?? null;
+      } else if ((token as AnyObject).roles == null) {
+        (token as AnyObject).roles = [];
       }
       return token;
     },
     async session({ session, token }) {
       if (session?.user) {
-        (session.user as any).id = token?.sub ?? null;
-        (session.user as any).rol = (token as any)?.rol ?? null;
-        (session.user as any).nick = (token as any)?.nick ?? null;
+        const tokenRoles = normalizeRoles((token as AnyObject).roles ?? (token as AnyObject).rol);
+        (session.user as AnyObject).id = token?.sub ?? null;
+        (session.user as AnyObject).roles = tokenRoles;
+        (session.user as AnyObject).rol = tokenRoles[0] ?? null;
+        (session.user as AnyObject).nick = (token as AnyObject)?.nick ?? null;
         try {
-          const suEmail = (session.user as any).email as string | undefined;
+          const suEmail = (session.user as AnyObject).email as string | undefined;
           if (suEmail) {
             const u = await prisma.user.findUnique({
               where: { email: suEmail },
-              select: { avatarUrl: true, image: true, name: true, nick: true },
+              select: {
+                avatarUrl: true,
+                image: true,
+                name: true,
+                nick: true,
+                roles: true,
+              },
             });
             const chosen = u?.avatarUrl ?? u?.image ?? null;
-            (session.user as any).avatarUrl = u?.avatarUrl ?? null;
-            (session.user as any).image = chosen;
-            if (u?.nick && !(session.user as any).nick) (session.user as any).nick = u.nick;
-            if (u?.name && !(session.user as any).name) (session.user as any).name = u.name;
+            (session.user as AnyObject).avatarUrl = u?.avatarUrl ?? null;
+            (session.user as AnyObject).image = chosen;
+            if (u?.nick && !(session.user as AnyObject).nick) (session.user as AnyObject).nick = u.nick;
+            if (u?.name && !(session.user as AnyObject).name) (session.user as AnyObject).name = u.name;
+            if (u?.roles) {
+              const dbRoles = normalizeRoles(u.roles);
+              (session.user as AnyObject).roles = dbRoles;
+              (session.user as AnyObject).rol = dbRoles[0] ?? null;
+              (token as AnyObject).roles = dbRoles;
+              (token as AnyObject).rol = dbRoles[0] ?? null;
+            }
           } else {
-            const chosen = (token as any)?.avatarUrl ?? (token as any)?.oauthImage ?? null;
-            (session.user as any).avatarUrl = (token as any)?.avatarUrl ?? null;
-            (session.user as any).image = chosen;
+            const chosen = (token as AnyObject)?.avatarUrl ?? (token as AnyObject)?.oauthImage ?? null;
+            (session.user as AnyObject).avatarUrl = (token as AnyObject)?.avatarUrl ?? null;
+            (session.user as AnyObject).image = chosen;
           }
         } catch {}
       }
@@ -81,10 +114,10 @@ export const authConfig = {
       if (account?.provider === "google") {
         try {
           await actualizaPerfilGoogleSiNecesario({
-            userId: Number((user as any).id),
+            userId: Number((user as AnyObject).id),
             perfil: {
-              nombre: (profile as any)?.name ?? null,
-              imagen: (profile as any)?.picture ?? (profile as any)?.image ?? null,
+              nombre: (profile as AnyObject)?.name ?? null,
+              imagen: (profile as AnyObject)?.picture ?? (profile as AnyObject)?.image ?? null,
             },
           });
         } catch {}
@@ -94,3 +127,4 @@ export const authConfig = {
 } satisfies Parameters<typeof NextAuth>[0];
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+

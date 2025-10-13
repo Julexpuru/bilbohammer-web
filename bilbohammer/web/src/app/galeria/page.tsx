@@ -1,8 +1,22 @@
-export default function Page() {
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+import { auth } from "@/auth";
+import { userCanManageGallery } from "@/lib/roles";
+import { GalleryPageContent } from "@/components/gallery/GalleryPageContent";
+import { fetchGalleryOverview } from "@/lib/gallery/queries";
+
+export default async function GalleryPage() {
+  const session = await auth();
+  const canUpload = userCanManageGallery(session);
+  const { albums, standalonePhotos, heroImages } = await fetchGalleryOverview();
+
   return (
-    <section className="card">
-      <h1 className="text-2xl font-bold mb-2">Galería</h1>
-      <p className="text-[var(--muted)]">Fotos y recuerdos de nuestros eventos.</p>
-    </section>
+    <GalleryPageContent
+      albums={albums}
+      standalonePhotos={standalonePhotos}
+      heroImages={heroImages}
+      canUpload={canUpload}
+    />
   );
 }

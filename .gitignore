@@ -77,3 +77,4 @@ cypress/screenshots/
 cypress/videos/
 playwright-report/
 test-results/
+web/public/uploads/

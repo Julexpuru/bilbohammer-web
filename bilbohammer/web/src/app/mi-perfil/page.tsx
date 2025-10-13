@@ -1,11 +1,16 @@
-
-// Server Component
+﻿// Server Component
 import { prisma } from "@/lib/prisma";
 import ClientEditWrapper from "./ClientEditWrapper";
 import { GamesSection } from "@/components/profile/GamesSection";
 import { GAME_TITLES, toUiId } from "@/lib/games_helpers";
 
 import { auth } from "@/lib/auth";
+
+const normalizeRoles = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map((role) => String(role));
+  if (value == null) return [];
+  return [String(value)];
+};
 
 export default async function Page() {
   const session = await auth();
@@ -41,6 +46,8 @@ export default async function Page() {
   const displayNick = user.nick || user.nombre || user.name || user.email;
   const memberSinceISO = user.membershipSince ? new Date(user.membershipSince).toISOString() : null;
   const description = user.descripcion ?? null;
+
+  const roleBadges = normalizeRoles((user as any).roles ?? (session.user as any)?.roles ?? (session.user as any)?.rol);
 
   const uiGames: string[] = Array.isArray(user.juegos) ? (user.juegos as any[]).map((e) => toUiId(String(e))) : [];
 
@@ -102,7 +109,18 @@ export default async function Page() {
           <div className="text-sm opacity-70">{user.email}</div>
           <div className="text-xl font-semibold">{displayNick}</div>
           <div className="flex flex-wrap gap-2">
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 border border-white/10">{user.rol}</span>
+            {roleBadges.length ? (
+              roleBadges.map((role) => (
+                <span
+                  key={role}
+                  className="text-xs px-2 py-0.5 rounded-full bg-slate-800 border border-white/10"
+                >
+                  {role}
+                </span>
+              ))
+            ) : (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 border border-white/10">SIN ROL</span>
+            )}
           </div>
         </div>
       </section>
@@ -125,3 +143,4 @@ export default async function Page() {
     </div>
   );
 }
+

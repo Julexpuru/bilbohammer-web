@@ -1,9 +1,10 @@
-import NextAuth from "next-auth";
+﻿import NextAuth from "next-auth";
 
 declare module "next-auth" {
   interface User {
     id: number;
-    rol?: string | null;
+    roles?: string[] | null;
+    rol?: string | null; // primer rol para compatibilidad
     nick?: string | null;
     avatarUrl?: string | null;
   }
@@ -14,9 +15,11 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      roles?: string[] | null;
       rol?: string | null;
       nick?: string | null;
-    avatarUrl?: string | null;
+      avatarUrl?: string | null;
     };
   }
 }
+

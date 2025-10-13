@@ -50,7 +50,7 @@ model User {
   passwordHash String?
 
   // Perfil propio
-  rol             Rol       @default(AMIGO)
+  roles          Rol[]     @default([])
   nombre          String?
   nick            String?   @unique
   descripcion     String?
@@ -70,6 +70,8 @@ model User {
   faccionesW40K FaccionesW40K[]
   faccionesAoS  FaccionesAoS[]
   faccionesTOW  FaccionesTOW[]
+  galleryImages        GalleryImage[]
+  albumCollaborations  GalleryAlbumCollaborator[]
 }
 
 model Account {
@@ -224,3 +226,75 @@ enum FaccionesTOW {
   WARRIORSOFCHAOS
   WOODELVES
 }
+
+model GalleryAlbum {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  title          String
+  description    String?
+  location       String?
+  displayDate    String?
+  dateISO        String?
+  coverImagePath String?
+  coverImageAlt  String?
+  totalPhotos    Int      @default(0)
+  facetYear      String
+  facetGame      String
+  facetFormat    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tags           GalleryAlbumTag[]
+  collaborators  GalleryAlbumCollaborator[]
+  images         GalleryImage[]
+}
+
+model GalleryImage {
+  id            String      @id @default(cuid())
+  albumId       String?
+  uploaderId    Int?
+  storagePath   String
+  thumbnailPath String?
+  title         String?
+  altText       String?
+  description   String?
+  takenAt       DateTime?
+  location      String?
+  width         Int?
+  height        Int?
+  fileSize      Int?
+  mimeType      String?
+  position      Int?
+  likesCount    Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  album    GalleryAlbum?             @relation(fields: [albumId], references: [id], onDelete: SetNull)
+  uploader User?                     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+}
+
+model GalleryAlbumTag {
+  id        String        @id @default(cuid())
+  albumId   String
+  label     String
+  createdAt DateTime      @default(now())
+
+  album GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@unique([albumId, label])
+}
+
+model GalleryAlbumCollaborator {
+  id        String        @id @default(cuid())
+  albumId   String
+  userId    Int
+  role      String?
+  createdAt DateTime      @default(now())
+
+  album GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([albumId, userId])
+}
+
+

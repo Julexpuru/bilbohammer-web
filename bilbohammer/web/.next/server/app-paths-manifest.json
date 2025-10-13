@@ -1,6 +1,9 @@
 {
-  "/page": "app/page.js",
-  "/mi-perfil/page": "app/mi-perfil/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/galeria/page": "app/galeria/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
+  "/page": "app/page.js",
+  "/eventos/page": "app/eventos/page.js",
+  "/galeria/[albumId]/page": "app/galeria/[albumId]/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/events/search/route": "app/api/events/search/route.js"
 }
