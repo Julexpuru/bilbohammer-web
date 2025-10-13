@@ -1,0 +1,389 @@
+"use client";
+import React from "react";
+import Image from "next/image";
+import clsx from "clsx";
+import EventStatusBadge from "@/components/events/EventStatusBadge";
+import Link from "next/link";
+
+type Props = { canCreate: boolean };
+
+type Item = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle?: string | null;
+  startsAt: string;
+  endsAt: string;
+  timezone?: string | null;
+  venueName?: string | null;
+  city?: string | null;
+  bannerUrl?: string | null;
+  status: string;
+  organizations?: string[];
+  roles?: any[];
+  tags?: string[];
+};
+
+type RoleEntry = {
+  id: string;
+  role: string;
+  user?: {
+    id?: string;
+    nick?: string;
+    name?: string;
+    email?: string;
+  };
+};
+
+function useDebounced<T>(value: T, delay = 350) {
+  const [v, setV] = React.useState(value);
+  React.useEffect(() => {
+    const id = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return v;
+}
+
+const ALL_TYPES = ["TOURNAMENT", "LEAGUE", "WORKSHOP", "SOCIAL"] as const;
+const ALL_GAMES = ["W40K", "AOS", "TOW", "ESDLA", "MARVEL", "OTROS"] as const;
+
+const TYPE_LABEL: Record<(typeof ALL_TYPES)[number], string> = {
+  TOURNAMENT: "Torneo",
+  LEAGUE: "Liga",
+  WORKSHOP: "Taller",
+  SOCIAL: "Social",
+};
+
+const GAME_LABEL: Record<(typeof ALL_GAMES)[number], string> = {
+  W40K: "Warhammer 40K",
+  AOS: "Age of Sigmar",
+  TOW: "The Old World",
+  ESDLA: "ESDLA",
+  MARVEL: "Marvel",
+  OTROS: "Otros",
+};
+
+export default function EventsExplore({ canCreate }: Props) {
+  const [q, setQ] = React.useState("");
+  const [orgBilbo, setOrgBilbo] = React.useState(true);
+  const [orgOtros, setOrgOtros] = React.useState(true);
+  const [types, setTypes] = React.useState<string[]>([...ALL_TYPES]);
+  const [games, setGames] = React.useState<string[]>([...ALL_GAMES]);
+  const [free, setFree] = React.useState(false);
+  const [past, setPast] = React.useState(false);
+  const [sort, setSort] = React.useState<"asc" | "desc">("asc");
+
+  const [items, setItems] = React.useState<Item[]>([]);
+  const [nextCursor, setNextCursor] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(false);
+  const nextCursorRef = React.useRef<any>(null);
+  const debQ = useDebounced(q, 350);
+
+  const hasFilters = React.useMemo(() => {
+    return (
+      q.trim().length > 0 ||
+      !orgBilbo ||
+      !orgOtros ||
+      types.length !== ALL_TYPES.length ||
+      games.length !== ALL_GAMES.length ||
+      free ||
+      past
+    );
+  }, [q, orgBilbo, orgOtros, types, games, free, past]);
+
+  const toggleOrganizer = (key: "bilbo" | "otros") => {
+    if (key === "bilbo") setOrgBilbo((prev) => !prev);
+    if (key === "otros") setOrgOtros((prev) => !prev);
+  };
+
+  const toggleType = (value: (typeof ALL_TYPES)[number]) => {
+    setTypes((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
+  };
+
+  const toggleGame = (value: (typeof ALL_GAMES)[number]) => {
+    setGames((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
+  };
+
+  const resetFilters = () => {
+    setQ("");
+    setOrgBilbo(true);
+    setOrgOtros(true);
+    setTypes([...ALL_TYPES]);
+    setGames([...ALL_GAMES]);
+    setFree(false);
+    setPast(false);
+  };
+
+  const buildSearchParams = React.useCallback(
+    (reset: boolean) => {
+      const params = new URLSearchParams();
+      if (debQ) params.set("q", debQ);
+      const orgsList: string[] = [];
+      if (orgBilbo) orgsList.push("bilbohammer");
+      if (orgOtros) orgsList.push("otros");
+      if (orgsList.length === 1) params.set("orgs", orgsList.join(","));
+      if (types.length && types.length < ALL_TYPES.length) params.set("types", types.join(","));
+      if (games.length && games.length < ALL_GAMES.length) params.set("games", games.join(","));
+      if (free) params.set("free", "1");
+      if (past) params.set("past", "1");
+      params.set("sort", sort);
+      params.set("take", "12");
+      const cursorValue = reset ? null : nextCursorRef.current;
+      if (cursorValue) params.set("cursor", JSON.stringify(cursorValue));
+      return params;
+    },
+    [debQ, orgBilbo, orgOtros, types, games, free, past, sort]
+  );
+
+  const fetchPage = React.useCallback(
+    async (reset = false) => {
+      setLoading(true);
+      try {
+        const params = buildSearchParams(reset);
+        const res = await fetch(`/api/events/search?${params.toString()}`);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error((data && data.error) || "Search failed");
+        }
+        setItems((prev) => (reset ? data.items : [...prev, ...data.items]));
+        setNextCursor(data.nextCursor || null);
+        nextCursorRef.current = data.nextCursor || null;
+      } catch (error) {
+        console.error("[events] search failed", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [buildSearchParams]
+  );
+
+  React.useEffect(() => {
+    nextCursorRef.current = null;
+    setNextCursor(null);
+    fetchPage(true);
+  }, [fetchPage]);
+
+  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && nextCursor && !loading) {
+            fetchPage(false);
+          }
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [fetchPage, nextCursor, loading]);
+
+  const renderFilterChip = (label: string, active: boolean, onClick: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={clsx(
+        "rounded-full border px-4 py-1.5 text-sm transition",
+        "border-[var(--hairline)] bg-[var(--card)] text-[var(--muted)]",
+        active && "border-[var(--accent)] bg-[var(--accent-50)] text-[var(--accent-600)]"
+      )}
+      aria-pressed={active}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <main className="mx-auto max-w-6xl p-4 md:p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold md:text-3xl">Eventos</h1>
+        <div className="flex items-center gap-2">
+          <button
+            className="rounded-md border px-2 py-1 text-sm"
+            onClick={() => setSort((prev) => (prev === "asc" ? "desc" : "asc"))}
+          >
+            Orden: {sort === "asc" ? "ascendente" : "descendente"}
+          </button>
+          {canCreate && (
+            <Link
+              href="/eventos/nuevo"
+              className="inline-flex items-center gap-2 rounded-md border border-emerald-700 bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500"
+            >
+              Crear evento
+            </Link>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
+        <aside className="sticky top-[calc(var(--nav-h)+1.5rem)] space-y-6">
+          <header className="space-y-4 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Filtros</p>
+              <h2 className="text-2xl font-semibold leading-tight">Ajusta tus eventos</h2>
+              <p className="text-sm text-[var(--muted)]">
+                Combina texto, organizador, formato o juego para encontrar el evento ideal. Los resultados se actualizan al instante.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="events-search" className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--muted)]">
+                Buscar por nombre o etiqueta
+              </label>
+              <input
+                id="events-search"
+                type="search"
+                value={q}
+                onChange={(event) => setQ(event.target.value)}
+                placeholder="Ej. torneo, liga, narrativa"
+                className="w-full rounded-2xl border border-[var(--hairline)] bg-[var(--card)] px-4 py-2 text-sm shadow-sm focus:border-[var(--accent)] focus:outline-none"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={resetFilters}
+              className={clsx(
+                "btn text-sm transition",
+                hasFilters ? "opacity-100" : "opacity-50 cursor-not-allowed"
+              )}
+              disabled={!hasFilters}
+            >
+              Limpiar filtros
+            </button>
+          </header>
+
+          <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Organizador</h3>
+            <div className="flex flex-wrap gap-2">
+              {renderFilterChip("Bilbohammer", orgBilbo, () => toggleOrganizer("bilbo"))}
+              {renderFilterChip("Otros colectivos", orgOtros, () => toggleOrganizer("otros"))}
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Formato</h3>
+            <div className="flex flex-wrap gap-2">
+              {ALL_TYPES.map((type) => renderFilterChip(TYPE_LABEL[type], types.includes(type), () => toggleType(type)))}
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Juego</h3>
+            <div className="flex flex-wrap gap-2">
+              {ALL_GAMES.map((game) => renderFilterChip(GAME_LABEL[game], games.includes(game), () => toggleGame(game)))}
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Estado</h3>
+            <div className="flex flex-wrap gap-2">
+              {renderFilterChip("Solo gratuitos", free, () => setFree((prev) => !prev))}
+              {renderFilterChip("Incluir pasados", past, () => setPast((prev) => !prev))}
+            </div>
+          </section>
+        </aside>
+
+        <section className="space-y-3">
+          {items.map((ev) => {
+            const start = new Date(ev.startsAt);
+            const end = new Date(ev.endsAt);
+            const tz = ev.timezone || "Europe/Madrid";
+            const dateRange = new Intl.DateTimeFormat("es-ES", {
+              dateStyle: "medium",
+              timeStyle: "short",
+              timeZone: tz,
+            }).formatRange(start, end);
+            const where = [ev.venueName, ev.city].filter(Boolean).join(" - ");
+            const roles = Array.isArray(ev.roles) ? (ev.roles as RoleEntry[]) : [];
+            const organizers: React.ReactNode[] = [];
+
+            (ev.organizations || []).forEach((name, index) => {
+              if (!name) return;
+              organizers.push(<span key={`org-${index}`}>{name}</span>);
+            });
+
+            roles
+              .filter((role) => role.role === "ORGANIZER" && role.user)
+              .forEach((role) => {
+                const user = role.user;
+                const label = user?.nick || user?.name || user?.email;
+                if (!label) return;
+                organizers.push(
+                  <Link key={`user-${user?.id ?? label}`} href={`/usuarios/${user?.id ?? ""}`} className="underline hover:no-underline">
+                    {label}
+                  </Link>
+                );
+              });
+
+            const tags = Array.isArray(ev.tags) ? ev.tags : [];
+
+            return (
+              <article key={ev.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-xl bg-white/5 p-4 shadow-sm transition hover:bg-white/10">
+                <div className="space-y-1">
+                  <Link href={`/eventos/${ev.slug}`} className="text-lg font-medium hover:underline">
+                    {ev.title}
+                  </Link>
+                  {ev.subtitle && <div className="text-sm opacity-80">{ev.subtitle}</div>}
+                  <div className="text-sm opacity-90">
+                    <strong>Cuando:</strong>{" "}
+                    <span suppressHydrationWarning>{dateRange}</span>
+                  </div>
+                  {where && (
+                    <div className="text-sm opacity-90">
+                      <strong>Donde:</strong> {where}
+                    </div>
+                  )}
+                  {organizers.length > 0 && (
+                    <div className="text-sm opacity-90">
+                      <strong>Organiza:</strong>{" "}
+                      <span>
+                        {organizers.map((node, index) => (
+                          <React.Fragment key={index}>{index > 0 ? ", " : null}{node}</React.Fragment>
+                        ))}
+                      </span>
+                    </div>
+                  )}
+                  {tags.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {tags.map((tag) => (
+                        <span key={tag} className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-xs">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-start gap-3">
+                  <EventStatusBadge status={ev.status as any} />
+                  <div className="relative grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-lg bg-black/30">
+                    {ev.bannerUrl ? (
+                      <Image
+                        src={ev.bannerUrl}
+                        alt="Banner del evento"
+                        fill
+                        sizes="96px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="text-xs opacity-60">Sin imagen</div>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+          <div ref={sentinelRef} />
+          {loading && <div className="text-sm opacity-70">Cargando...</div>}
+          {!loading && items.length === 0 && <div className="text-sm opacity-70">Sin resultados.</div>}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+
+
