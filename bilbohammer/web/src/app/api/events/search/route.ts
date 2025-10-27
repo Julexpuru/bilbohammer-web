@@ -1,5 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma, EventStatus, EventType, Juego } from "@prisma/client";
+import { auth } from "@/lib/auth";
 
 const TAKE_DEFAULT = 12;
 const TAKE_MAX = 48;
@@ -39,47 +41,21 @@ function normalizeLocation(location: string | null | undefined) {
   return { venueName: location.trim(), city: null };
 }
 
-function detectOrganizations(location: string | null | undefined): string[] {
-  if (!location) return [];
-  return location.toLowerCase().includes("bilbohammer") ? ["Bilbohammer"] : ["Otros"];
-}
-
-function extractSubtitle(details: string | null | undefined): string | null {
-  if (!details) return null;
-  const firstLine = details.trim().split(/\r?\n/)[0];
-  return firstLine.length > 0 ? firstLine : null;
-}
-
-function extractStatus(startsAt: Date, endsAt: Date): string {
-  const now = Date.now();
-  if (endsAt.getTime() < now) return "FINALIZED";
-  if (startsAt.getTime() > now) return "PUBLISHED";
-  return "ONGOING";
-}
-
-function extractTags(text: string | null | undefined): string[] {
-  if (!text) return [];
-  const matches = text.match(/#[\p{L}\d_]+/gu);
-  if (!matches) return [];
-  return Array.from(new Set(matches.map((tag) => tag.slice(1))));
-}
-
-function extractBannerUrl(post?: { content?: string | null } | null): string | null {
-  if (!post?.content) return null;
-  const markdownMatch = post.content.match(/!\[[^\]]*]\((?<url>[^)\s]+)(?:\s+"[^"]*")?\)/);
-  if (markdownMatch?.groups?.url) {
-    return markdownMatch.groups.url;
-  }
-  const urlMatch = post.content.match(/https?:\/\/\S+\.(?:png|jpe?g|gif|webp)/i);
-  return urlMatch ? urlMatch[0] : null;
-}
+const EVENT_TYPE_VALUES = new Set(Object.values(EventType));
+const GAME_VALUES = new Set(Object.values(Juego));
 
 export async function GET(request: Request) {
+  const session = await auth();
+  const normalizedRoles = Array.isArray(session?.user?.roles)
+    ? session.user.roles.map((role) => String(role).toUpperCase())
+    : [];
+  const canViewDrafts = normalizedRoles.includes("ADMIN") || normalizedRoles.includes("JUNTA");
+
   const url = new URL(request.url);
   const q = url.searchParams.get("q")?.trim() || null;
-  const orgs = parseList(url.searchParams.get("orgs"));
-  const types = parseList(url.searchParams.get("types"));
-  const games = parseList(url.searchParams.get("games"));
+  const orgs = parseList(url.searchParams.get("orgs")).map((value) => value.toLowerCase());
+  const types = parseList(url.searchParams.get("types")).map((value) => value.toUpperCase());
+  const games = parseList(url.searchParams.get("games")).map((value) => value.toUpperCase());
   const free = parseBoolean(url.searchParams.get("free"));
   const includePast = parseBoolean(url.searchParams.get("past"));
   const sort = url.searchParams.get("sort") === "desc" ? "desc" : "asc";
@@ -87,12 +63,16 @@ export async function GET(request: Request) {
   const take = Math.min(Math.max(Number.isFinite(takeParam) ? takeParam : TAKE_DEFAULT, 1), TAKE_MAX);
   const cursor = parseCursor(url.searchParams.get("cursor"));
 
-  const where: any = {};
+  const where: Prisma.EventWhereInput = {
+    isMembersOnly: false,
+  };
+
   if (q) {
     where.OR = [
       { title: { contains: q, mode: "insensitive" } },
       { details: { contains: q, mode: "insensitive" } },
       { location: { contains: q, mode: "insensitive" } },
+      { tags: { some: { label: { contains: q, mode: "insensitive" } } } },
     ];
   }
 
@@ -100,22 +80,48 @@ export async function GET(request: Request) {
     where.endsAt = { gte: new Date() };
   }
 
-  if (orgs.length === 1) {
-    const [org] = orgs;
-    if (org === "bilbohammer") {
-      where.location = { contains: "bilbohammer", mode: "insensitive" };
-    } else if (org === "otros") {
-      where.NOT = { location: { contains: "bilbohammer", mode: "insensitive" } };
-    }
+  const andFilters: Prisma.EventWhereInput[] = [];
+
+  if (!canViewDrafts) {
+    andFilters.push({ status: { not: EventStatus.DRAFT } });
+  }
+
+  if (orgs.includes("bilbohammer")) {
+    andFilters.push({
+      organizations: {
+        some: { organization: { slug: { equals: "bilbohammer", mode: "insensitive" } } },
+      },
+    });
+  } else if (orgs.includes("otros")) {
+    andFilters.push({
+      organizations: {
+        none: { organization: { slug: { equals: "bilbohammer", mode: "insensitive" } } },
+      },
+    });
+  }
+
+  const validTypes = types.filter((type) => EVENT_TYPE_VALUES.has(type as EventType)) as EventType[];
+  if (validTypes.length) {
+    andFilters.push({ type: { in: validTypes } });
+  }
+
+  const validGames = games.filter((game) => GAME_VALUES.has(game as Juego)) as Juego[];
+  if (validGames.length) {
+    andFilters.push({ game: { in: validGames } });
   }
 
   if (free) {
-    where.details = { contains: "gratis", mode: "insensitive" };
+    andFilters.push({
+      OR: [
+        { priceGeneral: null },
+        { priceGeneral: { lte: new Prisma.Decimal("0") } },
+      ],
+    });
   }
 
-  // tipos y juegos quedan reservados para cuando el modelo tenga esos datos
-  void types;
-  void games;
+  if (andFilters.length) {
+    where.AND = andFilters;
+  }
 
   try {
     const events = await prisma.event.findMany({
@@ -128,10 +134,9 @@ export async function GET(request: Request) {
       cursor: cursor ?? undefined,
       skip: cursor ? 1 : 0,
       include: {
-        posts: {
-          where: { type: "EVENTO" },
-          include: { author: true },
-        },
+        tags: true,
+        organizers: { include: { user: { select: { id: true, nick: true, name: true, email: true } } } },
+        organizations: { include: { organization: true } },
       },
     });
 
@@ -140,38 +145,46 @@ export async function GET(request: Request) {
 
     const items = slice.map((event) => {
       const { venueName, city } = normalizeLocation(event.location);
-      const firstPost = event.posts[0];
-      const tags = extractTags(firstPost?.content ?? null);
-      const roles = firstPost?.author
-        ? [
-            {
-              id: `${event.id}-organizer`,
-              role: "ORGANIZER",
-              user: {
-                id: String(firstPost.author.id),
-                nick: firstPost.author.nick,
-                name: firstPost.author.name,
-                email: firstPost.author.email,
-              },
-            },
-          ]
-        : [];
+
+      const now = Date.now();
+      const autoStatus =
+        event.status === EventStatus.CANCELLED || event.status === EventStatus.POSTPONED
+          ? event.status
+          : event.endsAt.getTime() < now
+            ? EventStatus.FINALIZED
+            : event.status;
 
       return {
         id: event.id,
         slug: event.id,
         title: event.title,
-        subtitle: extractSubtitle(event.details),
+        subtitle: event.details ? event.details.trim().split(/\r?\n/, 1)[0] ?? null : null,
         startsAt: event.startsAt.toISOString(),
         endsAt: event.endsAt.toISOString(),
         timezone: "Europe/Madrid",
         venueName,
         city,
-        bannerUrl: extractBannerUrl(firstPost),
-        status: extractStatus(event.startsAt, event.endsAt),
-        organizations: detectOrganizations(event.location),
-        roles,
-        tags,
+        bannerUrl: event.bannerUrl ?? null,
+        status: autoStatus,
+        type: event.type,
+        game: event.game,
+        priceGeneral: event.priceGeneral?.toString() ?? null,
+        priceSocios: event.priceSocios?.toString() ?? null,
+        isInternal: event.isInternal,
+        organizations: event.organizations.map((entry) => entry.organization.name),
+        roles: event.organizers.map((entry) => ({
+          id: `${event.id}-${entry.userId}`,
+          role: entry.role ?? null,
+          user: entry.user
+            ? {
+                id: String(entry.user.id),
+                nick: entry.user.nick,
+                name: entry.user.name,
+                email: entry.user.email,
+              }
+            : null,
+        })),
+        tags: event.tags.map((tag) => tag.label),
       };
     });
 

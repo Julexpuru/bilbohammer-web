@@ -141,7 +141,7 @@ export default function TopBar() {
           {aboutOpen && (
             <div
               role="menu"
-              className="absolute right-0 mt-2 flex w-56 flex-col gap-1 rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-2 shadow-xl"
+              className="absolute right-0 mt-2 flex w-56 flex-col gap-1 rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-2 shadow-xl z-50"
             >
               {aboutLinks.map(({ href, label }) => (
                 <Link

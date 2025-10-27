@@ -1,0 +1,7 @@
+ALTER TABLE "Event"
+  ADD COLUMN "showTabDescription" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN "showTabResources" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN "showTabClassification" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN "showTabChronicle" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN "showTabGallery" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN "showTabLocation" BOOLEAN NOT NULL DEFAULT true;

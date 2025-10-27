@@ -19,6 +19,9 @@ type Item = {
   city?: string | null;
   bannerUrl?: string | null;
   status: string;
+  priceGeneral?: string | null;
+  priceSocios?: string | null;
+  isInternal?: boolean;
   organizations?: string[];
   roles?: any[];
   tags?: string[];
@@ -63,12 +66,30 @@ const GAME_LABEL: Record<(typeof ALL_GAMES)[number], string> = {
   OTROS: "Otros",
 };
 
+const currencyFormatter = new Intl.NumberFormat("es-ES", {
+  style: "currency",
+  currency: "EUR",
+});
+
+const parseAmount = (value: string | null | undefined): number | null => {
+  if (value == null) return null;
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return null;
+  return amount;
+};
+
+const describePrice = (amount: number | null, audience: string): string | null => {
+  if (amount == null) return null;
+  if (amount <= 0) return `${audience}: Gratis`;
+  return `${audience}: ${currencyFormatter.format(amount)}`;
+};
+
 export default function EventsExplore({ canCreate }: Props) {
   const [q, setQ] = React.useState("");
   const [orgBilbo, setOrgBilbo] = React.useState(true);
   const [orgOtros, setOrgOtros] = React.useState(true);
-  const [types, setTypes] = React.useState<string[]>([...ALL_TYPES]);
-  const [games, setGames] = React.useState<string[]>([...ALL_GAMES]);
+  const [types, setTypes] = React.useState<string[]>([]);
+  const [games, setGames] = React.useState<string[]>([]);
   const [free, setFree] = React.useState(false);
   const [past, setPast] = React.useState(false);
   const [sort, setSort] = React.useState<"asc" | "desc">("asc");
@@ -84,8 +105,8 @@ export default function EventsExplore({ canCreate }: Props) {
       q.trim().length > 0 ||
       !orgBilbo ||
       !orgOtros ||
-      types.length !== ALL_TYPES.length ||
-      games.length !== ALL_GAMES.length ||
+      types.length > 0 ||
+      games.length > 0 ||
       free ||
       past
     );
@@ -108,8 +129,8 @@ export default function EventsExplore({ canCreate }: Props) {
     setQ("");
     setOrgBilbo(true);
     setOrgOtros(true);
-    setTypes([...ALL_TYPES]);
-    setGames([...ALL_GAMES]);
+    setTypes([]);
+    setGames([]);
     setFree(false);
     setPast(false);
   };
@@ -122,8 +143,8 @@ export default function EventsExplore({ canCreate }: Props) {
       if (orgBilbo) orgsList.push("bilbohammer");
       if (orgOtros) orgsList.push("otros");
       if (orgsList.length === 1) params.set("orgs", orgsList.join(","));
-      if (types.length && types.length < ALL_TYPES.length) params.set("types", types.join(","));
-      if (games.length && games.length < ALL_GAMES.length) params.set("games", games.join(","));
+      if (types.length) params.set("types", types.join(","));
+      if (games.length) params.set("games", games.join(","));
       if (free) params.set("free", "1");
       if (past) params.set("past", "1");
       params.set("sort", sort);
@@ -186,9 +207,10 @@ export default function EventsExplore({ canCreate }: Props) {
       type="button"
       onClick={onClick}
       className={clsx(
-        "rounded-full border px-4 py-1.5 text-sm transition",
-        "border-[var(--hairline)] bg-[var(--card)] text-[var(--muted)]",
-        active && "border-[var(--accent)] bg-[var(--accent-50)] text-[var(--accent-600)]"
+        "rounded-full border px-4 py-1.5 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-600)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--card)]",
+        active
+          ? "border-[var(--accent-600)] bg-[var(--accent-50)] text-[var(--accent-600)] font-semibold shadow-[0_0_0_1px_rgba(14,165,233,0.35)]"
+          : "border-[var(--hairline)] bg-[var(--card)] text-[var(--muted)] hover:text-[var(--text)]"
       )}
       aria-pressed={active}
     >
@@ -300,6 +322,23 @@ export default function EventsExplore({ canCreate }: Props) {
             const where = [ev.venueName, ev.city].filter(Boolean).join(" - ");
             const roles = Array.isArray(ev.roles) ? (ev.roles as RoleEntry[]) : [];
             const organizers: React.ReactNode[] = [];
+            const generalAmount = parseAmount(ev.priceGeneral);
+            const sociosAmount = parseAmount(ev.priceSocios);
+            const hasPriceInfo = generalAmount != null || sociosAmount != null;
+            const allKnownPricesAreFree =
+              hasPriceInfo &&
+              (generalAmount == null || generalAmount <= 0) &&
+              (sociosAmount == null || sociosAmount <= 0);
+            const priceBadges: string[] = [];
+
+            if (!hasPriceInfo || allKnownPricesAreFree) {
+              priceBadges.push("Entrada gratuita");
+            } else {
+              const generalLabel = describePrice(generalAmount, "General");
+              const sociosLabel = describePrice(sociosAmount, "Socios");
+              if (generalLabel) priceBadges.push(generalLabel);
+              if (sociosLabel) priceBadges.push(sociosLabel);
+            }
 
             (ev.organizations || []).forEach((name, index) => {
               if (!name) return;
@@ -345,6 +384,18 @@ export default function EventsExplore({ canCreate }: Props) {
                           <React.Fragment key={index}>{index > 0 ? ", " : null}{node}</React.Fragment>
                         ))}
                       </span>
+                    </div>
+                  )}
+                  {priceBadges.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {priceBadges.map((label) => (
+                        <span
+                          key={label}
+                          className="rounded-full border border-[var(--accent-600)] bg-[var(--accent-50)] px-3 py-0.5 text-xs font-medium text-[var(--accent-600)]"
+                        >
+                          {label}
+                        </span>
+                      ))}
                     </div>
                   )}
                   {tags.length > 0 && (

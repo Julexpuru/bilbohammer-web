@@ -1,9 +1,11 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/galeria/page": "app/galeria/page.js",
   "/page": "app/page.js",
   "/eventos/page": "app/eventos/page.js",
-  "/galeria/[albumId]/page": "app/galeria/[albumId]/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/events/search/route": "app/api/events/search/route.js"
+  "/galeria/page": "app/galeria/page.js",
+  "/eventos/[slug]/page": "app/eventos/[slug]/page.js",
+  "/api/events/route": "app/api/events/route.js",
+  "/novedades/page": "app/novedades/page.js",
+  "/api/posts/route": "app/api/posts/route.js",
+  "/api/members/summary/route": "app/api/members/summary/route.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
 }

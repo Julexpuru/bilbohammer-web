@@ -11,30 +11,35 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/galeria/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/galeria/page.js"
-    ],
     "/eventos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/eventos/page.js"
     ],
-    "/mi-perfil/page": [
+    "/eventos/[slug]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/mi-perfil/page.js"
+      "static/chunks/app/eventos/[slug]/page.js"
     ],
     "/galeria/[albumId]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/galeria/[albumId]/page.js"
     ],
-    "/_not-found/page": [
+    "/eventos/[slug]/editar/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/eventos/[slug]/editar/page.js"
+    ],
+    "/galeria/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/galeria/page.js"
+    ],
+    "/novedades/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/novedades/page.js"
     ]
   }
 }

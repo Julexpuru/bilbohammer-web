@@ -78,3 +78,4 @@ cypress/videos/
 playwright-report/
 test-results/
 web/public/uploads/
+bilbohammer/web/public/uploads/
