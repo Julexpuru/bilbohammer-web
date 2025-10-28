@@ -11,6 +11,31 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
+    "/novedades/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/novedades/page.js"
+    ],
+    "/sobre-nosotros/quienes-somos/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/sobre-nosotros/quienes-somos/page.js"
+    ],
+    "/sobre-nosotros/tablon-de-socios/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/sobre-nosotros/tablon-de-socios/page.js"
+    ],
+    "/sobre-nosotros/contacto/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/sobre-nosotros/contacto/page.js"
+    ],
+    "/mi-perfil/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/mi-perfil/page.js"
+    ],
     "/eventos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -20,11 +45,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/eventos/[slug]/page.js"
-    ],
-    "/galeria/[albumId]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/galeria/[albumId]/page.js"
     ],
     "/eventos/[slug]/editar/page": [
       "static/chunks/webpack.js",
@@ -36,10 +56,20 @@
       "static/chunks/main-app.js",
       "static/chunks/app/galeria/page.js"
     ],
-    "/novedades/page": [
+    "/galeria/[albumId]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/novedades/page.js"
+      "static/chunks/app/galeria/[albumId]/page.js"
+    ],
+    "/sobre-nosotros/juegos/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/sobre-nosotros/juegos/page.js"
+    ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

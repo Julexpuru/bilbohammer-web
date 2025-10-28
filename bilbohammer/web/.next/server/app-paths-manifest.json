@@ -1,11 +1,15 @@
 {
-  "/page": "app/page.js",
-  "/eventos/page": "app/eventos/page.js",
-  "/galeria/page": "app/galeria/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/eventos/[slug]/page": "app/eventos/[slug]/page.js",
+  "/galeria/page": "app/galeria/page.js",
+  "/sobre-nosotros/juegos/page": "app/sobre-nosotros/juegos/page.js",
+  "/eventos/page": "app/eventos/page.js",
+  "/eventos/[slug]/editar/page": "app/eventos/[slug]/editar/page.js",
+  "/api/gallery/search/route": "app/api/gallery/search/route.js",
+  "/page": "app/page.js",
+  "/api/events/[id]/route": "app/api/events/[id]/route.js",
   "/api/events/route": "app/api/events/route.js",
-  "/novedades/page": "app/novedades/page.js",
-  "/api/posts/route": "app/api/posts/route.js",
   "/api/members/summary/route": "app/api/members/summary/route.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
+  "/api/posts/route": "app/api/posts/route.js",
+  "/api/events/search/route": "app/api/events/search/route.js"
 }

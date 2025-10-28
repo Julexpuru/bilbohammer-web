@@ -19,10 +19,10 @@ const primaryLinks = [
 ];
 
 const aboutLinks = [
-  { href: "/sobre-nosotros#quienes-somos", label: "¿Quiénes somos?" },
-  { href: "/sobre-nosotros#juegos", label: "Juegos" },
-  { href: "/sobre-nosotros#tablon-de-socios", label: "Tablón de socios" },
-  { href: "/sobre-nosotros#contacto", label: "Contacto" },
+  { href: "/sobre-nosotros/quienes-somos", label: "¿Quiénes somos?" },
+  { href: "/sobre-nosotros/juegos", label: "Juegos" },
+  { href: "/sobre-nosotros/tablon-de-socios", label: "Tablón de socios" },
+  { href: "/sobre-nosotros/contacto", label: "Contacto" },
 ];
 
 function useOutsideClick(ref: RefObject<HTMLElement | null>, handler: () => void) {

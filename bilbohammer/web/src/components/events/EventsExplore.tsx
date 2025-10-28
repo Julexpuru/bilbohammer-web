@@ -401,8 +401,8 @@ export default function EventsExplore({ canCreate }: Props) {
                   {tags.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {tags.map((tag) => (
-                        <span key={tag} className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-xs">
-                          {tag}
+                        <span key={tag} className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-xs uppercase tracking-wide">
+                          {tag.toUpperCase()}
                         </span>
                       ))}
                     </div>

@@ -98,6 +98,7 @@ model User {
   eventOrganizers      EventOrganizer[]
   eventHighlights      EventHighlight[]     @relation("EventHighlightPlayer")
   eventRankings        EventRankingEntry[]  @relation("EventRankingPlayer")
+  gameInfos            GameInfo[]
 }
 
 model Account {
@@ -467,6 +468,22 @@ model EventRankingEntry {
   player User? @relation("EventRankingPlayer", fields: [playerId], references: [id], onDelete: SetNull)
 
   @@unique([eventId, position])
+}
+
+model GameInfo {
+  id             String   @id @default(cuid())
+  game           Juego    @unique
+  summary        String   @db.Text
+  contentHtml    String   @db.Text
+  investment     String   @default("")
+  playtime       String   @default("")
+  learning       String   @default("Media")
+  contactUserId  Int?
+  contactNote    String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  contactUser User? @relation(fields: [contactUserId], references: [id], onDelete: SetNull)
 }
 
 
