@@ -1,65 +1,48 @@
+import {
+  fallbackGameList,
+  factionIconPath as legacyFactionIconPath,
+  gameIconPath as legacyGameIconPath,
+  toEnumKey as baseToEnumKey,
+  toUiId as baseToUiId,
+} from "@/lib/games";
 
-export type GameId =
-  | "w40k"
-  | "aos"
-  | "tow"
-  | "esdla"
-  | "bb"
-  | "marvel"
-  | "rol"
-  | "magic"
-  | "boardgames"
-  | "otros";
+export type GameId = string;
 
-export const GAME_TITLES: Record<GameId, string> = {
-  w40k: "Warhammer 40,000",
-  aos: "Age of Sigmar",
-  tow: "The Old World",
-  esdla: "ESDLA",
-  bb: "Blood Bowl",
-  marvel: "Marvel Crisis Protocol",
-  rol: "Rol",
-  magic: "Magic",
-  boardgames: "Juegos de mesa",
-  otros: "Otros",
-};
+const LEGACY_LIST = fallbackGameList();
+
+export const GAME_TITLES: Record<string, string> = Object.fromEntries(
+  LEGACY_LIST.map((entry) => [entry.slug, entry.name])
+);
 
 export function gameIconPath(id: GameId): string {
-  return `/assets/icons/games/${id}.svg`;
+  return legacyGameIconPath(id);
 }
 
 export function factionIconPath(game: "w40k" | "aos" | "tow", id: string): string {
-  return `/assets/icons/factions/${game}/${id}.svg`;
+  return legacyFactionIconPath(game, id);
 }
 
-// Prisma Enum -> UI id
 export function toUiId(enumValue: string): string {
   if (!enumValue) return enumValue;
   if (enumValue === "JUEGOS_DE_MESA") return "boardgames";
-  return enumValue.toLowerCase();
+  return baseToUiId(enumValue);
 }
 
-// UI id -> Prisma Enum label
 export function toEnumKey(uiId: string): string {
   if (!uiId) return uiId;
   if (uiId === "boardgames") return "JUEGOS_DE_MESA";
-  return uiId.toUpperCase();
+  return baseToEnumKey(uiId);
 }
 
-// Humaniza ids (FOO_BAR -> Foo Bar)
 export function humanizeId(id: string): string {
   if (!id) return id;
-  // excepciones mínimas
   if (id.toLowerCase() === "tau") return "T'au Empire";
   return id
     .replace(/_/g, " ")
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-/**
- * Facciones segun tu schema exacto (enums de Prisma) convertidas a UI ids (lowercase).
- * Si amplias el schema, añade aquí.
- */
+// Facciones según los enums de Prisma (se mantienen estáticos)
 export const FACTIONS_UI: Record<"w40k" | "aos" | "tow", { id: string; name: string }[]> = {
   w40k: [
     "ADEPTA_SORORITAS",
@@ -90,19 +73,28 @@ export const FACTIONS_UI: Record<"w40k" | "aos" | "tow", { id: string; name: str
     "THOUSAND_SONS",
     "TYRANIDS",
     "WORLD_EATERS",
-  ].map(e => ({ id: toUiId(e), name: humanizeId(toUiId(e)) })),
+  ].map((entry) => {
+    const ui = toUiId(entry);
+    return { id: ui, name: humanizeId(ui) };
+  }),
 
   aos: [
     "STORMCAST",
     "SLAVES_TO_DARKNESS",
     "SOULBLIGHT_GRAVELORDS",
     "IRONJAWZ",
-  ].map(e => ({ id: toUiId(e), name: humanizeId(toUiId(e)) })),
+  ].map((entry) => {
+    const ui = toUiId(entry);
+    return { id: ui, name: humanizeId(ui) };
+  }),
 
   tow: [
     "EMPIRE",
     "DWARFS",
     "HIGH_ELVES",
     "CHAOS",
-  ].map(e => ({ id: toUiId(e), name: humanizeId(toUiId(e)) })),
+  ].map((entry) => {
+    const ui = toUiId(entry);
+    return { id: ui, name: humanizeId(ui) };
+  }),
 };

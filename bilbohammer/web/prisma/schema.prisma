@@ -18,19 +18,6 @@ enum Rol {
   AMIGO
 }
 
-enum Juego {
-  W40K
-  AOS
-  TOW
-  ESDLA
-  BB
-  MARVEL
-  ROL
-  MAGIC
-  JUEGOS_DE_MESA
-  OTROS
-}
-
 enum PostType {
   ANUNCIO
   EVENTO
@@ -73,11 +60,10 @@ model User {
   passwordHash String?
 
   // Perfil propio
-  roles          Rol[]     @default([])
+  roles           Rol[]     @default([])
   nombre          String?
   nick            String?   @unique
   descripcion     String?
-  juegos          Juego[]
   etiquetas       String[]
   avatarUrl       String?
   isActive        Boolean   @default(true)
@@ -87,17 +73,21 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  posts         Post[]
-  faccionesW40K FaccionesW40K[]
-  faccionesAoS  FaccionesAoS[]
-  faccionesTOW  FaccionesTOW[]
-  galleryImages        GalleryImage[]
-  albumCollaborations  GalleryAlbumCollaborator[]
-  eventOrganizers      EventOrganizer[]
-  eventHighlights      EventHighlight[]     @relation("EventHighlightPlayer")
-  eventRankings        EventRankingEntry[]  @relation("EventRankingPlayer")
+  accounts            Account[]
+  sessions            Session[]
+  posts               Post[]
+  games               UserGame[]
+  faccionesW40K       FaccionesW40K[]
+  faccionesAoS        FaccionesAoS[]
+  faccionesTOW        FaccionesTOW[]
+  galleryImages       GalleryImage[]
+  albumCollaborations GalleryAlbumCollaborator[]
+  eventOrganizers     EventOrganizer[]
+  eventHighlights     EventHighlight[]           @relation("EventHighlightPlayer")
+  eventRankings       EventRankingEntry[]        @relation("EventRankingPlayer")
+  coordinatedGames    GameInfo[]                 @relation("GameInfoContact")
+  managedChangeLogs   UserChangeLog[]            @relation("UserChangeLogAdmin")
+  receivedChangeLogs  UserChangeLog[]            @relation("UserChangeLogTarget")
 }
 
 model Account {
@@ -119,6 +109,53 @@ model Account {
   @@unique([provider, providerAccountId])
 }
 
+model Game {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  slug          String   @unique
+  legacyEnumKey String?  @unique
+  iconImagePath String?
+  heroImagePath String?
+  isDefault     Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users  UserGame[]
+  events Event[]
+  info   GameInfo?
+}
+
+model UserGame {
+  userId    Int
+  gameId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@id([userId, gameId])
+}
+
+model GameInfo {
+  id            String   @id @default(cuid())
+  gameId        String   @unique
+  summary       String   @db.Text
+  contentHtml   String   @db.Text
+  investment    String   @default("")
+  playtime      String   @default("")
+  learning      String   @default("Media")
+  contactUserId Int?
+  contactNote   String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  game        Game  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  contactUser User? @relation("GameInfoContact", fields: [contactUserId], references: [id], onDelete: SetNull)
+}
+
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
@@ -134,6 +171,21 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model UserChangeLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  adminId    Int?
+  adminEmail String?
+  changes    Json
+  createdAt  DateTime @default(now())
+
+  user  User  @relation("UserChangeLogTarget", fields: [userId], references: [id], onDelete: Cascade)
+  admin User? @relation("UserChangeLogAdmin", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model Post {
@@ -152,53 +204,55 @@ model Post {
 }
 
 model Event {
-  id               String          @id @default(cuid())
-  title            String
-  bannerUrl        String?
-  startsAt         DateTime
-  endsAt           DateTime
-  location         String?
-  latitude         Float?
-  longitude        Float?
-  mapsUrl          String?
-  details          String?         @db.Text
-  recap            String?         @db.Text
-  status           EventStatus     @default(DRAFT)
-  type             EventType       @default(OTHER)
-  game             Juego?
-  priceGeneral     Decimal?        @db.Decimal(10, 2)
-  priceSocios      Decimal?        @db.Decimal(10, 2)
-  capacityMax      Int?
-  capacityCurrent  Int?            @default(0)
-  isInternal       Boolean         @default(false)
-  isMembersOnly    Boolean         @default(false)
-  showDescription  Boolean         @default(true)
-  showAttachments  Boolean         @default(true)
-  showLinks        Boolean         @default(true)
-  showStandings    Boolean         @default(true)
-  showRecap        Boolean         @default(true)
-  showGallery      Boolean         @default(true)
-  showLocation     Boolean         @default(true)
-  showTabDescription Boolean       @default(true)
-  showTabResources Boolean         @default(true)
-  showTabClassification Boolean    @default(true)
-  showTabChronicle Boolean         @default(true)
-  showTabGallery   Boolean         @default(true)
-  showTabLocation  Boolean         @default(true)
-  albumId          String?   @unique
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id                    String      @id @default(cuid())
+  title                 String
+  bannerUrl             String?
+  startsAt              DateTime
+  endsAt                DateTime
+  location              String?
+  latitude              Float?
+  longitude             Float?
+  mapsUrl               String?
+  details               String?     @db.Text
+  recap                 String?     @db.Text
+  status                EventStatus @default(DRAFT)
+  type                  EventType   @default(OTHER)
+  gameId                String?
+  priceGeneral          Decimal?    @db.Decimal(10, 2)
+  priceSocios           Decimal?    @db.Decimal(10, 2)
+  capacityMax           Int?
+  capacityCurrent       Int?        @default(0)
+  isInternal            Boolean     @default(false)
+  isMembersOnly         Boolean     @default(false)
+  showDescription       Boolean     @default(true)
+  showAttachments       Boolean     @default(true)
+  showLinks             Boolean     @default(true)
+  showStandings         Boolean     @default(true)
+  showRecap             Boolean     @default(true)
+  showGallery           Boolean     @default(true)
+  showLocation          Boolean     @default(true)
+  showTabDescription    Boolean     @default(true)
+  showTabResources      Boolean     @default(true)
+  showTabClassification Boolean     @default(true)
+  showTabChronicle      Boolean     @default(true)
+  showTabGallery        Boolean     @default(true)
+  showTabLocation       Boolean     @default(true)
+  chronicleArticleId    String?
+  albumId               String?     @unique
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
-  posts            Post[]
-  organizers       EventOrganizer[]
-  organizations    EventOrganization[]
-  tags             EventTag[]
-  attachments      EventAttachment[]
-  links            EventLink[]
-  highlights       EventHighlight[]
-  rankings         EventRankingEntry[]
-  galleryImages    GalleryImage[]
-  album            GalleryAlbum?   @relation("EventAlbum", fields: [albumId], references: [id], onDelete: SetNull)
+  posts         Post[]
+  organizers    EventOrganizer[]
+  organizations EventOrganization[]
+  tags          EventTag[]
+  attachments   EventAttachment[]
+  links         EventLink[]
+  highlights    EventHighlight[]
+  rankings      EventRankingEntry[]
+  galleryImages GalleryImage[]
+  album         GalleryAlbum?       @relation("EventAlbum", fields: [albumId], references: [id], onDelete: SetNull)
+  game          Game?               @relation(fields: [gameId], references: [id], onDelete: SetNull)
 }
 
 model Notification {
@@ -308,14 +362,14 @@ model GalleryAlbum {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  tags           GalleryAlbumTag[]
-  collaborators  GalleryAlbumCollaborator[]
-  images         GalleryImage[]
-  event          Event?    @relation("EventAlbum")
+  tags          GalleryAlbumTag[]
+  collaborators GalleryAlbumCollaborator[]
+  images        GalleryImage[]
+  event         Event?                     @relation("EventAlbum")
 }
 
 model GalleryImage {
-  id            String      @id @default(cuid())
+  id            String    @id @default(cuid())
   albumId       String?
   uploaderId    Int?
   storagePath   String
@@ -330,21 +384,21 @@ model GalleryImage {
   fileSize      Int?
   mimeType      String?
   position      Int?
-  likesCount    Int         @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  likesCount    Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  album    GalleryAlbum?             @relation(fields: [albumId], references: [id], onDelete: SetNull)
-  uploader User?                     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
-  eventId String?
-  event   Event?                     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  album    GalleryAlbum? @relation(fields: [albumId], references: [id], onDelete: SetNull)
+  uploader User?         @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  eventId  String?
+  event    Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
 }
 
 model GalleryAlbumTag {
-  id        String        @id @default(cuid())
+  id        String   @id @default(cuid())
   albumId   String
   label     String
-  createdAt DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   album GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
 
@@ -352,11 +406,11 @@ model GalleryAlbumTag {
 }
 
 model GalleryAlbumCollaborator {
-  id        String        @id @default(cuid())
+  id        String   @id @default(cuid())
   albumId   String
   userId    Int
   role      String?
-  createdAt DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   album GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
   user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -365,22 +419,22 @@ model GalleryAlbumCollaborator {
 }
 
 model Organization {
-  id        String                 @id @default(cuid())
-  slug      String                 @unique
+  id        String   @id @default(cuid())
+  slug      String   @unique
   name      String
-  isClub    Boolean                @default(false)
-  createdAt DateTime               @default(now())
-  updatedAt DateTime               @updatedAt
+  isClub    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  events    EventOrganization[]
+  events EventOrganization[]
 }
 
 model EventOrganization {
-  id             String        @id @default(cuid())
+  id             String   @id @default(cuid())
   eventId        String
   organizationId String
   role           String?
-  createdAt      DateTime      @default(now())
+  createdAt      DateTime @default(now())
 
   event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -469,4 +523,8 @@ model EventRankingEntry {
   @@unique([eventId, position])
 }
 
-
+model SiteContent {
+  key       String   @id
+  content   Json
+  updatedAt DateTime @updatedAt
+}

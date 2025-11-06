@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, FormEvent, MouseEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -9,11 +9,13 @@ import type {
   EventHighlightType,
   EventStatus,
   EventType,
-  Juego,
 } from "@prisma/client";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { uploadAttachmentFile, uploadBannerFile } from "@/lib/events/uploads";
 import { slugify } from "@/lib/slugify";
+import type { ArticleCategory } from "@/app/novedades/data";
+
+type Juego = string;
 
 export type EventFormInitialData = {
   id: string;
@@ -49,6 +51,12 @@ export type EventFormInitialData = {
   showTabChronicle: boolean;
   showTabGallery: boolean;
   showTabLocation: boolean;
+  chronicleArticleId: string | null;
+  chronicleArticleTitle: string | null;
+  chronicleArticleSlug: string | null;
+  chronicleArticleCategory: ArticleCategory | null;
+  chronicleArticleSummary: string | null;
+  chronicleArticleDate: string | null;
   albumId: string | null;
   tags: string[];
   organizers: {
@@ -197,6 +205,7 @@ type EventFormState = {
   showTabChronicle: boolean;
   showTabGallery: boolean;
   showTabLocation: boolean;
+  chronicleArticleId: string;
   albumId: string;
   tags: string[];
   lockedTags: string[];
@@ -223,6 +232,15 @@ type AlbumSearchResult = {
   id: string;
   slug: string;
   title: string;
+};
+
+type ChronicleSearchResult = {
+  id: string;
+  slug: string;
+  title: string;
+  category: ArticleCategory;
+  summary: string | null;
+  date: string | null;
 };
 const EVENT_STATUS_OPTIONS: { value: EventStatus; label: string }[] = [
   { value: "DRAFT", label: "Borrador" },
@@ -394,6 +412,25 @@ const NUMBER_FIELDS_HELPER = {
   capacityCurrent: "Aforo actual debe ser un entero mayor o igual a 0.",
 } as const;
 
+const LINKED_VISIBILITY_FIELDS: Array<{ tab: BooleanField; linked: BooleanField[] }> = [
+  { tab: "showTabDescription", linked: ["showDescription"] },
+  { tab: "showTabChronicle", linked: ["showRecap"] },
+  { tab: "showTabGallery", linked: ["showGallery"] },
+  { tab: "showTabLocation", linked: ["showLocation"] },
+];
+
+function normalizeLinkedVisibilityFlags(state: EventFormState): EventFormState {
+  const next = { ...state };
+  LINKED_VISIBILITY_FIELDS.forEach(({ tab, linked }) => {
+    const normalizedValue = Boolean(next[tab] && linked.every((field) => next[field]));
+    next[tab] = normalizedValue;
+    linked.forEach((field) => {
+      next[field] = normalizedValue;
+    });
+  });
+  return next;
+}
+
 function generateKey() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -447,6 +484,7 @@ function buildInitialState(initialData?: EventFormInitialData): EventFormState {
       showTabChronicle: true,
       showTabGallery: true,
       showTabLocation: true,
+      chronicleArticleId: "",
       albumId: "",
       tags: [],
       lockedTags: [],
@@ -460,7 +498,13 @@ function buildInitialState(initialData?: EventFormInitialData): EventFormState {
     const systemTags = computeSystemTags(baseState.type, baseState.game);
     const { tags, lockedTags } = syncSystemTags(baseState.tags, systemTags);
     const organizations = ensureBilboOrganization(baseState.organizations);
-    return { ...baseState, tags, lockedTags, organizations };
+    const stateWithDerived: EventFormState = {
+      ...baseState,
+      tags,
+      lockedTags,
+      organizations,
+    };
+    return normalizeLinkedVisibilityFlags(stateWithDerived);
   }
 
   const baseState: EventFormState = {
@@ -499,6 +543,7 @@ function buildInitialState(initialData?: EventFormInitialData): EventFormState {
     showTabChronicle: initialData.showTabChronicle,
     showTabGallery: initialData.showTabGallery,
     showTabLocation: initialData.showTabLocation,
+    chronicleArticleId: initialData.chronicleArticleId ?? "",
     albumId: initialData.albumId ?? "",
     tags: [...initialData.tags],
     lockedTags: [],
@@ -561,7 +606,13 @@ function buildInitialState(initialData?: EventFormInitialData): EventFormState {
     }),
   }));
   const organizations = ensureBilboOrganization(mappedOrganizations);
-  return { ...baseState, tags, lockedTags, organizations };
+  const stateWithDerived: EventFormState = {
+    ...baseState,
+    tags,
+    lockedTags,
+    organizations,
+  };
+  return normalizeLinkedVisibilityFlags(stateWithDerived);
 }
 
 function extractFileNameFromUrl(url: string): string {
@@ -666,10 +717,22 @@ function useMemberSearch(query: string) {
 }
 export default function EventForm({ mode, initialData }: EventFormProps) {
   const router = useRouter();
+  const initialChronicle: ChronicleSearchResult | null = initialData?.chronicleArticleId
+    ? {
+        id: initialData.chronicleArticleId,
+        slug: initialData.chronicleArticleSlug ?? "",
+        title: initialData.chronicleArticleTitle ?? "Crónica enlazada",
+        category: initialData.chronicleArticleCategory ?? "chronicles",
+        summary: initialData.chronicleArticleSummary ?? null,
+        date: initialData.chronicleArticleDate ?? null,
+      }
+    : null;
+  const [currentEventId, setCurrentEventId] = useState<string | null>(initialData?.id ?? null);
   const [state, setState] = useState<EventFormState>(() => buildInitialState(initialData));
   const [tagInput, setTagInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const skipRedirectRef = useRef(false);
   const [memberSelectionTarget, setMemberSelectionTarget] = useState<string | null>(null);
   const [memberNotice, setMemberNotice] = useState<string | null>(null);
   const { results: memberResults, loading: memberLoading, error: memberError } = useMemberSearch(searchTerm);
@@ -693,6 +756,13 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
   const [albumCreateError, setAlbumCreateError] = useState<string | null>(null);
   const [albumCreateSuccess, setAlbumCreateSuccess] = useState<string | null>(null);
   const [albumDraft, setAlbumDraft] = useState<AlbumDraftState>(() => buildAlbumDraftFromEvent(buildInitialState(initialData)));
+  const [chronicleQuery, setChronicleQuery] = useState(initialChronicle?.title ?? "");
+  const [chronicleResults, setChronicleResults] = useState<ChronicleSearchResult[]>([]);
+  const [chronicleBusy, setChronicleBusy] = useState(false);
+  const [chronicleActionBusy, setChronicleActionBusy] = useState(false);
+  const [chronicleLoading, setChronicleLoading] = useState(false);
+  const [chronicleError, setChronicleError] = useState<string | null>(null);
+  const [selectedChronicle, setSelectedChronicle] = useState<ChronicleSearchResult | null>(initialChronicle);
   const [activeTab, setActiveTab] = useState<'description' | 'resources' | 'stories' | 'gallery' | 'location'>('description');
 
   useEffect(() => {
@@ -704,6 +774,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
   }, [initialData]);
 
   const { title, startsAt, location, type, game } = state;
+  const chronicleQueryTrimmed = chronicleQuery.trim();
 
   useEffect(() => {
     if (albumCreatorOpen) {
@@ -737,6 +808,110 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       setBannerPreview(state.bannerUrl);
     }
   }, [state.bannerUrl, bannerFile]);
+
+  useEffect(() => {
+    const chronicleId = state.chronicleArticleId.trim();
+    if (!chronicleId) {
+      setSelectedChronicle(null);
+      return;
+    }
+    if (selectedChronicle && selectedChronicle.id === chronicleId) {
+      return;
+    }
+
+    let cancelled = false;
+    setChronicleLoading(true);
+    setChronicleError(null);
+
+    fetch(`/api/novedades/chronicles/search?id=${encodeURIComponent(chronicleId)}`)
+      .then(async (response) => {
+        if (!response.ok) {
+          const data = await response.json().catch(() => null);
+          throw new Error(data?.error ?? "No se pudo cargar la cronica enlazada.");
+        }
+        const data = (await response.json()) as { results: ChronicleSearchResult[] };
+        if (!cancelled) {
+          const chronicle = data.results[0] ?? null;
+          setSelectedChronicle(chronicle);
+          if (chronicle) {
+            setChronicleQuery(chronicle.title);
+          }
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setChronicleError(error instanceof Error ? error.message : "No se pudo cargar la cronica enlazada.");
+          setSelectedChronicle(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setChronicleLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state.chronicleArticleId]);
+
+  useEffect(() => {
+    if (chronicleActionBusy) {
+      return;
+    }
+    const trimmed = chronicleQuery.trim();
+    if (!trimmed) {
+      setChronicleResults([]);
+      setChronicleError(null);
+      setChronicleBusy(false);
+      return;
+    }
+
+    if (trimmed.length < 2) {
+      setChronicleResults([]);
+      setChronicleBusy(false);
+      return;
+    }
+
+    if (selectedChronicle && selectedChronicle.title.trim().toLowerCase() === trimmed.toLowerCase()) {
+      setChronicleResults([]);
+      setChronicleBusy(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setChronicleBusy(true);
+      setChronicleError(null);
+      try {
+        const response = await fetch(
+          `/api/novedades/chronicles/search?q=${encodeURIComponent(trimmed)}`,
+          {
+            signal: controller.signal,
+          },
+        );
+        if (!response.ok) {
+          const data = await response.json().catch(() => null);
+          throw new Error(data?.error ?? "No se pudo buscar cronicas.");
+        }
+        const data = (await response.json()) as { results: ChronicleSearchResult[] };
+        setChronicleResults(data.results);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setChronicleError(error instanceof Error ? error.message : "No se pudo buscar cronicas.");
+        setChronicleResults([]);
+      } finally {
+        if (!controller.signal.aborted) {
+          setChronicleBusy(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [chronicleQuery, selectedChronicle, chronicleActionBusy]);
 
   useEffect(() => {
     const trimmed = albumQuery.trim();
@@ -967,7 +1142,9 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     });
   }
 
-  async function handleAlbumCreateSubmit(event?: FormEvent<HTMLFormElement>) {
+  async function handleAlbumCreateSubmit(
+    event?: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>
+  ) {
     event?.preventDefault();
     setAlbumCreateError(null);
     setAlbumCreateSuccess(null);
@@ -1122,6 +1299,76 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     });
   }
 
+  const handleChronicleSelect = useCallback(
+    (chronicle: ChronicleSearchResult) => {
+      setSelectedChronicle(chronicle);
+      setChronicleQuery(chronicle.title);
+      setChronicleResults([]);
+      setChronicleError(null);
+      updateField("chronicleArticleId", chronicle.id);
+    },
+    [updateField],
+  );
+
+  const handleChronicleClear = useCallback(() => {
+    setSelectedChronicle(null);
+    setChronicleQuery("");
+    setChronicleResults([]);
+    setChronicleError(null);
+    updateField("chronicleArticleId", "");
+  }, [updateField]);
+
+  const handleChronicleCreate = useCallback(async () => {
+    setChronicleError(null);
+    setChronicleActionBusy(true);
+    try {
+      const eventId = await persistEventSilently();
+      if (!eventId) {
+        setChronicleError("No se pudieron guardar los cambios del evento. Revisa los campos marcados e intentalo de nuevo.");
+        return;
+      }
+      const returnUrl = `/eventos/${eventId}/editar`;
+      router.push(
+        `/novedades/nueva?category=chronicles&linkEvent=${encodeURIComponent(
+          eventId,
+        )}&returnTo=${encodeURIComponent(returnUrl)}`,
+      );
+    } catch (error) {
+      setChronicleError(
+        error instanceof Error ? error.message : "No se pudo preparar la creacion de la cronica.",
+      );
+    } finally {
+      setChronicleActionBusy(false);
+    }
+  }, [persistEventSilently, router]);
+
+  const handleChronicleEdit = useCallback(async () => {
+    if (!selectedChronicle || !selectedChronicle.slug) {
+      return;
+    }
+    setChronicleError(null);
+    setChronicleActionBusy(true);
+    try {
+      const eventId = await persistEventSilently();
+      if (!eventId) {
+        setChronicleError("No se pudieron guardar los cambios del evento. Revisa los campos marcados e intentalo de nuevo.");
+        return;
+      }
+      const returnUrl = `/eventos/${eventId}/editar`;
+      router.push(
+        `/novedades/${selectedChronicle.category}/${selectedChronicle.slug}/editar?linkEvent=${encodeURIComponent(
+          eventId,
+        )}&returnTo=${encodeURIComponent(returnUrl)}`,
+      );
+    } catch (error) {
+      setChronicleError(
+        error instanceof Error ? error.message : "No se pudo preparar la edicion de la cronica.",
+      );
+    } finally {
+      setChronicleActionBusy(false);
+    }
+  }, [persistEventSilently, router, selectedChronicle]);
+
   function handleAddTag() {
     const trimmed = tagInput.trim();
     if (!trimmed || duplicateTag) return;
@@ -1237,7 +1484,9 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!canSubmit) return;
+    const skipRedirect = skipRedirectRef.current;
+    skipRedirectRef.current = false;
+    if (!canSubmit) return null;
 
     const errors: Record<string, string> = {};
 
@@ -1396,12 +1645,12 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       })
       .filter(
         (item): item is {
-          id?: string;
-          slug?: string;
-          name?: string;
-          isClub?: boolean;
+          id: string | undefined;
+          slug: string | undefined;
+          name: string | undefined;
+          isClub: boolean;
           role: string | null;
-        } => Boolean(item)
+        } => item !== null
       );
 
     if (state.organizations.length && preparedOrganizations.length !== state.organizations.length) {
@@ -1546,6 +1795,8 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     setSubmitError(null);
     setSubmitBusy(true);
 
+    let persistedEventId: string | null = null;
+
     const computedIsInternal = preparedOrganizers.length > 0;
 
     const showDescription = state.showTabDescription;
@@ -1594,6 +1845,9 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       showTabChronicle: state.showTabChronicle,
       showTabGallery: state.showTabGallery,
       showTabLocation: state.showTabLocation,
+      chronicleArticleId: state.chronicleArticleId.trim()
+        ? state.chronicleArticleId.trim()
+        : null,
       albumId: state.albumId.trim() || null,
       tags: state.tags.map((tag) => tag.trim()).filter(Boolean),
       organizers: preparedOrganizers,
@@ -1624,9 +1878,15 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       const data = (await response.json()) as { event?: { id: string } };
       const eventId = data.event?.id ?? initialData?.id ?? "";
       if (eventId) {
+        if (!currentEventId) {
+          setCurrentEventId(eventId);
+        }
+        persistedEventId = eventId;
+      }
+      if (eventId && !skipRedirect) {
         router.push(`/eventos/${eventId}`);
         router.refresh();
-      } else if (mode === "create") {
+      } else if (!skipRedirect && mode === "create") {
         router.push("/eventos");
       }
     } catch (error) {
@@ -1638,6 +1898,25 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     } finally {
       setSubmitBusy(false);
     }
+    return persistedEventId;
+  }
+
+  async function persistEventSilently(overrides?: Partial<EventFormState>) {
+    if (overrides) {
+      await new Promise<void>((resolve) => {
+        setState((prev) => {
+          resolve();
+          return { ...prev, ...overrides };
+        });
+      });
+    }
+    skipRedirectRef.current = true;
+    const fakeEvent = {
+      preventDefault() {},
+      stopPropagation() {},
+    } as unknown as React.FormEvent<HTMLFormElement>;
+    const result = await handleSubmit(fakeEvent);
+    return result;
   }
 
   async function handleDelete() {
@@ -2590,20 +2869,131 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                 Mostrar pestaña Cronica
               </label>
             </div>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Cronica</span>
-                  <RichTextEditor
-                    value={state.recap}
-                    onChange={(html) => updateField("recap", html)}
-                    placeholder="Cuenta que sucedio durante el evento..."
-                  />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+            <div className="space-y-6">
+              <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
                     <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white">
-                      Destacados
+                      Cronica en Novedades
                     </h3>
+                    <p className="text-xs text-[var(--muted)]">
+                      Vincula la cronica del evento publicada en la seccion de novedades o crea una nueva sin salir del editor.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="rounded-2xl border border-white/20 px-3 py-2 text-xs font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={handleChronicleCreate}
+                      disabled={chronicleActionBusy || submitBusy || deleteBusy}
+                    >
+                      Nueva cronica
+                    </button>
+                    {selectedChronicle && selectedChronicle.slug && (
+                      <button
+                        type="button"
+                        className="rounded-2xl border border-white/20 px-3 py-2 text-xs font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={handleChronicleEdit}
+                        disabled={chronicleActionBusy || submitBusy || deleteBusy}
+                      >
+                        Editar cronica
+                      </button>
+                    )}
+                    {selectedChronicle && selectedChronicle.slug && (
+                      <Link
+                        href={`/novedades/${selectedChronicle.category}/${selectedChronicle.slug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-2xl border border-white/20 px-3 py-2 text-xs font-semibold text-white transition hover:border-white/40"
+                      >
+                        Ver cronica
+                      </Link>
+                    )}
+                    {selectedChronicle && (
+                      <button
+                        type="button"
+                        className="rounded-2xl border border-red-400/40 px-3 py-2 text-xs font-semibold text-red-200 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={handleChronicleClear}
+                        disabled={chronicleActionBusy}
+                      >
+                        Desvincular
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {selectedChronicle ? (
+                  <div className="space-y-1 rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <p className="text-sm font-semibold text-white">{selectedChronicle.title}</p>
+                    <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+                      {selectedChronicle.category === "chronicles" ? "Cronicas" : selectedChronicle.category}
+                    </p>
+                    {selectedChronicle.summary && (
+                      <p className="text-sm text-[var(--muted)]">{selectedChronicle.summary}</p>
+                    )}
+                    {selectedChronicle.date && (
+                      <p className="text-xs text-[var(--muted)]">Fecha: {selectedChronicle.date}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--muted)]">
+                    No hay ninguna cronica enlazada todavia. Puedes crear una nueva o buscarla entre las publicadas.
+                  </p>
+                )}
+                <div className="space-y-2">
+                  <label className="grid gap-1">
+                    <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+                      Buscar cronica existente
+                    </span>
+                    <input
+                      className="rounded-2xl border border-white/15 bg-black/30 px-3 py-2 text-sm focus:border-white/40 focus:outline-none"
+                      value={chronicleQuery}
+                      onChange={(event) => {
+                        setChronicleQuery(event.target.value);
+                        setChronicleError(null);
+                      }}
+                      placeholder="Escribe el titulo o resumen..."
+                      disabled={chronicleActionBusy}
+                    />
+                  </label>
+                  {chronicleLoading && (
+                    <p className="text-xs text-[var(--muted)]">Cargando datos de la cronica vinculada...</p>
+                  )}
+                  {chronicleBusy && !chronicleLoading && (
+                    <p className="text-xs text-[var(--muted)]">Buscando cronicas coincidentes...</p>
+                  )}
+                  {chronicleError && <p className="text-xs text-red-300">{chronicleError}</p>}
+                  {chronicleResults.length > 0 && (
+                    <ul className="space-y-2">
+                      {chronicleResults.map((chronicle) => (
+                        <li key={chronicle.id}>
+                          <button
+                            type="button"
+                            className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-left text-sm text-white transition hover:border-white/40"
+                            onClick={() => handleChronicleSelect(chronicle)}
+                          >
+                            <span className="font-medium">{chronicle.title}</span>
+                            {chronicle.summary && (
+                              <span className="mt-1 block text-xs text-[var(--muted)]">
+                                {chronicle.summary}
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {!chronicleBusy && chronicleResults.length === 0 && chronicleQueryTrimmed.length >= 2 && (
+                    <p className="text-xs text-[var(--muted)]">
+                      No se encontraron cronicas que coincidan con la busqueda.
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white">
+                    Destacados
+                  </h3>
                     <button
                       type="button"
                       className="rounded-2xl border border-white/20 px-3 py-2 text-sm text-white hover:border-white/40"

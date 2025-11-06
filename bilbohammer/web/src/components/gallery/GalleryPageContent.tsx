@@ -68,7 +68,7 @@ function computeReactionWeight(likes: number, comments: number) {
 function calculateAlbumMetrics(album: GalleryAlbum) {
   const primaryImage = album.images[0];
   const recency = computeRecencyWeight(album.dateISO, primaryImage?.takenAt ?? primaryImage?.createdAt);
-  const likes = album.images.reduce((total, image) => total + image.likes, 0);
+  const likes = album.images.reduce((total, image) => total + (image.likesCount ?? image.likes ?? 0), 0);
   const comments = album.images.reduce((total, image) => total + image.comments.length, 0);
   const reactions = computeReactionWeight(likes, comments);
   const score = recency * 0.6 + reactions * 0.4 + 0.25;
@@ -77,7 +77,7 @@ function calculateAlbumMetrics(album: GalleryAlbum) {
 
 function calculatePhotoMetrics(photo: GalleryStandalonePhoto) {
   const recency = computeRecencyWeight(photo.image.takenAt, photo.image.createdAt);
-  const reactions = computeReactionWeight(photo.image.likes, photo.image.comments.length);
+  const reactions = computeReactionWeight(photo.image.likesCount ?? photo.image.likes ?? 0, photo.image.comments.length);
   const score = recency * 0.6 + reactions * 0.4 + 0.2;
   return { recency, reactions, score, preview: photo.image };
 }

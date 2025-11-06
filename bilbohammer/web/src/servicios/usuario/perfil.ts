@@ -1,7 +1,7 @@
 ﻿import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { UserProfile } from "@/types/profile";
-import { GAMES, FACTIONS, enumFactionToUi, factionIconPath } from "@/lib/games";
+import { FACTIONS, enumFactionToUi, factionIconPath, gameIconPath } from "@/lib/games";
 
 type AnyObject = Record<string, any>;
 
@@ -30,7 +30,10 @@ export async function getCurrentUserProfile(): Promise<UserProfile> {
       emailVerified: true,
       roles: true,
       etiquetas: true,
-      juegos: true,
+      games: {
+        include: { game: true },
+        orderBy: { game: { sortOrder: "asc" } },
+      },
       isActive: true,
       lastLoginAt: true,
       membershipSince: true,
@@ -62,23 +65,30 @@ export async function getCurrentUserProfile(): Promise<UserProfile> {
     };
   }
 
-  const gameIds = (user.juegos || []).map((j: any) => String(j).toLowerCase());
-  const games = GAMES.filter((g) => gameIds.includes(g.id)).map((g) => {
-    let selectedFactionIds: string[] = [];
-    if (g.id === "w40k") selectedFactionIds = (user.faccionesW40K || []).map((ev: any) => enumFactionToUi("w40k", String(ev)));
-    if (g.id === "aos") selectedFactionIds = (user.faccionesAoS || []).map((ev: any) => enumFactionToUi("aos", String(ev)));
-    if (g.id === "tow") selectedFactionIds = (user.faccionesTOW || []).map((ev: any) => enumFactionToUi("tow", String(ev)));
+  const games = (user.games || []).map((entry: any) => {
+    const slug: string | null = entry.game?.slug ?? entry.gameId ?? null;
+    if (!slug) return null;
+    const name: string = entry.game?.name ?? slug;
+    const iconUrl: string | null = entry.game?.iconImagePath ?? gameIconPath(slug);
 
-    const list = (FACTIONS as AnyObject)[g.id] || [];
+    let selectedFactionIds: string[] = [];
+    if (slug === "w40k")
+      selectedFactionIds = (user.faccionesW40K || []).map((ev: any) => enumFactionToUi("w40k", String(ev)));
+    if (slug === "aos")
+      selectedFactionIds = (user.faccionesAoS || []).map((ev: any) => enumFactionToUi("aos", String(ev)));
+    if (slug === "tow")
+      selectedFactionIds = (user.faccionesTOW || []).map((ev: any) => enumFactionToUi("tow", String(ev)));
+
+    const list = (FACTIONS as AnyObject)[slug] || [];
     return {
-      id: g.id,
-      name: g.name,
-      iconUrl: g.iconUrl ?? null,
+      id: slug,
+      name,
+      iconUrl,
       factions: list
         .filter((f: AnyObject) => selectedFactionIds.includes(f.id))
-        .map((f: AnyObject) => ({ ...f, iconUrl: f.iconUrl ?? factionIconPath(g.id as any, f.id) })),
+        .map((f: AnyObject) => ({ ...f, iconUrl: f.iconUrl ?? factionIconPath(slug as any, f.id) })),
     };
-  });
+  }).filter((value): value is NonNullable<typeof value> => value !== null);
 
   const roles = normalizeRoles(user.roles ?? fallbackRoles);
 

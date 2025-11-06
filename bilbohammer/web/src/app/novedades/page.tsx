@@ -1,8 +1,34 @@
-export default function Page() {
+import { auth } from "@/auth";
+import { extractRoles } from "@/lib/roles";
+import { getArticlesGrouped } from "@/lib/novedades-repository";
+
+import { NovedadesContent } from "./NovedadesContent";
+
+export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "Novedades | Bilbohammer",
+  description: "Explora noticias, crónicas y contenidos exclusivos para socios del club Bilbohammer.",
+};
+
+export default async function NovedadesPage() {
+  const session = await auth();
+  const roles = extractRoles(session);
+  const isSocio = roles.includes("SOCIO");
+  const canManage = roles.some((role) => role === "ADMIN" || role === "JUNTA" || role === "REDACTOR");
+  const articlesByCategory = await getArticlesGrouped();
+
   return (
-    <section className="card">
-      <h1 className="text-2xl font-bold mb-2">Novedades</h1>
-      <p className="text-[var(--muted)]">Aquí aparecerán las últimas noticias del club.</p>
-    </section>
+    <main className="space-y-6">
+      <header className="rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-8 text-center sm:text-left">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--accent-600)]">Lo último del club</p>
+        <h1 className="mt-3 text-3xl font-bold text-[var(--text)] sm:text-4xl">Novedades</h1>
+        <p className="mt-3 text-sm text-[var(--muted)] sm:text-base">
+          Descubre las noticias más recientes, revive las crónicas de nuestras actividades y accede a contenido exclusivo si formas parte del club como socio.
+        </p>
+      </header>
+      <NovedadesContent articlesByCategory={articlesByCategory} showMembersTab={isSocio} canManage={canManage} />
+    </main>
   );
 }
+

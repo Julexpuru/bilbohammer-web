@@ -3,26 +3,12 @@
 import * as React from "react";
 import { useState, useCallback, memo } from "react";
 import { useSession } from "next-auth/react";
-import {
-  GAMES,
-  FACTIONS,
-  gameIconPath,
-  factionIconPath,
-} from "@/lib/games";
+import { FACTIONS, gameIconPath, factionIconPath } from "@/lib/games";
+import { useGamesCatalog } from "@/lib/use-games-catalog";
 
 import EditToolbar from "@/components/profile/EditToolbar";
 
-type GameId =
-  | "w40k"
-  | "aos"
-  | "tow"
-  | "esdla"
-  | "bb"
-  | "marvel"
-  | "rol"
-  | "magic"
-  | "boardgames"
-  | "otros";
+type GameId = string;
 
 type Profile = {
   email?: string | null;
@@ -34,9 +20,6 @@ type Profile = {
   games?: string[]; // UI ids
   factions?: Record<string, string[]>; // { w40k: [...], aos: [...], tow: [...] }
 };
-
-const ALL_GAMES = GAMES.map((g) => g.id) as GameId[];
-const gameName = (id: string) => GAMES.find((g) => g.id === id)?.name ?? id;
 
 // ============ Tiny image that never shows placeholder text ============
 type ImgProps = { cacheKey: string; src?: string | null; className?: string };
@@ -76,6 +59,8 @@ const Img = memo(
 
 export default function ClientEditWrapper({ profile }: { profile: Profile }) {
   const { update } = useSession();
+  const { games: catalogGames } = useGamesCatalog();
+  const gameOptions = catalogGames;
 
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -174,29 +159,38 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
   }
 
   const GameCheckbox = memo(
-    function GameCheckbox({ id, checked }: { id: GameId; checked: boolean }) {
+    function GameCheckbox({
+      option,
+      checked,
+    }: {
+      option: { slug: string; name: string; iconImagePath: string | null };
+      checked: boolean;
+    }) {
+      const slug = option.slug as GameId;
+      const label = option.name || slug;
+      const iconSrc = option.iconImagePath ?? gameIconPath(slug);
       return (
         <label className="flex items-center justify-between gap-3 px-2 py-1 rounded hover:bg-slate-800/60 border border-white/5 select-none">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-6 h-6 grid place-items-center">
               <Img
-                cacheKey={`game:${id}`}
-                src={gameIconPath(id)}
+                cacheKey={`game:${slug}`}
+                src={iconSrc}
                 className="w-6 h-6 object-contain opacity-90"
               />
             </div>
-            <span className="text-sm truncate">{gameName(id)}</span>
+            <span className="text-sm truncate">{label}</span>
           </div>
           <input
             type="checkbox"
             checked={checked}
-            onChange={() => toggleGameCb(id)}
+            onChange={() => toggleGameCb(slug)}
             className="w-4 h-4 accent-blue-600"
           />
         </label>
       );
     },
-    (a, b) => a.id === b.id && a.checked === b.checked
+    (a, b) => a.option.slug === b.option.slug && a.checked === b.checked && a.option.name === b.option.name && a.option.iconImagePath === b.option.iconImagePath
   );
 
   const FactionCheckbox = memo(
@@ -396,8 +390,16 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
                     <span className="text-xs opacity-70">Selecciona uno o varios</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {ALL_GAMES.map((id) => (
-                      <GameCheckbox key={id} id={id} checked={games.includes(id)} />
+                    {gameOptions.map((option) => (
+                      <GameCheckbox
+                        key={option.slug}
+                        option={{
+                          slug: option.slug,
+                          name: option.name,
+                          iconImagePath: option.iconImagePath,
+                        }}
+                        checked={games.includes(option.slug as GameId)}
+                      />
                     ))}
                   </div>
                 </div>

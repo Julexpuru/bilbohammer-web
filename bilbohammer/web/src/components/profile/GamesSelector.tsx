@@ -1,7 +1,8 @@
 "use client";
 
-import { GAMES, enumFactionToUi } from "@/lib/games";
+import { enumFactionToUi, gameIconPath } from "@/lib/games";
 import { PRISMA_W40K, PRISMA_AOS, PRISMA_TOW } from "@/lib/prisma-factions";
+import { useGamesCatalog } from "@/lib/use-games-catalog";
 
 export type GamesState = {
   selected: Set<string>; // game ids
@@ -23,7 +24,8 @@ export default function GamesSelector({
   state: GamesState;
   onChange: (next: GamesState) => void;
 }) {
-  const games = GAMES;
+  const { games: catalogGames } = useGamesCatalog();
+  const games = catalogGames;
 
   function toggleGame(id: string) {
     const next = new Set(state.selected);
@@ -51,14 +53,20 @@ export default function GamesSelector({
     <div className="space-y-3">
       <div className="border border-white/10 rounded-md">
         {games.map((g) => {
-          const checked = state.selected.has(g.id);
+          const slug = g.slug;
+          const checked = state.selected.has(slug);
+          const label = g.name || slug;
+          const iconSrc = g.iconImagePath ?? gameIconPath(slug);
           return (
-            <div key={g.id} className="flex items-center justify-between px-3 py-2 border-b border-white/10 last:border-b-0">
-              <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded bg-slate-800 grid place-items-center text-xs">{g.name[0]}</div>
-                <div className="text-sm">{g.name}</div>
+            <div key={slug} className="flex items-center justify-between px-3 py-2 border-b border-white/10 last:border-b-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-7 h-7 rounded bg-slate-800 grid place-items-center overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={iconSrc} alt="" className="h-7 w-7 object-contain" loading="lazy" decoding="async" />
+                </div>
+                <div className="text-sm truncate">{label}</div>
               </div>
-              <input type="checkbox" checked={checked} onChange={() => toggleGame(g.id)} />
+              <input type="checkbox" checked={checked} onChange={() => toggleGame(slug)} />
             </div>
           );
         })}

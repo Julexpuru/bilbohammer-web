@@ -82,10 +82,14 @@ export async function POST(request: Request) {
     const organizations = await resolveOrganizations(parsed.organizations);
     const isInternal = await computeInternalFlag(prisma, parsed.organizers, parsed.organizations, parsed.eventData.isInternal);
 
+    const { gameId, albumId, chronicleArticleId, ...eventData } = parsed.eventData;
     const event = await prisma.$transaction(async (tx) => {
       const created = await tx.event.create({
         data: {
-          ...parsed.eventData,
+          ...eventData,
+          ...(chronicleArticleId === undefined ? {} : { chronicleArticleId }),
+          ...(gameId ? { game: { connect: { id: gameId } } } : {}),
+          ...(albumId ? { album: { connect: { id: albumId } } } : {}),
           isInternal,
           tags: buildNestedCreate(parsed.tags, (label) => ({ label })),
           organizers: buildNestedCreate(parsed.organizers, (org) => org),

@@ -1,8 +1,8 @@
-
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toEnumKey, toUiId } from "@/lib/games_helpers";
+import { loadActiveGames, resolveGameIdsFromInput } from "@/lib/game-catalog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ type PatchBody = {
   nick?: string | null;
   membershipSince?: string | null;
   description?: string | null;
-  juegos?: string[]; // UI ids
+  juegos?: string[]; // UI ids (slugs) or legacy enum keys
   factions?: Record<string, string[]>; // { w40k: [...uiIds] }
   avatarUrl?: string | null;
 };
@@ -26,29 +26,16 @@ function pickAllowed(candidates: string[], allowed: string[]): string | null {
   for (const c of candidates) {
     if (allowedSet.has(c)) return c;
   }
-  const normAllowed = allowed.map(a => ({ a, n: normalize(a) }));
+  const normAllowed = allowed.map((a) => ({ a, n: normalize(a) }));
   for (const c of candidates) {
     const n = normalize(c);
-    const hit = normAllowed.find(x => x.n === n || x.n.includes(n) || n.includes(x.n));
+    const hit = normAllowed.find((x) => x.n === n || x.n.includes(n) || n.includes(x.n));
     if (hit) return hit.a;
   }
   return null;
 }
 
-const GAME_CANDIDATES: Record<string, string[]> = {
-  w40k: ["W40K", "WARHAMMER_40K", "WARHAMMER_40000", "WARHAMMER40K"],
-  aos: ["AOS", "AGE_OF_SIGMAR"],
-  tow: ["TOW", "THE_OLD_WORLD", "OLD_WORLD"],
-  esdla: ["ESDLA", "MIDDLE_EARTH", "LORD_OF_THE_RINGS", "EL_SENOR_DE_LOS_ANILLOS", "EL_SEÑOR_DE_LOS_ANILLOS"],
-  bb: ["BB", "BLOOD_BOWL"],
-  marvel: ["MARVEL", "MCP", "CRISIS_PROTOCOL"],
-  rol: ["ROL", "RPG", "ROLEPLAY"],
-  magic: ["MAGIC", "MTG"],
-  boardgames: ["BOARDGAMES", "BOARD_GAMES", "JUEGOS_DE_MESA"],
-  otros: ["OTROS", "OTHERS"],
-};
-
-function mapUiListToEnum(uiIds: string[], allowed: string[], extra: Record<string,string[]> = {}): string[] {
+function mapUiListToEnum(uiIds: string[], allowed: string[], extra: Record<string, string[]> = {}): string[] {
   const out: string[] = [];
   for (const id of uiIds) {
     const base = toEnumKey(id);
@@ -67,7 +54,7 @@ async function getEnumLabels(enumType: string): Promise<string[]> {
     WHERE lower(t.typname) = lower(${enumType})
     ORDER BY e.enumsortorder
   `;
-  return rows.map(r => r.enumlabel);
+  return rows.map((r) => r.enumlabel);
 }
 
 export async function PATCH(req: Request) {
@@ -75,50 +62,83 @@ export async function PATCH(req: Request) {
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = (await req.json()) as PatchBody;
 
-  const [allowedJuego, allowedW40K, allowedAoS, allowedTOW] = await Promise.all([
-    getEnumLabels("Juego"),
+  const [games, allowedW40K, allowedAoS, allowedTOW] = await Promise.all([
+    loadActiveGames(),
     getEnumLabels("FaccionesW40K"),
     getEnumLabels("FaccionesAoS"),
     getEnumLabels("FaccionesTOW"),
   ]);
 
   const uiJuegos = Array.isArray(body.juegos) ? body.juegos : undefined;
-  const enumJuegos = uiJuegos ? mapUiListToEnum(uiJuegos, allowedJuego, GAME_CANDIDATES) : undefined;
+  const gameIds = uiJuegos ? resolveGameIdsFromInput(uiJuegos, games) : undefined;
 
   const factions = body.factions;
-  const w40k = factions ? mapUiListToEnum((factions["w40k"] || []), allowedW40K) : undefined;
-  const aos  = factions ? mapUiListToEnum((factions["aos"]  || []), allowedAoS) : undefined;
-  const tow  = factions ? mapUiListToEnum((factions["tow"]  || []), allowedTOW.concat(["HIGH_ELVES","HIGHELVES"])) : undefined;
+  const w40k = factions ? mapUiListToEnum(factions["w40k"] || [], allowedW40K) : undefined;
+  const aos = factions ? mapUiListToEnum(factions["aos"] || [], allowedAoS) : undefined;
+  const tow = factions
+    ? mapUiListToEnum(factions["tow"] || [], allowedTOW.concat(["HIGH_ELVES", "HIGHELVES"]))
+    : undefined;
 
-  await prisma.user.update({
-  where: { email: session.user.email },
-  data: {
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+
+  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  const updateData: Record<string, unknown> = {
     ...(body.name !== undefined ? { name: body.name } : {}),
     ...(body.nick !== undefined ? { nick: body.nick } : {}),
-    ...(body.membershipSince !== undefined ? { membershipSince: (() => {
-      const v = body.membershipSince;
-      if (!v) return null;
-      const mmOnly = /^\d{4}-\d{2}$/.test(v) ? v.match(/^(\d{4})-(\d{2})$/)! : null;
-      if (mmOnly) {
-        const y = parseInt(mmOnly[1], 10);
-        const m = parseInt(mmOnly[2], 10) - 1;
-        return new Date(Date.UTC(y, m, 1));
-      }
-      const d = new Date(v);
-      if (!isNaN(d.getTime())) {
-        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
-      }
-      return null;
-    })() } : {}),
+    ...(body.membershipSince !== undefined
+      ? {
+          membershipSince: (() => {
+            const v = body.membershipSince;
+            if (!v) return null;
+            const mmOnly = /^\d{4}-\d{2}$/.test(v) ? v.match(/^(\d{4})-(\d{2})$/)! : null;
+            if (mmOnly) {
+              const y = parseInt(mmOnly[1], 10);
+              const m = parseInt(mmOnly[2], 10) - 1;
+              return new Date(Date.UTC(y, m, 1));
+            }
+            const d = new Date(v);
+            if (!isNaN(d.getTime())) {
+              return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+            }
+            return null;
+          })(),
+        }
+      : {}),
     ...(body.description !== undefined ? { descripcion: body.description } : {}),
-    ...(enumJuegos !== undefined ? { juegos: enumJuegos as any } : {}),
     ...(w40k !== undefined ? { faccionesW40K: w40k as any } : {}),
-    ...(aos  !== undefined ? { faccionesAoS:  aos  as any } : {}),
-    ...(tow  !== undefined ? { faccionesTOW: tow  as any } : {}),
-    ...(Object.prototype.hasOwnProperty.call(body, 'avatarUrl') ? { avatarUrl: body.avatarUrl } : {}),
-  },
-  select: { id: true }
-});
+    ...(aos !== undefined ? { faccionesAoS: aos as any } : {}),
+    ...(tow !== undefined ? { faccionesTOW: tow as any } : {}),
+    ...(Object.prototype.hasOwnProperty.call(body, "avatarUrl") ? { avatarUrl: body.avatarUrl } : {}),
+  };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: user.id },
+      data: updateData,
+      select: { id: true },
+    });
+
+    if (gameIds !== undefined) {
+      if (gameIds.length === 0) {
+        await tx.userGame.deleteMany({ where: { userId: user.id } });
+      } else {
+        await tx.userGame.deleteMany({
+          where: {
+            userId: user.id,
+            NOT: { gameId: { in: gameIds } },
+          },
+        });
+        await tx.userGame.createMany({
+          data: gameIds.map((gameId) => ({ userId: user.id, gameId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+  });
 
   return NextResponse.json({ ok: true });
 }
@@ -127,18 +147,36 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const u = await prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: { accounts: true },
+    include: {
+      accounts: true,
+      games: {
+        include: {
+          game: { select: { slug: true } },
+        },
+        orderBy: {
+          game: { sortOrder: "asc" },
+        },
+      },
+    },
   });
 
-  if (!u) return NextResponse.json(null);
+  if (!user) return NextResponse.json(null);
+
+  const { games, ...userData } = user;
 
   return NextResponse.json({
-    ...u,
-    juegos: Array.isArray(u.juegos) ? (u.juegos as any[]).map((e:any)=>toUiId(String(e))) : [],
-    faccionesW40K: Array.isArray(u.faccionesW40K) ? (u.faccionesW40K as any[]).map((e:any)=>toUiId(String(e))) : [],
-    faccionesAoS: Array.isArray(u.faccionesAoS) ? (u.faccionesAoS as any[]).map((e:any)=>toUiId(String(e))) : [],
-    faccionesTOW: Array.isArray(u.faccionesTOW) ? (u.faccionesTOW as any[]).map((e:any)=>toUiId(String(e))) : [],
+    ...userData,
+    juegos: games.map((entry) => entry.game?.slug ?? entry.gameId),
+    faccionesW40K: Array.isArray(user.faccionesW40K)
+      ? (user.faccionesW40K as any[]).map((e: any) => toUiId(String(e)))
+      : [],
+    faccionesAoS: Array.isArray(user.faccionesAoS)
+      ? (user.faccionesAoS as any[]).map((e: any) => toUiId(String(e)))
+      : [],
+    faccionesTOW: Array.isArray(user.faccionesTOW)
+      ? (user.faccionesTOW as any[]).map((e: any) => toUiId(String(e)))
+      : [],
   });
 }

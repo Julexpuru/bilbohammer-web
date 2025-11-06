@@ -14,6 +14,11 @@ export function Avatar({
   size?: number;
 }) {
   const chosen = avatarUrl || oauthAvatarUrl || null;
+  const [failed, setFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setFailed(false);
+  }, [avatarUrl, oauthAvatarUrl]);
 
   return (
     <div
@@ -21,12 +26,13 @@ export function Avatar({
       className="rounded-full border border-white/20 grid place-items-center overflow-hidden bg-gradient-to-br from-cyan-600 to-slate-800"
       style={{ width: size, height: size }}
     >
-      {chosen ? (
+      {chosen && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={chosen}
           alt={displayName}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={() => setFailed(true)}
         />
       ) : (
         <Placeholder name={displayName} />

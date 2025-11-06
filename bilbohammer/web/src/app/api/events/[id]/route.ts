@@ -42,7 +42,7 @@ async function resolveOrganizations(inputs: OrganizationInput[]) {
   return created;
 }
 
-function buildCreateMany<T extends Record<string, any>>(items: T[], mapper: (item: T) => Record<string, any>) {
+function buildCreateMany<TInput, TOutput>(items: TInput[], mapper: (item: TInput) => TOutput): TOutput[] | null {
   if (!items.length) return null;
   return items.map(mapper);
 }
@@ -96,11 +96,23 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const organizations = await resolveOrganizations(parsed.organizations);
     const isInternal = await computeInternalFlag(prisma, parsed.organizers, parsed.organizations, parsed.eventData.isInternal);
 
+    const { gameId, albumId, chronicleArticleId, ...eventData } = parsed.eventData;
     const event = await prisma.$transaction(async (tx) => {
       await tx.event.update({
         where: { id: params.id },
         data: {
-          ...parsed.eventData,
+          ...eventData,
+          ...(chronicleArticleId === undefined ? {} : { chronicleArticleId }),
+          ...(gameId === undefined
+            ? {}
+            : gameId
+              ? { game: { connect: { id: gameId } } }
+              : { game: { disconnect: true } }),
+          ...(albumId === undefined
+            ? {}
+            : albumId
+              ? { album: { connect: { id: albumId } } }
+              : { album: { disconnect: true } }),
           isInternal,
         },
       });

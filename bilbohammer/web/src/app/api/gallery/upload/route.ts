@@ -289,14 +289,16 @@ async function createAlbum(meta: IncomingAlbumMeta, photos: IncomingPhoto[], upl
       });
     }
 
-    const coverImageMatch =
-      (meta.coverPhotoId && createdPhotos.find((photo) => photo.clientId === meta.coverPhotoId)) ?? createdPhotos[0];
+    const coverImageMatch = meta.coverPhotoId
+      ? createdPhotos.find((photo) => photo.clientId === meta.coverPhotoId) ?? null
+      : null;
+    const coverImage = coverImageMatch ?? createdPhotos[0] ?? null;
 
     await tx.galleryAlbum.update({
       where: { id: albumRecord.id },
       data: {
-        coverImagePath: coverImageMatch?.storagePath ?? null,
-        coverImageAlt: coverImageMatch?.altText ?? null,
+        coverImagePath: coverImage?.storagePath ?? null,
+        coverImageAlt: coverImage?.altText ?? null,
         totalPhotos: createdPhotos.length,
       },
     });
@@ -476,19 +478,18 @@ async function updateAlbum(
       });
     }
 
-    const coverImageMatch =
-      (meta.coverPhotoId &&
-        (createdPhotos.find((photo) => photo.clientId === meta.coverPhotoId) ||
-          updatedPhotos.find((photo) => photo.recordId === meta.coverPhotoId))) ??
-      createdPhotos[0] ??
-      updatedPhotos[0] ??
-      null;
+    const requestedCover = meta.coverPhotoId
+      ? createdPhotos.find((photo) => photo.clientId === meta.coverPhotoId) ??
+        updatedPhotos.find((photo) => photo.recordId === meta.coverPhotoId) ??
+        null
+      : null;
+    const coverImage = requestedCover ?? createdPhotos[0] ?? updatedPhotos[0] ?? null;
 
     await tx.galleryAlbum.update({
       where: { id: albumRecord.id },
       data: {
-        coverImagePath: coverImageMatch?.storagePath ?? null,
-        coverImageAlt: coverImageMatch?.altText ?? null,
+        coverImagePath: coverImage?.storagePath ?? null,
+        coverImageAlt: coverImage?.altText ?? null,
         totalPhotos: seenImageIds.size,
       },
     });

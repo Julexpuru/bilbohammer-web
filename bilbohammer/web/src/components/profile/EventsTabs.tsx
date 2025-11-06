@@ -1,16 +1,20 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import type { ProfileEventRef } from "@/types/profile";
 
 function EventItem({ ev }: { ev: ProfileEventRef }) {
   const d = ev.date ? new Date(ev.date) : null;
   const fmt = d ? d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" }) : "Fecha sin especificar";
   return (
-    <div className="flex items-center justify-between border-b border-white/10 py-2">
+    <Link
+      href={`/eventos/${ev.id}`}
+      className="flex items-center justify-between border-b border-white/10 py-2 transition hover:bg-white/5"
+    >
       <span className="text-sm">{ev.title}</span>
       <span className="text-xs opacity-70">{fmt}</span>
-    </div>
+    </Link>
   );
 }
 

@@ -2,7 +2,10 @@
 import { prisma } from "@/lib/prisma";
 import ClientEditWrapper from "./ClientEditWrapper";
 import { GamesSection } from "@/components/profile/GamesSection";
-import { GAME_TITLES, toUiId } from "@/lib/games_helpers";
+import { EventsTabs } from "@/components/profile/EventsTabs";
+import { toUiId } from "@/lib/games_helpers";
+import { gameIconPath } from "@/lib/games";
+import { Avatar } from "@/components/profile/Avatar";
 
 import { auth } from "@/lib/auth";
 
@@ -25,7 +28,13 @@ export default async function Page() {
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: { accounts: true },
+    include: {
+      accounts: true,
+      games: {
+        include: { game: true },
+        orderBy: { game: { sortOrder: "asc" } },
+      },
+    },
   });
 
   if (!user) {
@@ -37,8 +46,6 @@ export default async function Page() {
     );
   }
 
-  const displayAvatar: string | undefined = user.avatarUrl ?? user.image ?? undefined;
-  const hasAvatar = !!displayAvatar;
   const _memberSinceRaw = (user as any).memberSince ?? (user as any).membershipSince ?? null;
   const memberSinceText = _memberSinceRaw
     ? new Date(_memberSinceRaw).toLocaleDateString("es-ES", { month: "long", year: "numeric" })
@@ -49,7 +56,10 @@ export default async function Page() {
 
   const roleBadges = normalizeRoles((user as any).roles ?? (session.user as any)?.roles ?? (session.user as any)?.rol);
 
-  const uiGames: string[] = Array.isArray(user.juegos) ? (user.juegos as any[]).map((e) => toUiId(String(e))) : [];
+  const userGames = Array.isArray((user as any).games) ? (user as any).games : [];
+  const uiGames: string[] = userGames
+    .map((entry: any) => entry.game?.slug ?? entry.gameId ?? null)
+    .filter((slug: unknown): slug is string => typeof slug === "string" && slug.length > 0);
 
   const factions: Record<string, string[]> = {
     w40k: Array.isArray(user.faccionesW40K) ? (user.faccionesW40K as any[]).map((x) => toUiId(String(x))) : [],
@@ -57,18 +67,59 @@ export default async function Page() {
     tow: Array.isArray(user.faccionesTOW) ? (user.faccionesTOW as any[]).map((x) => toUiId(String(x))) : [],
   };
 
-  const gamesForView = uiGames.map((gid) => ({
-    id: gid,
-    name: (GAME_TITLES as any)[gid] ?? gid,
-    iconUrl: null as string | null,
-    factions:
-      gid === "w40k"
-        ? factions.w40k.map((fid) => ({ id: fid, name: fid.replace(/_/g, " ").toUpperCase() }))
-        : gid === "aos"
-        ? factions.aos.map((fid) => ({ id: fid, name: fid.replace(/_/g, " ").toUpperCase() }))
-        : gid === "tow"
-        ? factions.tow.map((fid) => ({ id: fid, name: fid.replace(/_/g, " ").toUpperCase() }))
-        : [],
+  const gamesForView = userGames
+    .map((entry: any) => {
+      const slug: string | null = entry.game?.slug ?? entry.gameId ?? null;
+      if (!slug) return null;
+      const name: string = entry.game?.name ?? slug;
+      const iconUrl: string | null = entry.game?.iconImagePath ?? gameIconPath(slug);
+      const factionsForGame =
+        slug === "w40k"
+          ? factions.w40k.map((fid) => ({ id: fid, name: fid.replace(/_/g, " ").toUpperCase() }))
+          : slug === "aos"
+          ? factions.aos.map((fid) => ({ id: fid, name: fid.replace(/_/g, " ").toUpperCase() }))
+          : slug === "tow"
+          ? factions.tow.map((fid) => ({ id: fid, name: fid.replace(/_/g, " ").toUpperCase() }))
+          : [];
+      return {
+        id: slug,
+        name,
+        iconUrl,
+        factions: factionsForGame,
+      };
+    })
+    .filter((game: any): game is { id: string; name: string; iconUrl: string | null; factions: any[] } => Boolean(game));
+
+  const [organizedEventsRaw, participantEventsRaw] = await Promise.all([
+    prisma.event.findMany({
+      where: {
+        organizers: { some: { userId: user.id } },
+      },
+      select: { id: true, title: true, startsAt: true },
+      orderBy: { startsAt: "desc" },
+    }),
+    prisma.event.findMany({
+      where: {
+        OR: [
+          { rankings: { some: { playerId: user.id } } },
+          { highlights: { some: { playerId: user.id } } },
+        ],
+      },
+      select: { id: true, title: true, startsAt: true },
+      orderBy: { startsAt: "desc" },
+    }),
+  ]);
+
+  const eventsOrganized = organizedEventsRaw.map((event) => ({
+    id: event.id,
+    title: event.title,
+    date: event.startsAt.toISOString(),
+  }));
+
+  const eventsParticipated = participantEventsRaw.map((event) => ({
+    id: event.id,
+    title: event.title,
+    date: event.startsAt.toISOString(),
   }));
 
   return (
@@ -90,21 +141,12 @@ export default async function Page() {
       </div>
 
       <section className="grid grid-cols-[auto_1fr] gap-6 items-start">
-        <div className="w-28 h-28 rounded-full overflow-hidden border border-white/10 bg-slate-800/40">
-          {hasAvatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={displayAvatar as string} alt="avatar" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full grid place-items-center" style={{ background: "var(--card)", color: "var(--muted)" }}>
-              <svg viewBox="0 0 24 24" width="88" height="88" aria-hidden="true">
-                <circle cx="12" cy="8" r="4" fill="currentColor" opacity="0.35" />
-                <path d="M4 20c0-4 4-6 8-6s8 2 8 6" fill="currentColor" opacity="0.35"/>
-                <circle cx="12" cy="8" r="3" fill="currentColor" />
-                <path d="M6 20c.8-2.6 3.6-4 6-4s5.2 1.4 6 4" fill="currentColor"/>
-              </svg>
-            </div>
-          )}
-        </div>
+        <Avatar
+          avatarUrl={user.avatarUrl ?? null}
+          oauthAvatarUrl={user.image ?? null}
+          displayName={displayNick}
+          size={112}
+        />
         <div className="space-y-1">
           <div className="text-sm opacity-70">{user.email}</div>
           <div className="text-xl font-semibold">{displayNick}</div>
@@ -136,10 +178,7 @@ export default async function Page() {
 
       <GamesSection games={gamesForView as any} />
 
-      <section className="rounded-xl border border-white/10 p-4 bg-slate-900/40">
-        <h2 className="text-lg font-semibold mb-2">Eventos</h2>
-        <div className="text-sm opacity-70">Organizador y Participante — próximamente.</div>
-      </section>
+      <EventsTabs organized={eventsOrganized} participated={eventsParticipated} />
     </div>
   );
 }

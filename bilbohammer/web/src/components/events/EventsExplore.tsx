@@ -3,7 +3,9 @@ import React from "react";
 import Image from "next/image";
 import clsx from "clsx";
 import EventStatusBadge from "@/components/events/EventStatusBadge";
+import EventShareButtons from "@/components/events/EventShareButtons";
 import Link from "next/link";
+import { useGamesCatalog } from "@/lib/use-games-catalog";
 
 type Props = { canCreate: boolean };
 
@@ -48,22 +50,11 @@ function useDebounced<T>(value: T, delay = 350) {
 }
 
 const ALL_TYPES = ["TOURNAMENT", "LEAGUE", "WORKSHOP", "SOCIAL"] as const;
-const ALL_GAMES = ["W40K", "AOS", "TOW", "ESDLA", "MARVEL", "OTROS"] as const;
-
 const TYPE_LABEL: Record<(typeof ALL_TYPES)[number], string> = {
   TOURNAMENT: "Torneo",
   LEAGUE: "Liga",
   WORKSHOP: "Taller",
   SOCIAL: "Social",
-};
-
-const GAME_LABEL: Record<(typeof ALL_GAMES)[number], string> = {
-  W40K: "Warhammer 40K",
-  AOS: "Age of Sigmar",
-  TOW: "The Old World",
-  ESDLA: "ESDLA",
-  MARVEL: "Marvel",
-  OTROS: "Otros",
 };
 
 const currencyFormatter = new Intl.NumberFormat("es-ES", {
@@ -89,10 +80,13 @@ export default function EventsExplore({ canCreate }: Props) {
   const [orgBilbo, setOrgBilbo] = React.useState(true);
   const [orgOtros, setOrgOtros] = React.useState(true);
   const [types, setTypes] = React.useState<string[]>([]);
-  const [games, setGames] = React.useState<string[]>([]);
+  const [selectedGames, setSelectedGames] = React.useState<string[]>([]);
   const [free, setFree] = React.useState(false);
   const [past, setPast] = React.useState(false);
   const [sort, setSort] = React.useState<"asc" | "desc">("asc");
+
+  const { games: catalogGames } = useGamesCatalog();
+  const gameFilters = catalogGames;
 
   const [items, setItems] = React.useState<Item[]>([]);
   const [nextCursor, setNextCursor] = React.useState<any>(null);
@@ -106,11 +100,11 @@ export default function EventsExplore({ canCreate }: Props) {
       !orgBilbo ||
       !orgOtros ||
       types.length > 0 ||
-      games.length > 0 ||
+      selectedGames.length > 0 ||
       free ||
       past
     );
-  }, [q, orgBilbo, orgOtros, types, games, free, past]);
+  }, [q, orgBilbo, orgOtros, types, selectedGames, free, past]);
 
   const toggleOrganizer = (key: "bilbo" | "otros") => {
     if (key === "bilbo") setOrgBilbo((prev) => !prev);
@@ -121,8 +115,8 @@ export default function EventsExplore({ canCreate }: Props) {
     setTypes((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
   };
 
-  const toggleGame = (value: (typeof ALL_GAMES)[number]) => {
-    setGames((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
+  const toggleGame = (slug: string) => {
+    setSelectedGames((prev) => (prev.includes(slug) ? prev.filter((item) => item !== slug) : [...prev, slug]));
   };
 
   const resetFilters = () => {
@@ -130,7 +124,7 @@ export default function EventsExplore({ canCreate }: Props) {
     setOrgBilbo(true);
     setOrgOtros(true);
     setTypes([]);
-    setGames([]);
+    setSelectedGames([]);
     setFree(false);
     setPast(false);
   };
@@ -144,7 +138,7 @@ export default function EventsExplore({ canCreate }: Props) {
       if (orgOtros) orgsList.push("otros");
       if (orgsList.length === 1) params.set("orgs", orgsList.join(","));
       if (types.length) params.set("types", types.join(","));
-      if (games.length) params.set("games", games.join(","));
+      if (selectedGames.length) params.set("games", selectedGames.join(","));
       if (free) params.set("free", "1");
       if (past) params.set("past", "1");
       params.set("sort", sort);
@@ -153,7 +147,7 @@ export default function EventsExplore({ canCreate }: Props) {
       if (cursorValue) params.set("cursor", JSON.stringify(cursorValue));
       return params;
     },
-    [debQ, orgBilbo, orgOtros, types, games, free, past, sort]
+    [debQ, orgBilbo, orgOtros, types, selectedGames, free, past, sort]
   );
 
   const fetchPage = React.useCallback(
@@ -296,7 +290,13 @@ export default function EventsExplore({ canCreate }: Props) {
           <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Juego</h3>
             <div className="flex flex-wrap gap-2">
-              {ALL_GAMES.map((game) => renderFilterChip(GAME_LABEL[game], games.includes(game), () => toggleGame(game)))}
+              {gameFilters.map((game) =>
+                renderFilterChip(
+                  game.name ?? game.slug,
+                  selectedGames.includes(game.slug),
+                  () => toggleGame(game.slug)
+                )
+              )}
             </div>
           </section>
 
@@ -363,9 +363,20 @@ export default function EventsExplore({ canCreate }: Props) {
             return (
               <article key={ev.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-xl bg-white/5 p-4 shadow-sm transition hover:bg-white/10">
                 <div className="space-y-1">
-                  <Link href={`/eventos/${ev.slug}`} className="text-lg font-medium hover:underline">
-                    {ev.title}
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link href={`/eventos/${ev.slug}`} className="text-lg font-medium hover:underline">
+                      {ev.title}
+                    </Link>
+                    {ev.status !== "DRAFT" && ev.status !== "CANCELLED" && (
+                      <EventShareButtons
+                        eventId={ev.slug}
+                        title={ev.title}
+                        startsAt={ev.startsAt}
+                        endsAt={ev.endsAt}
+                        location={where || undefined}
+                      />
+                    )}
+                  </div>
                   {ev.subtitle && <div className="text-sm opacity-80">{ev.subtitle}</div>}
                   <div className="text-sm opacity-90">
                     <strong>Cuando:</strong>{" "}

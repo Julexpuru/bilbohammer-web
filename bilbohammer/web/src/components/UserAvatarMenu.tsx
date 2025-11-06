@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./UserAvatarMenu.module.css";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 
 export type UserAvatarMenuProps = {
-  size?: number; // px – tamaño del círculo
+  size?: number; // px - tamano del circulo
   profileHref?: string; // ruta a "Mi Perfil"
   className?: string;
 };
@@ -16,10 +16,23 @@ export default function UserAvatarMenu({ size = 34, profileHref = "/mi-perfil", 
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const popRef = useRef<HTMLDivElement | null>(null);
 
-  const user = session?.user as any | undefined;
-  const avatarUrl = user?.avatarUrl || user?.image || null;
+  const [cachedUser, setCachedUser] = useState<any | null>(session?.user ?? null);
+  useEffect(() => {
+    if (session?.user) setCachedUser(session.user);
+  }, [session]);
+  useEffect(() => {
+    if (status === "unauthenticated") setCachedUser(null);
+  }, [status]);
+
+  const user = (session?.user ?? cachedUser) as any | undefined;
+  const [fallbackAvatar, setFallbackAvatar] = useState(false);
+  const avatarUrl = !fallbackAvatar ? user?.avatarUrl || user?.image || null : null;
   const displayName: string | undefined = user?.nick || user?.name || user?.email || undefined;
   const initial = useMemo(() => (displayName ? displayName.trim()[0]?.toUpperCase() : "?"), [displayName]);
+
+  useEffect(() => {
+    setFallbackAvatar(false);
+  }, [user?.avatarUrl, user?.image]);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -40,16 +53,16 @@ export default function UserAvatarMenu({ size = 34, profileHref = "/mi-perfil", 
     };
   }, [open]);
 
-  if (status === "loading") {
+  if (status === "loading" && !user) {
     return (
       <div className={`${styles.skeleton} ${className ?? ""}`} style={{ width: size, height: size }} aria-hidden />
     );
   }
 
-  if (!session?.user) {
+  if (!user) {
     return (
       <button className={`${styles.loginBtn} ${className ?? ""}`} onClick={() => signIn()}>
-        Iniciar sesión
+        Iniciar sesion
       </button>
     );
   }
@@ -68,7 +81,12 @@ export default function UserAvatarMenu({ size = 34, profileHref = "/mi-perfil", 
       >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt={displayName ?? "Usuario"} className={styles.avatarImg} />
+          <img
+            src={avatarUrl}
+            alt={displayName ?? "Usuario"}
+            className={styles.avatarImg}
+            onError={() => setFallbackAvatar(true)}
+          />
         ) : (
           <span className={styles.initial}>{initial}</span>
         )}
@@ -103,7 +121,7 @@ export default function UserAvatarMenu({ size = 34, profileHref = "/mi-perfil", 
                 signOut({ callbackUrl: "/" });
               }}
             >
-              Cerrar sesión
+              Cerrar sesion
             </button>
           </div>
         </div>

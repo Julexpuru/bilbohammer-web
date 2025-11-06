@@ -1,8 +1,10 @@
 export type GalleryPhotoComment = {
   id: string;
   author: string;
-  message: string;
-  createdAt: string;
+  message?: string;
+  body?: string;
+  createdAt?: string;
+  formattedDate?: string;
 };
 
 export type GalleryImage = {
@@ -16,7 +18,8 @@ export type GalleryImage = {
   title?: string;
   takenAt?: string;
   location?: string;
-  likes: number;
+  likes?: number;
+  likesCount?: number;
   comments: GalleryPhotoComment[];
 };
 

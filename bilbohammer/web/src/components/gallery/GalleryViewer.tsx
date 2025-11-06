@@ -60,3 +60,5 @@ export function GalleryViewer({
     />
   );
 }
+
+export type { StandalonePhotoEditPayload } from "./AlbumPhotoLightbox";

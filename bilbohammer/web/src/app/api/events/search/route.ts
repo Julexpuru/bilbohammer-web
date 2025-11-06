@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Prisma, EventStatus, EventType, Juego } from "@prisma/client";
+import { Prisma, EventStatus, EventType } from "@prisma/client";
 import { auth } from "@/lib/auth";
+import { loadActiveGames, resolveGameIdsFromInput } from "@/lib/game-catalog";
 
 const TAKE_DEFAULT = 12;
 const TAKE_MAX = 48;
@@ -42,7 +43,6 @@ function normalizeLocation(location: string | null | undefined) {
 }
 
 const EVENT_TYPE_VALUES = new Set(Object.values(EventType));
-const GAME_VALUES = new Set(Object.values(Juego));
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
   const q = url.searchParams.get("q")?.trim() || null;
   const orgs = parseList(url.searchParams.get("orgs")).map((value) => value.toLowerCase());
   const types = parseList(url.searchParams.get("types")).map((value) => value.toUpperCase());
-  const games = parseList(url.searchParams.get("games")).map((value) => value.toUpperCase());
+  const games = parseList(url.searchParams.get("games"));
   const free = parseBoolean(url.searchParams.get("free"));
   const includePast = parseBoolean(url.searchParams.get("past"));
   const sort = url.searchParams.get("sort") === "desc" ? "desc" : "asc";
@@ -105,9 +105,12 @@ export async function GET(request: Request) {
     andFilters.push({ type: { in: validTypes } });
   }
 
-  const validGames = games.filter((game) => GAME_VALUES.has(game as Juego)) as Juego[];
-  if (validGames.length) {
-    andFilters.push({ game: { in: validGames } });
+  if (games.length) {
+    const catalog = await loadActiveGames();
+    const validGameIds = resolveGameIdsFromInput(games, catalog);
+    if (validGameIds.length) {
+      andFilters.push({ gameId: { in: validGameIds } });
+    }
   }
 
   if (free) {
@@ -137,6 +140,7 @@ export async function GET(request: Request) {
         tags: true,
         organizers: { include: { user: { select: { id: true, nick: true, name: true, email: true } } } },
         organizations: { include: { organization: true } },
+        game: { select: { slug: true } },
       },
     });
 
@@ -167,7 +171,7 @@ export async function GET(request: Request) {
         bannerUrl: event.bannerUrl ?? null,
         status: autoStatus,
         type: event.type,
-        game: event.game,
+        game: event.game?.slug ?? null,
         priceGeneral: event.priceGeneral?.toString() ?? null,
         priceSocios: event.priceSocios?.toString() ?? null,
         isInternal: event.isInternal,

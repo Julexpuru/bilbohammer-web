@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/page": [
+    "/admin/gestion-usuarios/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
+      "static/chunks/app/admin/gestion-usuarios/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -11,35 +11,45 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
+    "/mi-perfil/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/mi-perfil/page.js"
+    ],
+    "/sobre-nosotros/tablon-de-socios/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/sobre-nosotros/tablon-de-socios/page.js"
+    ],
     "/eventos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/eventos/page.js"
     ],
-    "/eventos/[slug]/page": [
+    "/sobre-nosotros/quienes-somos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/eventos/[slug]/page.js"
+      "static/chunks/app/sobre-nosotros/quienes-somos/page.js"
     ],
-    "/galeria/[albumId]/page": [
+    "/sobre-nosotros/juegos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/galeria/[albumId]/page.js"
-    ],
-    "/eventos/[slug]/editar/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/eventos/[slug]/editar/page.js"
+      "static/chunks/app/sobre-nosotros/juegos/page.js"
     ],
     "/galeria/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/galeria/page.js"
     ],
-    "/novedades/page": [
+    "/admin/gestion-documental/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/novedades/page.js"
+      "static/chunks/app/admin/gestion-documental/page.js"
     ]
   }
 }

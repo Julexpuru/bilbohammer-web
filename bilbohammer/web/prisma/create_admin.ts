@@ -34,7 +34,6 @@ async function main() {
         nick: "Admin",
         descripcion: "Usuario de administracion de la pagina web",
         roles: { set: [Rol.ADMIN] },
-        juegos: [],
         etiquetas: [],
         isActive: true,
       },
@@ -51,4 +50,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

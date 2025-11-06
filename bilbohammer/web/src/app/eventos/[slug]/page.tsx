@@ -2,9 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import EventStatusBadge from "@/components/events/EventStatusBadge";
+import EventShareButtons from "@/components/events/EventShareButtons";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { userCanManageEvents } from "@/lib/roles";
+import { findArticleById } from "@/lib/novedades-repository";
 
 type Params = {
   slug: string;
@@ -88,6 +90,7 @@ export default async function EventDetailPage({
           user: { select: { id: true, nick: true, name: true } },
         },
       },
+      game: { select: { slug: true, name: true, isDefault: true } },
       organizations: { include: { organization: true } },
       attachments: true,
       links: true,
@@ -101,6 +104,10 @@ export default async function EventDetailPage({
   if (!event) {
     notFound();
   }
+
+  const chronicleArticle = event.chronicleArticleId
+    ? await findArticleById(event.chronicleArticleId)
+    : null;
 
   const now = Date.now();
   const computedStatus =
@@ -250,7 +257,7 @@ export default async function EventDetailPage({
   const hasOrganizerInfo = organizerLines.length > 0;
 
   const typeLabel = typeLabels[event.type] ?? event.type;
-  const gameLabel = event.game ?? "General";
+  const gameLabel = event.game?.name ?? event.game?.slug ?? "General";
 
   const heroInfoItems: HeroInfoItem[] = [{ key: "dates", label: "Fechas", lines: [rangeLabel] }];
   if (hasLocationInfo) {
@@ -337,6 +344,8 @@ export default async function EventDetailPage({
       </Link>
     );
 
+  const showShareButtons = event.status !== "DRAFT" && event.status !== "CANCELLED";
+
   return (
     <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
       <header className="space-y-6">
@@ -349,6 +358,17 @@ export default async function EventDetailPage({
                   <span className="rounded-full border border-white/20 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white">
                     Solo socios
                   </span>
+                )}
+                {showShareButtons && (
+                  <div className="ml-2">
+                    <EventShareButtons
+                      eventId={event.id}
+                      title={event.title}
+                      startsAt={event.startsAt.toISOString()}
+                      endsAt={event.endsAt.toISOString()}
+                      location={locationLabel}
+                    />
+                  </div>
                 )}
               </div>
               <div className="space-y-2">
@@ -559,10 +579,27 @@ export default async function EventDetailPage({
         )}
 
         {activeTab === "cronica" && (
-          <div className="space-y-3">
-            {event.recap ? (
-              <p className="whitespace-pre-line text-sm leading-relaxed opacity-90">{event.recap}</p>
-            ) : (
+          <div className="space-y-4">
+            {chronicleArticle && (
+              <div className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <h2 className="text-lg font-semibold text-white">{chronicleArticle.title}</h2>
+                <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+                  Publicada en Novedades
+                </p>
+                {chronicleArticle.summary && (
+                  <p className="text-sm text-[var(--muted)]">{chronicleArticle.summary}</p>
+                )}
+                <Link
+                  href={`/novedades/${chronicleArticle.category}/${chronicleArticle.slug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white transition hover:border-white/40"
+                >
+                  Leer cronica completa
+                </Link>
+              </div>
+            )}
+            {!chronicleArticle && (
               <p className="text-sm text-[var(--muted)]">La cronica de este evento llegara pronto.</p>
             )}
           </div>

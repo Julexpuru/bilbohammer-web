@@ -6,8 +6,11 @@ import {
   EventType,
   EventStatus,
   EventHighlightType,
+  Game,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { GAME_DEFAULT_CONTENT } from "../src/lib/game-default-content";
+import { cloneContactContent } from "../src/lib/contact-content-data";
 
 const prisma = new PrismaClient();
 
@@ -20,9 +23,201 @@ type SeedUser = {
   descripcion?: string | null;
   passwordHash?: string | null;
   isActive?: boolean;
+  games?: string[];
 };
 
-async function upsertUser(user: SeedUser) {
+type SeedGame = {
+  slug: string;
+  name: string;
+  legacyEnumKey?: string;
+  sortOrder: number;
+  isDefault?: boolean;
+  iconImagePath?: string | null;
+  heroImagePath?: string | null;
+  description?: string | null;
+  isActive?: boolean;
+};
+
+const SEED_GAMES: SeedGame[] = [
+  {
+    slug: "w40k",
+    name: "Warhammer 40,000",
+    legacyEnumKey: "W40K",
+    iconImagePath: "/assets/icons/games/w40k.png",
+    sortOrder: 10,
+  },
+  {
+    slug: "aos",
+    name: "Age of Sigmar",
+    legacyEnumKey: "AOS",
+    iconImagePath: "/assets/icons/games/aos.png",
+    sortOrder: 20,
+  },
+  {
+    slug: "tow",
+    name: "The Old World",
+    legacyEnumKey: "TOW",
+    iconImagePath: "/assets/icons/games/tow.png",
+    sortOrder: 30,
+  },
+  {
+    slug: "esdla",
+    name: "El Senor de los Anillos",
+    legacyEnumKey: "ESDLA",
+    iconImagePath: "/assets/icons/games/esdla.png",
+    sortOrder: 40,
+  },
+  {
+    slug: "bb",
+    name: "Blood Bowl",
+    legacyEnumKey: "BB",
+    iconImagePath: "/assets/icons/games/bloodbowl.png",
+    sortOrder: 50,
+  },
+  {
+    slug: "marvel",
+    name: "Marvel Crisis Protocol",
+    legacyEnumKey: "MARVEL",
+    iconImagePath: "/assets/icons/games/mcp.png",
+    sortOrder: 60,
+  },
+  {
+    slug: "rol",
+    name: "Rol",
+    legacyEnumKey: "ROL",
+    iconImagePath: "/assets/icons/games/rol.png",
+    sortOrder: 70,
+  },
+  {
+    slug: "magic",
+    name: "Magic",
+    legacyEnumKey: "MAGIC",
+    iconImagePath: "/assets/icons/games/magic.png",
+    sortOrder: 80,
+  },
+  {
+    slug: "boardgames",
+    name: "Juegos de mesa",
+    legacyEnumKey: "JUEGOS_DE_MESA",
+    iconImagePath: "/assets/icons/games/juegosdemesa.png",
+    sortOrder: 90,
+  },
+  {
+    slug: "otros",
+    name: "Otros",
+    legacyEnumKey: "OTROS",
+    iconImagePath: "/assets/icons/games/otros.png",
+    sortOrder: 100,
+    isDefault: true,
+  },
+];
+
+async function seedGames(): Promise<Map<string, Game>> {
+  const seeded = await Promise.all(
+    SEED_GAMES.map((game) =>
+      prisma.game.upsert({
+        where: { slug: game.slug },
+        update: {
+          name: game.name,
+          legacyEnumKey: game.legacyEnumKey ?? null,
+          iconImagePath: game.iconImagePath ?? null,
+          heroImagePath: game.heroImagePath ?? game.iconImagePath ?? null,
+          description: game.description ?? null,
+          sortOrder: game.sortOrder,
+          isDefault: Boolean(game.isDefault),
+          isActive: game.isActive ?? true,
+        },
+        create: {
+          slug: game.slug,
+          name: game.name,
+          legacyEnumKey: game.legacyEnumKey ?? null,
+          iconImagePath: game.iconImagePath ?? null,
+          heroImagePath: game.heroImagePath ?? game.iconImagePath ?? null,
+          description: game.description ?? null,
+          sortOrder: game.sortOrder,
+          isDefault: Boolean(game.isDefault),
+          isActive: game.isActive ?? true,
+        },
+      })
+    )
+  );
+
+  return new Map(seeded.map((game) => [game.slug, game]));
+}
+
+async function seedGameInfo(gameIndex: Map<string, Game>) {
+  await Promise.all(
+    Object.entries(GAME_DEFAULT_CONTENT).map(async ([slug, defaults]) => {
+      const game = gameIndex.get(slug);
+      if (!game) return;
+      await prisma.gameInfo.upsert({
+        where: { gameId: game.id },
+        update: {
+          summary: defaults.summary,
+          contentHtml: defaults.contentHtml,
+          investment: defaults.investment,
+          playtime: defaults.playtime,
+          learning: defaults.learning || "Media",
+          contactUserId: null,
+          contactNote: defaults.contactNote ?? "",
+        },
+        create: {
+          gameId: game.id,
+          summary: defaults.summary,
+          contentHtml: defaults.contentHtml,
+          investment: defaults.investment,
+          playtime: defaults.playtime,
+          learning: defaults.learning || "Media",
+          contactNote: defaults.contactNote ?? "",
+        },
+      });
+    }),
+  );
+}
+
+async function syncUserGames(userId: number, gameSlugs: string[], gameIndex: Map<string, Game>) {
+  const trimmed = Array.from(new Set(gameSlugs.map((slug) => slug.trim()).filter(Boolean)));
+  if (trimmed.length === 0) {
+    await prisma.userGame.deleteMany({ where: { userId } });
+    return;
+  }
+
+  const gameIds: string[] = [];
+  const missing: string[] = [];
+  for (const slug of trimmed) {
+    const game = gameIndex.get(slug);
+    if (!game) {
+      missing.push(slug);
+      continue;
+    }
+    gameIds.push(game.id);
+  }
+
+  if (missing.length > 0) {
+    console.warn(`Seed warning: juegos no encontrados para el usuario ${userId}: ${missing.join(", ")}`);
+  }
+
+  if (gameIds.length === 0) {
+    await prisma.userGame.deleteMany({ where: { userId } });
+    return;
+  }
+
+  await prisma.userGame.deleteMany({
+    where: {
+      userId,
+      NOT: {
+        gameId: { in: gameIds },
+      },
+    },
+  });
+
+  await prisma.userGame.createMany({
+    data: gameIds.map((gameId) => ({ userId, gameId })),
+    skipDuplicates: true,
+  });
+}
+
+async function upsertUser(user: SeedUser, gameIndex: Map<string, Game>) {
   const etiquetas = user.etiquetas ?? [];
   const isActive = user.isActive ?? true;
   const updateData: Record<string, unknown> = {
@@ -38,7 +233,7 @@ async function upsertUser(user: SeedUser) {
     updateData.passwordHash = user.passwordHash;
   }
 
-  return prisma.user.upsert({
+  const persisted = await prisma.user.upsert({
     where: { email: user.email },
     update: updateData,
     create: {
@@ -52,6 +247,12 @@ async function upsertUser(user: SeedUser) {
       passwordHash: user.passwordHash ?? null,
     },
   });
+
+  if (user.games !== undefined) {
+    await syncUserGames(persisted.id, user.games, gameIndex);
+  }
+
+  return persisted;
 }
 
 async function upsertOrganization(params: { slug: string; name: string; isClub?: boolean }) {
@@ -71,6 +272,7 @@ const SAMPLE_USERS: SeedUser[] = [
     etiquetas: [],
     roles: [Rol.ADMIN, Rol.SOCIO],
     passwordHash: "$2a$12$lQf5dfG97mY2r90NJ1pWse14c.JaC8tNy3jAhHiLs1W7aBfkwNFD.",
+    games: ["w40k", "aos"],
   },
   {
     name: "Kimetz",
@@ -78,6 +280,7 @@ const SAMPLE_USERS: SeedUser[] = [
     nick: "Kimetz",
     etiquetas: [],
     roles: [Rol.JUNTA, Rol.SOCIO],
+    games: ["tow", "bb"],
   },
   {
     name: "Andoni",
@@ -85,6 +288,7 @@ const SAMPLE_USERS: SeedUser[] = [
     nick: "Andoni",
     etiquetas: [],
     roles: [Rol.SOCIO],
+    games: ["rol", "boardgames"],
   },
   {
     name: "Gorka",
@@ -92,29 +296,205 @@ const SAMPLE_USERS: SeedUser[] = [
     nick: "gorka",
     etiquetas: [],
     roles: [Rol.AMIGO],
+    games: ["otros"],
+  },
+  {
+    name: "Iker",
+    email: "iker@bilbohammer.test",
+    nick: "iker",
+    etiquetas: ["w40k"],
+    roles: [Rol.SOCIO],
+    isActive: true,
+    games: ["w40k", "bb"],
+  },
+  {
+    name: "Maialen",
+    email: "maialen@bilbohammer.test",
+    nick: "maia",
+    etiquetas: ["pintura"],
+    roles: [Rol.AMIGO],
+    isActive: true,
+    games: ["boardgames"],
+  },
+  {
+    name: "Asier",
+    email: "asier@bilbohammer.test",
+    nick: "asier",
+    etiquetas: ["rol"],
+    roles: [Rol.SOCIO],
+    games: ["rol", "otros"],
+  },
+  {
+    name: "Irati",
+    email: "irati@bilbohammer.test",
+    nick: "irati",
+    etiquetas: ["aos"],
+    roles: [Rol.SOCIO],
+    games: ["aos"],
+  },
+  {
+    name: "Jon",
+    email: "jon@bilbohammer.test",
+    nick: "jonny",
+    etiquetas: [],
+    roles: [Rol.AMIGO],
+    games: ["magic"],
+  },
+  {
+    name: "Ane",
+    email: "ane@bilbohammer.test",
+    nick: "ane",
+    etiquetas: ["organizacion"],
+    roles: [Rol.JUNTA, Rol.SOCIO],
+    isActive: true,
+    games: ["w40k", "aos"],
+  },
+  {
+    name: "Lander",
+    email: "lander@bilbohammer.test",
+    nick: "land",
+    etiquetas: ["escenografia"],
+    roles: [Rol.SOCIO],
+    games: ["boardgames", "otros"],
+  },
+  {
+    name: "Uxue",
+    email: "uxue@bilbohammer.test",
+    nick: "uxu",
+    etiquetas: ["juegos de mesa"],
+    roles: [Rol.AMIGO],
+    games: ["boardgames"],
+  },
+  {
+    name: "Gaizka",
+    email: "gaizka@bilbohammer.test",
+    nick: "gaiz",
+    etiquetas: ["w40k"],
+    roles: [Rol.SOCIO],
+    isActive: false,
+    games: ["w40k"],
+  },
+  {
+    name: "Leire",
+    email: "leire@bilbohammer.test",
+    nick: "lei",
+    etiquetas: ["aos"],
+    roles: [Rol.SOCIO],
+    games: ["aos", "magic"],
+  },
+  {
+    name: "Xabier",
+    email: "xabier@bilbohammer.test",
+    nick: "xab",
+    etiquetas: [],
+    roles: [Rol.SOCIO],
+    games: ["tow"],
+  },
+  {
+    name: "Naia",
+    email: "naia@bilbohammer.test",
+    nick: "naia",
+    etiquetas: ["pintura"],
+    roles: [Rol.AMIGO],
+    games: ["otros"],
+  },
+  {
+    name: "Hodei",
+    email: "hodei@bilbohammer.test",
+    nick: "hodei",
+    etiquetas: ["w40k"],
+    roles: [Rol.SOCIO],
+    games: ["w40k", "rol"],
+  },
+  {
+    name: "June",
+    email: "june@bilbohammer.test",
+    nick: "jun",
+    etiquetas: ["rol"],
+    roles: [Rol.AMIGO],
+    games: ["rol"],
+  },
+  {
+    name: "Unai",
+    email: "unai@bilbohammer.test",
+    nick: "unai",
+    etiquetas: [],
+    roles: [Rol.SOCIO],
+    games: ["bb"],
+  },
+  {
+    name: "Maddi",
+    email: "maddi@bilbohammer.test",
+    nick: "mad",
+    etiquetas: ["organizacion"],
+    roles: [Rol.JUNTA],
+    games: ["rol", "boardgames"],
+  },
+  {
+    name: "Eneko",
+    email: "eneko@bilbohammer.test",
+    nick: "enek",
+    etiquetas: ["tow"],
+    roles: [Rol.SOCIO],
+    games: ["tow", "magic"],
+  },
+  {
+    name: "Olaia",
+    email: "olaia@bilbohammer.test",
+    nick: "ola",
+    etiquetas: ["comunicacion"],
+    roles: [Rol.AMIGO],
+    games: ["otros"],
+  },
+  {
+    name: "Iban",
+    email: "iban@bilbohammer.test",
+    nick: "iban",
+    etiquetas: ["w40k"],
+    roles: [Rol.SOCIO],
+    isActive: true,
+    games: ["w40k"],
+  },
+  {
+    name: "Sara",
+    email: "sara@bilbohammer.test",
+    nick: "sara",
+    etiquetas: ["aos"],
+    roles: [Rol.SOCIO],
+    games: ["aos", "boardgames"],
   },
 ];
 
 async function main() {
+  const gameIndex = await seedGames();
+  await seedGameInfo(gameIndex);
   const hash = await bcrypt.hash("DemoSegura123!", 12);
-  const userLocal = await upsertUser({
-    email: "local@bilbohammer.test",
-    passwordHash: hash,
-    name: "Local Demo",
-    nick: "local_demo",
-    etiquetas: ["tester", "demo"],
-    roles: [Rol.SOCIO],
-  });
+  const userLocal = await upsertUser(
+    {
+      email: "local@bilbohammer.test",
+      passwordHash: hash,
+      name: "Local Demo",
+      nick: "local_demo",
+      etiquetas: ["tester", "demo"],
+      roles: [Rol.SOCIO],
+      games: ["w40k", "boardgames"],
+    },
+    gameIndex
+  );
 
-  const userOauth = await upsertUser({
-    email: "oauth@bilbohammer.test",
-    name: "OAuth Demo",
-    roles: [Rol.AMIGO],
-  });
+  const userOauth = await upsertUser(
+    {
+      email: "oauth@bilbohammer.test",
+      name: "OAuth Demo",
+      roles: [Rol.AMIGO],
+      games: ["marvel", "otros"],
+    },
+    gameIndex
+  );
 
   const extraUsers: string[] = [];
   for (const candidate of SAMPLE_USERS) {
-    const created = await upsertUser(candidate);
+    const created = await upsertUser(candidate, gameIndex);
     extraUsers.push(created.email);
   }
 
@@ -123,8 +503,22 @@ async function main() {
     upsertOrganization({ slug: "dkhm", name: "DKHM" }),
   ]);
 
-  const album = await prisma.galleryAlbum.create({
-    data: {
+  const album = await prisma.galleryAlbum.upsert({
+    where: { slug: "quedada-semanal" },
+    update: {
+      title: "Quedada semanal Bilbohammer",
+      description: "Momentos destacados de nuestra quedada semanal.",
+      location: "Bilbohammer HQ",
+      displayDate: new Date().toLocaleDateString("es-ES"),
+      dateISO: new Date().toISOString(),
+      coverImagePath: "/assets/img/slide1.svg",
+      coverImageAlt: "Mesa de juego con miniaturas",
+      totalPhotos: 0,
+      facetYear: String(new Date().getFullYear()),
+      facetGame: "w40k",
+      facetFormat: "social",
+    },
+    create: {
       slug: "quedada-semanal",
       title: "Quedada semanal Bilbohammer",
       description: "Momentos destacados de nuestra quedada semanal.",
@@ -140,8 +534,28 @@ async function main() {
     },
   });
 
+  await prisma.galleryImage.deleteMany({ where: { albumId: album.id } });
+
   const ahora = new Date();
   const dosHoras = new Date(ahora.getTime() + 2 * 60 * 60 * 1000);
+
+  const existingEvent = await prisma.event.findUnique({
+    where: { albumId: album.id },
+    select: { id: true },
+  });
+
+  if (existingEvent) {
+    await prisma.post.deleteMany({ where: { eventId: existingEvent.id } });
+    await prisma.eventOrganization.deleteMany({ where: { eventId: existingEvent.id } });
+    await prisma.eventOrganizer.deleteMany({ where: { eventId: existingEvent.id } });
+    await prisma.eventTag.deleteMany({ where: { eventId: existingEvent.id } });
+    await prisma.eventAttachment.deleteMany({ where: { eventId: existingEvent.id } });
+    await prisma.eventLink.deleteMany({ where: { eventId: existingEvent.id } });
+    await prisma.eventHighlight.deleteMany({ where: { eventId: existingEvent.id } });
+    await prisma.eventRankingEntry.deleteMany({ where: { eventId: existingEvent.id } });
+    await prisma.event.delete({ where: { id: existingEvent.id } });
+  }
+
   const evento = await prisma.event.create({
     data: {
       title: "Quedada semanal",
@@ -156,7 +570,7 @@ async function main() {
       recap: "Gran ambiente, mesas llenas y muchas risas. ¡Repetiremos!",
       status: EventStatus.PUBLISHED,
       type: EventType.SOCIAL,
-      game: "OTROS",
+      gameId: gameIndex.get("otros")?.id ?? null,
       priceGeneral: new Prisma.Decimal("5.00"),
       priceSocios: new Prisma.Decimal("0.00"),
       capacityMax: 30,
@@ -170,7 +584,7 @@ async function main() {
       showRecap: true,
       showGallery: true,
       showLocation: true,
-      album: { connect: { id: album.id } },
+      albumId: album.id,
       tags: {
         create: [{ label: "Casual" }, { label: "Pintura" }, { label: "Demo" }],
       },
@@ -306,6 +720,18 @@ async function main() {
       visible: true,
     },
   });
+
+  const existingContactContent = await prisma.siteContent.findUnique({
+    where: { key: "contact-page" },
+  });
+  if (!existingContactContent) {
+    await prisma.siteContent.create({
+      data: {
+        key: "contact-page",
+        content: cloneContactContent(),
+      },
+    });
+  }
 
   console.log("Seed OK ?", {
     userLocal: userLocal.email,

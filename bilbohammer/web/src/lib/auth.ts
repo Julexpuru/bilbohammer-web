@@ -54,17 +54,25 @@ export const authConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
+      const providerImage =
+        account?.provider === "google"
+          ? (profile as AnyObject)?.picture ?? (profile as AnyObject)?.image ?? null
+          : null;
       if (user) {
+        const email = (user as AnyObject)?.email ?? (token as AnyObject)?.email ?? null;
+        if (email) (token as AnyObject).email = email;
         const roles = normalizeRoles((user as AnyObject).roles ?? (user as AnyObject).rol);
         (token as AnyObject).roles = roles;
         (token as AnyObject).rol = roles[0] ?? null;
         (token as AnyObject).nick = (user as AnyObject).nick ?? null;
         (token as AnyObject).avatarUrl = (user as AnyObject).avatarUrl ?? null;
-        (token as AnyObject).oauthImage = (user as AnyObject).image ?? null;
+        const userImage = (user as AnyObject).image ?? null;
+        (token as AnyObject).oauthImage = providerImage ?? userImage ?? (token as AnyObject).oauthImage ?? null;
       } else if ((token as AnyObject).roles == null) {
         (token as AnyObject).roles = [];
       }
+      if (providerImage) (token as AnyObject).oauthImage = providerImage;
       return token;
     },
     async session({ session, token }) {
@@ -73,12 +81,26 @@ export const authConfig = {
         (session.user as AnyObject).id = token?.sub ?? null;
         (session.user as AnyObject).roles = tokenRoles;
         (session.user as AnyObject).rol = tokenRoles[0] ?? null;
-        (session.user as AnyObject).nick = (token as AnyObject)?.nick ?? null;
+        (session.user as AnyObject).nick = (token as AnyObject)?.nick ?? (session.user as AnyObject).nick ?? null;
+
+        const fallbackAssignFromToken = () => {
+          const avatarFromToken = (token as AnyObject)?.avatarUrl ?? null;
+          const oauthImageFromToken = (token as AnyObject)?.oauthImage ?? null;
+          const chosen = avatarFromToken ?? oauthImageFromToken ?? null;
+          (session.user as AnyObject).avatarUrl = avatarFromToken;
+          (session.user as AnyObject).image = chosen;
+          (session.user as AnyObject).oauthImage = oauthImageFromToken;
+        };
+
         try {
-          const suEmail = (session.user as AnyObject).email as string | undefined;
-          if (suEmail) {
-            const u = await prisma.user.findUnique({
-              where: { email: suEmail },
+          const emailFromToken = (token as AnyObject).email ?? (session.user as AnyObject).email ?? null;
+          const userId = token?.sub ? Number(token.sub) : null;
+          const numericUserId = Number.isFinite(userId) ? userId : null;
+          const where = emailFromToken ? { email: emailFromToken } : numericUserId != null ? { id: numericUserId } : null;
+
+          if (where) {
+            let u = await prisma.user.findUnique({
+              where,
               select: {
                 avatarUrl: true,
                 image: true,
@@ -87,24 +109,58 @@ export const authConfig = {
                 roles: true,
               },
             });
-            const chosen = u?.avatarUrl ?? u?.image ?? null;
-            (session.user as AnyObject).avatarUrl = u?.avatarUrl ?? null;
-            (session.user as AnyObject).image = chosen;
-            if (u?.nick && !(session.user as AnyObject).nick) (session.user as AnyObject).nick = u.nick;
-            if (u?.name && !(session.user as AnyObject).name) (session.user as AnyObject).name = u.name;
-            if (u?.roles) {
-              const dbRoles = normalizeRoles(u.roles);
-              (session.user as AnyObject).roles = dbRoles;
-              (session.user as AnyObject).rol = dbRoles[0] ?? null;
-              (token as AnyObject).roles = dbRoles;
-              (token as AnyObject).rol = dbRoles[0] ?? null;
+
+            const oauthImage = (token as AnyObject)?.oauthImage ?? null;
+
+            if (oauthImage && u?.image !== oauthImage) {
+              try {
+                await prisma.user.update({
+                  where,
+                  data: { image: oauthImage },
+                });
+                if (u) {
+                  u = { ...u, image: oauthImage };
+                } else {
+                  u = {
+                    avatarUrl: null,
+                    image: oauthImage,
+                    name: null,
+                    nick: null,
+                    roles: [],
+                  };
+                }
+              } catch {
+                // si falla la actualizacion no bloqueamos la sesion; se reintentara en el siguiente login
+              }
+            }
+
+            if (u) {
+              const chosen = u.avatarUrl ?? u.image ?? oauthImage ?? null;
+              (session.user as AnyObject).avatarUrl = u.avatarUrl ?? null;
+              (session.user as AnyObject).image = chosen;
+              (session.user as AnyObject).oauthImage = u.image ?? oauthImage ?? null;
+              (token as AnyObject).avatarUrl = u.avatarUrl ?? null;
+              (token as AnyObject).oauthImage = u.image ?? oauthImage ?? null;
+              if (u.nick) (session.user as AnyObject).nick ??= u.nick;
+              if (u.name) (session.user as AnyObject).name ??= u.name;
+              if (u.roles) {
+                const dbRoles = normalizeRoles(u.roles);
+                if (dbRoles.length) {
+                  (session.user as AnyObject).roles = dbRoles;
+                  (session.user as AnyObject).rol = dbRoles[0] ?? null;
+                  (token as AnyObject).roles = dbRoles;
+                  (token as AnyObject).rol = dbRoles[0] ?? null;
+                }
+              }
+            } else {
+              fallbackAssignFromToken();
             }
           } else {
-            const chosen = (token as AnyObject)?.avatarUrl ?? (token as AnyObject)?.oauthImage ?? null;
-            (session.user as AnyObject).avatarUrl = (token as AnyObject)?.avatarUrl ?? null;
-            (session.user as AnyObject).image = chosen;
+            fallbackAssignFromToken();
           }
-        } catch {}
+        } catch {
+          fallbackAssignFromToken();
+        }
       }
       return session;
     },

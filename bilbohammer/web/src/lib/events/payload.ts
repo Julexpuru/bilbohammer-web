@@ -1,13 +1,7 @@
 "use server";
 
-import {
-  EventHighlightType,
-  EventStatus,
-  EventType,
-  Juego,
-  Prisma,
-  PrismaClient,
-} from "@prisma/client";
+import { EventHighlightType, EventStatus, EventType, Prisma, PrismaClient } from "@prisma/client";
+import { loadActiveGames, resolveGameFromInput, type GameCatalogItem } from "@/lib/game-catalog";
 
 export type OrganizerInput = {
   userId: number;
@@ -15,10 +9,10 @@ export type OrganizerInput = {
 };
 
 export type OrganizationInput = {
-  id?: string | null;
-  slug?: string | null;
-  name?: string | null;
-  isClub?: boolean;
+  id: string | null;
+  slug: string | null;
+  name: string | null;
+  isClub: boolean | undefined;
   role: string | null;
 };
 
@@ -65,7 +59,7 @@ export type ParsedEventPayload = {
     recap?: string | null;
     status: EventStatus;
     type: EventType;
-    game?: Juego | null;
+    gameId?: string | null;
     priceGeneral?: Prisma.Decimal | null;
     priceSocios?: Prisma.Decimal | null;
     capacityMax?: number | null;
@@ -85,6 +79,7 @@ export type ParsedEventPayload = {
     showTabChronicle: boolean;
     showTabGallery: boolean;
     showTabLocation: boolean;
+    chronicleArticleId?: string | null;
     albumId?: string | null;
   };
   tags: string[];
@@ -101,7 +96,6 @@ type RawPayload = Record<string, any>;
 const EVENT_STATUS_VALUES = new Set(Object.values(EventStatus));
 const EVENT_TYPE_VALUES = new Set(Object.values(EventType));
 const EVENT_HIGHLIGHT_TYPE_VALUES = new Set(Object.values(EventHighlightType));
-const JUEGO_VALUES = new Set(Object.values(Juego));
 
 const EVENT_TYPE_TAG_LABELS: Record<EventType, string> = {
   SOCIAL: "Social",
@@ -109,19 +103,6 @@ const EVENT_TYPE_TAG_LABELS: Record<EventType, string> = {
   LEAGUE: "Liga",
   WORKSHOP: "Workshop",
   OTHER: "Otro",
-};
-
-const GAME_TAG_LABELS: Record<Juego, string> = {
-  W40K: "Warhammer 40K",
-  AOS: "Age of Sigmar",
-  TOW: "The Old World",
-  ESDLA: "El Senor de los Anillos",
-  BB: "Blood Bowl",
-  MARVEL: "Marvel Crisis Protocol",
-  ROL: "Rol",
-  MAGIC: "Magic",
-  JUEGOS_DE_MESA: "Juegos de mesa",
-  OTROS: "Otros",
 };
 
 function parseDate(value: unknown, field: string): Date {
@@ -203,8 +184,13 @@ export async function parseEventPayload(raw: RawPayload): Promise<ParsedEventPay
   const typeRaw = typeof raw.type === "string" ? raw.type.toUpperCase() : undefined;
   const type = typeRaw && EVENT_TYPE_VALUES.has(typeRaw as EventType) ? (typeRaw as EventType) : EventType.OTHER;
 
-  const gameRaw = typeof raw.game === "string" ? raw.game.toUpperCase() : undefined;
-  const game = gameRaw && JUEGO_VALUES.has(gameRaw as Juego) ? (gameRaw as Juego) : null;
+  const gameRaw = typeof raw.game === "string" ? raw.game : undefined;
+  let selectedGame: GameCatalogItem | null = null;
+  if (gameRaw) {
+    const games = await loadActiveGames();
+    selectedGame = resolveGameFromInput(gameRaw, games);
+  }
+  const gameId = selectedGame?.id ?? null;
 
   const priceGeneral = parseDecimal(raw.priceGeneral, "priceGeneral");
   const priceSocios = parseDecimal(raw.priceSocios, "priceSocios");
@@ -233,6 +219,8 @@ export async function parseEventPayload(raw: RawPayload): Promise<ParsedEventPay
     ? visibility.tabs
     : {};
 
+  const hasChronicleId = Object.prototype.hasOwnProperty.call(raw, "chronicleArticleId");
+  const chronicleArticleId = hasChronicleId ? parseString(raw.chronicleArticleId) : undefined;
   const hasAlbumId = Object.prototype.hasOwnProperty.call(raw, "albumId");
   const albumId = hasAlbumId ? parseString(raw.albumId) : undefined;
 
@@ -282,8 +270,8 @@ export async function parseEventPayload(raw: RawPayload): Promise<ParsedEventPay
 
   const systemTags = new Set<string>();
   systemTags.add(EVENT_TYPE_TAG_LABELS[type] ?? type);
-  if (game && game !== "OTROS") {
-    systemTags.add(GAME_TAG_LABELS[game] ?? game);
+  if (selectedGame && !selectedGame.isDefault) {
+    systemTags.add(selectedGame.name ?? selectedGame.slug);
   }
   const tags = Array.from(new Set([...baseTags, ...systemTags]));
 
@@ -412,7 +400,7 @@ export async function parseEventPayload(raw: RawPayload): Promise<ParsedEventPay
       recap,
       status,
       type,
-      game,
+      gameId,
       priceGeneral,
       priceSocios,
       capacityMax,
@@ -432,6 +420,7 @@ export async function parseEventPayload(raw: RawPayload): Promise<ParsedEventPay
       showTabChronicle,
       showTabGallery,
       showTabLocation,
+      chronicleArticleId: hasChronicleId ? chronicleArticleId ?? null : undefined,
       albumId: hasAlbumId ? albumId ?? null : undefined,
     },
     tags,

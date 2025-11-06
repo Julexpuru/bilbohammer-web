@@ -3,6 +3,8 @@ import EventForm, { EventFormInitialData } from "@/components/events/EventForm";
 import { auth } from "@/auth";
 import { userCanManageEvents } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { findArticleById } from "@/lib/novedades-repository";
 
 type Params = {
   slug: string;
@@ -10,13 +12,29 @@ type Params = {
 
 export const dynamic = "force-dynamic";
 
-type LoadedEvent = NonNullable<
-  Awaited<
-    ReturnType<typeof prisma.event.findUnique>
-  >
->;
+type LoadedEvent = Prisma.EventGetPayload<{
+  include: {
+    tags: true;
+    game: true;
+    organizers: {
+      include: {
+        user: { select: { id: true; name: true; nombre: true; nick: true; email: true } };
+      };
+    };
+    organizations: { include: { organization: true } };
+    attachments: true;
+    links: true;
+    highlights: true;
+    rankings: { orderBy: { position: "asc" } };
+    album: true;
+  };
+}>;
 
-function mapEventToInitialData(event: LoadedEvent): EventFormInitialData {
+async function mapEventToInitialData(event: LoadedEvent): Promise<EventFormInitialData> {
+  const linkedChronicle = event.chronicleArticleId
+    ? await findArticleById(event.chronicleArticleId)
+    : null;
+
   return {
     id: event.id,
     title: event.title,
@@ -31,7 +49,7 @@ function mapEventToInitialData(event: LoadedEvent): EventFormInitialData {
     recap: event.recap ?? null,
     status: event.status as EventFormInitialData["status"],
     type: event.type as EventFormInitialData["type"],
-    game: event.game ?? null,
+    game: event.game?.legacyEnumKey ?? event.game?.slug ?? null,
     priceGeneral: event.priceGeneral ? event.priceGeneral.toString() : null,
     priceSocios: event.priceSocios ? event.priceSocios.toString() : null,
     capacityMax: event.capacityMax,
@@ -51,6 +69,12 @@ function mapEventToInitialData(event: LoadedEvent): EventFormInitialData {
     showTabChronicle: event.showTabChronicle ?? true,
     showTabGallery: event.showTabGallery ?? true,
     showTabLocation: event.showTabLocation ?? true,
+    chronicleArticleId: event.chronicleArticleId ?? null,
+    chronicleArticleTitle: linkedChronicle?.title ?? null,
+    chronicleArticleSlug: linkedChronicle?.slug ?? null,
+    chronicleArticleCategory: linkedChronicle?.category ?? null,
+    chronicleArticleSummary: linkedChronicle?.summary ?? null,
+    chronicleArticleDate: linkedChronicle?.date ?? null,
     albumId: event.albumId ?? null,
     tags: event.tags.map((tag) => tag.label),
     organizers: event.organizers.map((entry) => ({
@@ -110,6 +134,7 @@ export default async function EditEventPage({ params }: { params: Params }) {
     where: { id: params.slug },
     include: {
       tags: true,
+      game: true,
       organizers: {
         include: {
           user: { select: { id: true, name: true, nombre: true, nick: true, email: true } },
@@ -128,7 +153,7 @@ export default async function EditEventPage({ params }: { params: Params }) {
     notFound();
   }
 
-  const initialData = mapEventToInitialData(event);
+  const initialData = await mapEventToInitialData(event);
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 px-4 py-8">

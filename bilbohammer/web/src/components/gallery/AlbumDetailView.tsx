@@ -171,17 +171,24 @@ export function AlbumDetailView({ album, editAccess = "none" }: AlbumDetailViewP
         <h2 className="text-2xl font-semibold text-[var(--text)]">Reaccion de la comunidad</h2>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        {albumData.albumComments.map((comment) => (
-          <article key={comment.id} className="flex flex-col gap-2 rounded-2xl border border-[var(--hairline)] bg-[var(--bg)] p-4">
-            <header className="flex items-center justify-between text-sm text-[var(--muted)]">
-              <span className="font-medium text-[var(--text)]">{comment.author}</span>
-              <time className="text-xs" dateTime={comment.createdAt}>
-                {new Date(comment.createdAt).toLocaleDateString("es-ES")}
-              </time>
-            </header>
-            <p className="text-sm text-[var(--muted)]">{comment.message}</p>
-          </article>
-        ))}
+        {albumData.albumComments.map((comment) => {
+          const displayDate =
+            comment.formattedDate ?? (comment.createdAt ? new Date(comment.createdAt).toLocaleDateString("es-ES") : "");
+          return (
+            <article
+              key={comment.id}
+              className="flex flex-col gap-2 rounded-2xl border border-[var(--hairline)] bg-[var(--bg)] p-4"
+            >
+              <header className="flex items-center justify-between text-sm text-[var(--muted)]">
+                <span className="font-medium text-[var(--text)]">{comment.author}</span>
+                <time className="text-xs" dateTime={comment.createdAt ?? undefined}>
+                  {displayDate}
+                </time>
+              </header>
+              <p className="text-sm text-[var(--muted)]">{comment.message ?? comment.body ?? ""}</p>
+            </article>
+          );
+        })}
       </div>
     </section>
   );

@@ -19,11 +19,38 @@ const primaryLinks = [
 ];
 
 const aboutLinks = [
-  { href: "/sobre-nosotros#quienes-somos", label: "¿Quiénes somos?" },
-  { href: "/sobre-nosotros#juegos", label: "Juegos" },
-  { href: "/sobre-nosotros#tablon-de-socios", label: "Tablón de socios" },
-  { href: "/sobre-nosotros#contacto", label: "Contacto" },
+  { href: "/sobre-nosotros/quienes-somos", label: "¿Quiénes somos?" },
+  { href: "/sobre-nosotros/juegos", label: "Juegos" },
+  { href: "/sobre-nosotros/tablon-de-socios", label: "Tablón de socios" },
+  { href: "/sobre-nosotros/contacto", label: "Contacto" },
 ];
+
+const clubLinks = [
+  { href: "/admin/gestion-usuarios", label: "Gestion de Usuarios" },
+  { href: "/admin/gestion-documental", label: "Gestion Documental" },
+];
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      className={clsx("transition-transform duration-150", open ? "rotate-180" : "rotate-0")}
+      focusable="false"
+    >
+      <path
+        d="M2 4.5 6 8l4-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function useOutsideClick(ref: RefObject<HTMLElement | null>, handler: () => void) {
   useEffect(() => {
@@ -47,6 +74,10 @@ export default function TopBar() {
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
 
+  const clubRef = useRef<HTMLDivElement | null>(null);
+  const clubHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [clubOpen, setClubOpen] = useState(false);
+
   const cancelScheduledClose = useCallback(() => {
     if (hoverTimer.current) {
       clearTimeout(hoverTimer.current);
@@ -64,9 +95,30 @@ export default function TopBar() {
     hoverTimer.current = setTimeout(() => setAboutOpen(false), 180);
   }, [cancelScheduledClose]);
 
+  const cancelScheduledClubClose = useCallback(() => {
+    if (clubHoverTimer.current) {
+      clearTimeout(clubHoverTimer.current);
+      clubHoverTimer.current = null;
+    }
+  }, []);
+
+  const closeClub = useCallback(() => {
+    cancelScheduledClubClose();
+    setClubOpen(false);
+  }, [cancelScheduledClubClose]);
+
+  const scheduleClubClose = useCallback(() => {
+    cancelScheduledClubClose();
+    clubHoverTimer.current = setTimeout(() => setClubOpen(false), 180);
+  }, [cancelScheduledClubClose]);
+
   useOutsideClick(aboutRef, closeAbout);
   useEffect(() => closeAbout(), [pathname, closeAbout]);
   useEffect(() => () => cancelScheduledClose(), [cancelScheduledClose]);
+
+  useOutsideClick(clubRef, closeClub);
+  useEffect(() => closeClub(), [pathname, closeClub]);
+  useEffect(() => () => cancelScheduledClubClose(), [cancelScheduledClubClose]);
 
   const activeMap = useMemo(() => {
     const map = new Map<string, boolean>();
@@ -80,6 +132,8 @@ export default function TopBar() {
     map.set("/sobre-nosotros", pathname === "/sobre-nosotros" || pathname.startsWith("/sobre-nosotros/"));
     return map;
   }, [pathname]);
+
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
 
   return (
     <div className="header-grid">
@@ -131,12 +185,7 @@ export default function TopBar() {
             aria-expanded={aboutOpen}
           >
             Sobre Nosotros
-            <span
-              aria-hidden="true"
-              className={clsx("text-xs transition-transform duration-150", aboutOpen ? "rotate-180" : "rotate-0")}
-            >
-              ▾
-            </span>
+            <ChevronIcon open={aboutOpen} />
           </button>
           {aboutOpen && (
             <div
@@ -161,9 +210,50 @@ export default function TopBar() {
 
       <div className="justify-self-end flex items-center gap-3">
         {canManageClub && (
-          <Link href="/admin" className="manage-club-btn">
-            Gestión del club
-          </Link>
+          <div
+            ref={clubRef}
+            className="relative"
+            onMouseEnter={() => {
+              cancelScheduledClubClose();
+              setClubOpen(true);
+            }}
+            onMouseLeave={scheduleClubClose}
+          >
+            <button
+              type="button"
+              className={clsx(
+                "manage-club-btn",
+                (clubOpen || isAdminRoute) && "bg-[rgba(255,255,255,0.18)] border-[rgba(255,255,255,0.35)]"
+              )}
+              aria-haspopup="menu"
+              aria-expanded={clubOpen}
+              onClick={() => {
+                cancelScheduledClubClose();
+                setClubOpen((prev) => !prev);
+              }}
+            >
+              Gestion del club
+              <ChevronIcon open={clubOpen} />
+            </button>
+            {clubOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 mt-2 flex w-60 flex-col gap-1 rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-2 shadow-xl z-50"
+              >
+                {clubLinks.map(({ href, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="rounded-xl px-3 py-2 text-sm text-[var(--text)] transition hover:bg-[var(--accent-50)] hover:text-[var(--accent-600)]"
+                    onClick={closeClub}
+                    role="menuitem"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         <ThemeToggle />
         {session?.user ? (
@@ -177,3 +267,4 @@ export default function TopBar() {
     </div>
   );
 }
+
