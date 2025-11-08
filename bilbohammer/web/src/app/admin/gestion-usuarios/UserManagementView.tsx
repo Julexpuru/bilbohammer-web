@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { Avatar } from "@/components/profile/Avatar";
 import type { ColumnConfig, PreparedRow } from "./table-config";
 import { COLUMN_LABELS } from "./table-config";
+import { formatClubDateTime, getClubDateTimeFormatter } from "@/lib/date-format";
 
 type RowData = PreparedRow;
 
@@ -122,7 +123,7 @@ function formatDateDisplay(value: string | undefined, hydrated: boolean): string
   if (hasTimeComponent(trimmed)) {
     options.timeStyle = "short";
   }
-  return new Intl.DateTimeFormat("es-ES", options).format(date);
+  return formatClubDateTime(date, options);
 }
 
 function toDateInputValue(value: string | undefined): string {
@@ -647,10 +648,10 @@ export function UserManagementView({ columns, initialRows }: Props) {
       const timestamp = new Date();
       setSaveInfo(
         updated.length > 0
-          ? `Ultimo guardado: ${new Intl.DateTimeFormat("es-ES", {
+          ? `Ultimo guardado: ${formatClubDateTime(timestamp, {
               dateStyle: "short",
               timeStyle: "medium",
-            }).format(timestamp)}`
+            })}`
           : "Sin cambios aplicados."
       );
 
@@ -859,7 +860,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
   }, [pendingChanges]);
   const historyDateFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat("es-ES", {
+      getClubDateTimeFormatter({
         dateStyle: "medium",
         timeStyle: "short",
       }),
@@ -1114,6 +1115,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
 
                           if (column.type === "image") {
                             const avatarUrl = row.avatarUrl || "";
+                            const oauthAvatarUrl = row.oauthAvatarUrl || value || "";
                             return (
                               <td key={column.key} className={cellClasses} style={style}>
                                 <div className="flex items-center gap-3 pr-2">
@@ -1121,7 +1123,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
                                     size={44}
                                     displayName={displayName}
                                     avatarUrl={avatarUrl || undefined}
-                                    oauthAvatarUrl={value || undefined}
+                                    oauthAvatarUrl={oauthAvatarUrl || undefined}
                                   />
                                 </div>
                               </td>

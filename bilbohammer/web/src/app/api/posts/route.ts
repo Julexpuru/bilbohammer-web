@@ -1,84 +1,90 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 // src/app/api/posts/route.ts
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getArticlesByCategory } from "@/lib/novedades-repository";
+import { HOME_FEED_PAGE_SIZE } from "@/constants/feed";
+import { auth } from "@/auth";
+import type { ArticleCategory } from "@/app/novedades/data";
+import type { PostType } from "@prisma/client";
 
-/**
- * Endpoint tolerante:
- * - Usa prisma.post si existe; si no, prueba prisma.announcement (por si el modelo aún se llama así).
- * - Si el modelo no tiene campo "type", ignora el filtro "type".
- * - Paginación por cursor si el modelo tiene "id".
- */
+type FeedItem = {
+  id: string;
+  type: PostType;
+  title: string;
+  content: string;
+  createdAt: string;
+  imageUrl?: string | null;
+};
+
+const ARTICLE_CATEGORY_BY_TYPE: Record<Exclude<PostType, "EVENTO">, ArticleCategory> = {
+  ANUNCIO: "news",
+  NOTICIA_PRIVADA: "members",
+};
+
 export async function GET(req: Request) {
-  const client = prisma as any;
-  const postModel = client.post ?? client.announcement; // 👈 fallback
-  if (!postModel) {
-    return NextResponse.json(
-      { error: "No existe un modelo Post/Announcement en Prisma. Revisa schema.prisma y vuelve a generar el cliente." },
-      { status: 500 }
-    );
-  }
-
   const { searchParams } = new URL(req.url);
-  const type = searchParams.get("type"); // ANUNCIO|EVENTO|NOTICIA_PRIVADA|all
+  const type = (searchParams.get("type") as PostType) ?? "ANUNCIO";
   const cursor = searchParams.get("cursor") || undefined;
-  const take = 10;
+  const limitParam = Number(searchParams.get("limit"));
+  const take =
+    Number.isFinite(limitParam) && limitParam > 0
+      ? Math.min(Math.trunc(limitParam), HOME_FEED_PAGE_SIZE)
+      : HOME_FEED_PAGE_SIZE;
 
-  // Construye "where" solo si el modelo soporta esos campos
-  const where: any = {};
-  // many esquemas usan "published"
-  if ("published" in postModel) where.published = true;
-
-  // Aplica filtro por tipo solo si hay campo "type" en el modelo
-  const hasTypeField =
-    client._dmmf?.mappingsMap?.get?.("Post")?.findMany?.args?.some?.((a: any) => a.name === "type") ||
-    client._dmmf?.mappingsMap?.get?.("Announcement")?.findMany?.args?.some?.((a: any) => a.name === "type") ||
-    true; // Prisma no expone fácil esta introspección en runtime; probamos más abajo
-
-  if (type && type !== "all") {
-    // intentaremos filtrar por type y si falla, hacemos catch y repetimos sin type
-    where.type = type;
+  if (type === "EVENTO") {
+    return fetchEventFeed(cursor, take);
   }
 
-  // include del evento si existe relación
-  const include = {} as any;
-  // Intentamos incluir "event" si el modelo lo soporta; si no, no pasa nada
-  if ("event" in (client.post ?? {})) include.event = true;
-
-  // Query con paginación por cursor (si hay "id")
-  try {
-    const args: any = {
-      where,
-      orderBy: { createdAt: "desc" },
-      take: take + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      ...include.event ? { include } : {},
-    };
-
-    let items = await postModel.findMany(args);
-    const nextCursor = items.length > take ? items[items.length - 1].id : null;
-    if (nextCursor) items.pop();
-
-    return NextResponse.json({ items, nextCursor });
-  } catch (e) {
-    // Si falló por el filtro type (modelo sin ese campo), repetimos sin él
-    try {
-      const args2: any = {
-        where: Object.fromEntries(Object.entries(where).filter(([k]) => k !== "type")),
-        orderBy: { createdAt: "desc" },
-        take: take + 1,
-        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      };
-      let items = await postModel.findMany(args2);
-      const nextCursor = items.length > take ? items[items.length - 1].id : null;
-      if (nextCursor) items.pop();
-      return NextResponse.json({ items, nextCursor, note: "Modelo sin campo 'type': filtro ignorado." });
-    } catch (e2) {
-      return NextResponse.json(
-        { error: "No se pudo listar posts/anuncios. ¿Modelo y migraciones actualizadas?" },
-        { status: 500 }
-      );
+  if (type === "NOTICIA_PRIVADA") {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Privado" }, { status: 401 });
     }
   }
+
+  return fetchArticleFeed(type, cursor, take);
+}
+
+async function fetchArticleFeed(type: Exclude<PostType, "EVENTO">, cursor: string | undefined, take: number) {
+  const category = ARTICLE_CATEGORY_BY_TYPE[type];
+  const articles = await getArticlesByCategory(category);
+  const startIndex = cursor ? Math.max(Number(cursor), 0) : 0;
+  const slice = articles.slice(startIndex, startIndex + take);
+  const nextCursor = startIndex + slice.length < articles.length ? String(startIndex + slice.length) : null;
+  const items: FeedItem[] = slice.map((article) => ({
+    id: `article-${article.id}`,
+    type,
+    title: article.title,
+    content:
+      article.summary ||
+      article.body?.find((block) => block.type === "paragraph")?.text ||
+      "Consulta la ficha completa en la sección de novedades.",
+    createdAt: article.date ?? new Date().toISOString(),
+    imageUrl: article.banner ?? null,
+  }));
+
+  return NextResponse.json({ items, nextCursor });
+}
+
+async function fetchEventFeed(cursor: string | undefined, take: number) {
+  const events = await prisma.event.findMany({
+    orderBy: { startsAt: "asc" },
+    take: take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+  });
+  const hasExtra = events.length > take;
+  const nextCursor = hasExtra ? events[events.length - 1].id : null;
+  const slice = hasExtra ? events.slice(0, -1) : events;
+  const items: FeedItem[] = slice.map((event) => ({
+    id: `event-${event.id}`,
+    type: "EVENTO",
+    title: event.title,
+    content: event.details ?? event.location ?? "Consulta la ficha del evento para más información.",
+    createdAt: event.startsAt.toISOString(),
+    imageUrl: event.bannerUrl ?? null,
+  }));
+  return NextResponse.json({ items, nextCursor });
 }

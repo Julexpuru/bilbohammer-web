@@ -53,6 +53,7 @@ export default async function Page() {
   const displayNick = user.nick || user.nombre || user.name || user.email;
   const memberSinceISO = user.membershipSince ? new Date(user.membershipSince).toISOString() : null;
   const description = user.descripcion ?? null;
+  const oauthAvatarUrl = (user as any).oauthAvatarUrl ?? user.image ?? null;
 
   const roleBadges = normalizeRoles((user as any).roles ?? (session.user as any)?.roles ?? (session.user as any)?.rol);
 
@@ -143,7 +144,7 @@ export default async function Page() {
       <section className="grid grid-cols-[auto_1fr] gap-6 items-start">
         <Avatar
           avatarUrl={user.avatarUrl ?? null}
-          oauthAvatarUrl={user.image ?? null}
+          oauthAvatarUrl={oauthAvatarUrl}
           displayName={displayNick}
           size={112}
         />

@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
 import type { Article, ArticleCategory, ArticlesByCategory } from "./data";
@@ -11,6 +11,7 @@ type Props = {
   articlesByCategory: ArticlesByCategory;
   showMembersTab: boolean;
   canManage: boolean;
+  initialTab?: ArticleCategory;
 };
 
 const TAB_ORDER: Array<{ id: ArticleCategory }> = [
@@ -24,7 +25,7 @@ type DateRange = {
   to: string;
 };
 
-export function NovedadesContent({ articlesByCategory, showMembersTab, canManage }: Props) {
+export function NovedadesContent({ articlesByCategory, showMembersTab, canManage, initialTab }: Props) {
   const tabs = useMemo(
     () =>
       TAB_ORDER.filter((tab) => tab.id !== "members" || showMembersTab).map((tab) => ({
@@ -34,16 +35,30 @@ export function NovedadesContent({ articlesByCategory, showMembersTab, canManage
     [showMembersTab],
   );
 
-  const defaultTab = tabs[0]?.id ?? "news";
-  const [activeTab, setActiveTab] = useState<ArticleCategory>(defaultTab);
+  const fallbackTab = tabs[0]?.id ?? "news";
+  const safeInitialTab = useMemo(() => {
+    if (initialTab && tabs.some((tab) => tab.id === initialTab)) {
+      return initialTab;
+    }
+    return fallbackTab;
+  }, [fallbackTab, initialTab, tabs]);
+
+  const [activeTab, setActiveTab] = useState<ArticleCategory>(safeInitialTab);
+  const lastInitialTab = useRef<ArticleCategory>(safeInitialTab);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange>({ from: "", to: "" });
 
   useEffect(() => {
     if (!tabs.some((tab) => tab.id === activeTab)) {
-      setActiveTab(tabs[0]?.id ?? "news");
+      setActiveTab(fallbackTab);
     }
-  }, [activeTab, tabs]);
+  }, [activeTab, fallbackTab, tabs]);
+
+  useEffect(() => {
+    if (lastInitialTab.current === safeInitialTab) return;
+    lastInitialTab.current = safeInitialTab;
+    setActiveTab(safeInitialTab);
+  }, [safeInitialTab]);
 
   const filteredArticles = useMemo(() => {
     const currentArticles = articlesByCategory[activeTab] ?? [];
@@ -78,7 +93,7 @@ export function NovedadesContent({ articlesByCategory, showMembersTab, canManage
   if (tabs.length === 0) {
     return (
       <section className="rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-10 text-center text-[var(--muted)]">
-        No hay secciones de novedades disponibles todavía.
+        No hay secciones de novedades disponibles todavÃ­a.
       </section>
     );
   }
@@ -95,7 +110,7 @@ export function NovedadesContent({ articlesByCategory, showMembersTab, canManage
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Título, autor o tag"
+            placeholder="TÃ­tulo, autor o tag"
             className="mt-2 w-full rounded-2xl border border-[var(--hairline)] bg-[var(--card)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)] focus:border-[var(--accent-400)] focus:outline-none"
           />
         </div>
@@ -195,7 +210,7 @@ function toExcerpt(summary: string) {
   if (words.length <= 100) {
     return summary.trim();
   }
-  return `${words.slice(0, 100).join(" ")}…`;
+  return `${words.slice(0, 100).join(" ")}â€¦`;
 }
 
 function formatReadableDate(value: string) {
@@ -203,7 +218,7 @@ function formatReadableDate(value: string) {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat("es-ES", { dateStyle: "medium" }).format(parsed);
+    return new Intl.DateTimeFormat("es-ES", { dateStyle: "medium" }).format(parsed);
 }
 
 type HeroCardProps = {
@@ -253,3 +268,4 @@ function HeroCard({ article }: HeroCardProps) {
     </article>
   );
 }
+

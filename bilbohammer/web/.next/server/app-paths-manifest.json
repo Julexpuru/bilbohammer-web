@@ -1,10 +1,1 @@
-{
-  "/page": "app/page.js",
-  "/mi-perfil/page": "app/mi-perfil/page.js",
-  "/admin/gestion-usuarios/page": "app/admin/gestion-usuarios/page.js",
-  "/sobre-nosotros/tablon-de-socios/page": "app/sobre-nosotros/tablon-de-socios/page.js",
-  "/api/events/route": "app/api/events/route.js",
-  "/admin/gestion-documental/page": "app/admin/gestion-documental/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/members/summary/route": "app/api/members/summary/route.js"
-}
+{}

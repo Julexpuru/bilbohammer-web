@@ -13,6 +13,9 @@ import { GAME_DEFAULT_CONTENT } from "../src/lib/game-default-content";
 import { cloneContactContent } from "../src/lib/contact-content-data";
 
 const prisma = new PrismaClient();
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const daysAgo = (days: number) => new Date(Date.now() - days * DAY_IN_MS);
+const daysFromNow = (days: number, hours = 0) => new Date(Date.now() + days * DAY_IN_MS + hours * 60 * 60 * 1000);
 
 type SeedUser = {
   email: string;
@@ -468,6 +471,8 @@ const SAMPLE_USERS: SeedUser[] = [
 async function main() {
   const gameIndex = await seedGames();
   await seedGameInfo(gameIndex);
+  await prisma.post.deleteMany();
+  await prisma.event.deleteMany();
   const hash = await bcrypt.hash("DemoSegura123!", 12);
   const userLocal = await upsertUser(
     {
@@ -692,26 +697,122 @@ async function main() {
     data: { totalPhotos: 2 },
   });
 
-  await prisma.post.create({
-    data: {
-      title: "Este viernes, quedada",
-      type: PostType.EVENTO,
-      published: true,
-      authorId: userLocal.id,
-      eventId: evento.id,
-      content: "Trae tu ejercito y ganas de jugar.",
-    },
-  });
+  const upcomingEvents = await Promise.all([
+    prisma.event.create({
+      data: {
+        title: "Liga Kill Team de otoño",
+        bannerUrl: "/assets/img/slide3.svg",
+        startsAt: daysFromNow(5),
+        endsAt: daysFromNow(5, 6),
+        location: "Sala táctica Bilbohammer",
+        details: "Tres rondas suizas con listas a 125 puntos.",
+        status: EventStatus.PUBLISHED,
+        type: EventType.LEAGUE,
+        priceGeneral: new Prisma.Decimal("10.00"),
+        priceSocios: new Prisma.Decimal("0.00"),
+      },
+    }),
+    prisma.event.create({
+      data: {
+        title: "Open de pintura express",
+        bannerUrl: "/assets/img/slide1.svg",
+        startsAt: daysFromNow(9),
+        endsAt: daysFromNow(9, 4),
+        location: "Bilbohammer HQ",
+        details: "Trae tu mini y te damos una hora para terminarla.",
+        status: EventStatus.PUBLISHED,
+        type: EventType.WORKSHOP,
+        priceGeneral: new Prisma.Decimal("0.00"),
+        priceSocios: new Prisma.Decimal("0.00"),
+      },
+    }),
+  ]);
 
-  await prisma.post.create({
-    data: {
-      title: "Bienvenida a nuevos socios",
+  type FeedPostSeed = {
+    title: string;
+    type: PostType;
+    content: string;
+    reactionScore: number;
+    createdAt: Date;
+    author: "local" | "oauth";
+    eventId?: string;
+  };
+
+  const feedPosts: FeedPostSeed[] = [
+    {
+      title: "Guía rápida para quienes os apuntáis esta semana",
       type: PostType.ANUNCIO,
-      published: true,
-      authorId: userOauth.id,
-      content: "Recordad leer las normas del local.",
+      content: "Hemos resumido los pasos para reservar mesa, apuntarte a ligas y pedir llaves del local.",
+      reactionScore: 72,
+      createdAt: daysAgo(1),
+      author: "oauth",
     },
-  });
+    {
+      title: "Horario extendido el sábado",
+      type: PostType.ANUNCIO,
+      content: "Abrimos desde las 10:00 hasta medianoche para que podáis cerrar campañas pendientes.",
+      reactionScore: 28,
+      createdAt: daysAgo(2),
+      author: "local",
+    },
+    {
+      title: "Crónica privada de la junta: nueva remesa de tapetes",
+      type: PostType.NOTICIA_PRIVADA,
+      content: "Llegan 6 tapetes temáticos financiados con la cuota trimestral. Coordinad el almacenaje en Discord.",
+      reactionScore: 41,
+      createdAt: daysAgo(3),
+      author: "oauth",
+    },
+    {
+      title: "Mentorías uno a uno para socios",
+      type: PostType.NOTICIA_PRIVADA,
+      content: "Abrimos slots de práctica competitiva con la gente de la liga. Reservad desde el tablón privado.",
+      reactionScore: 19,
+      createdAt: daysAgo(5),
+      author: "local",
+    },
+    {
+      title: "Últimas plazas para la quedada semanal",
+      type: PostType.EVENTO,
+      content: "Nos quedan 4 plazas libres en mesas narrativas. Confirmad asistencia antes del jueves.",
+      reactionScore: 33,
+      createdAt: daysAgo(2),
+      author: "local",
+      eventId: evento.id,
+    },
+    {
+      title: "Liga Kill Team: cierra tu inscripción",
+      type: PostType.EVENTO,
+      content: "Publicamos bases actualizadas y emparejamientos de la primera jornada.",
+      reactionScore: 25,
+      createdAt: daysAgo(4),
+      author: "oauth",
+      eventId: upcomingEvents[0]?.id,
+    },
+  ];
+
+  for (const post of feedPosts) {
+    await prisma.post.create({
+      data: {
+        title: post.title,
+        type: post.type,
+        content: post.content,
+        reactionScore: post.reactionScore,
+        createdAt: post.createdAt,
+        published: true,
+        author: {
+          connect: { id: post.author === "local" ? userLocal.id : userOauth.id },
+        },
+        ...(post.eventId
+          ? {
+              event: {
+                connect: { id: post.eventId },
+              },
+            }
+          : {}),
+      },
+    });
+  }
 
   await prisma.notification.create({
     data: {

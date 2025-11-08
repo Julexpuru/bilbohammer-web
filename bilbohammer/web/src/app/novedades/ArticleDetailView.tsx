@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { formatClubDateTime } from "@/lib/date-format";
 
 import type { Article, ArticleBlock, ArticleComment } from "./data";
 import { CATEGORY_LABELS } from "./data";
@@ -502,8 +503,8 @@ function formatReadableDate(value: string, includeTime = false) {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat("es-ES", {
+  return formatClubDateTime(parsed, {
     dateStyle: "long",
     ...(includeTime ? { timeStyle: "short" as const } : {}),
-  }).format(parsed);
+  });
 }

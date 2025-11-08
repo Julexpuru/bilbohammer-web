@@ -66,6 +66,7 @@ model User {
   descripcion     String?
   etiquetas       String[]
   avatarUrl       String?
+  oauthAvatarUrl  String?
   isActive        Boolean   @default(true)
   lastLoginAt     DateTime?
   membershipSince DateTime?
@@ -194,6 +195,7 @@ model Post {
   content   String?
   type      PostType
   published Boolean  @default(true)
+  reactionScore Int   @default(0)
   createdAt DateTime @default(now())
 
   authorId Int?

@@ -4,6 +4,7 @@ import type { Rol } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { extractRoles } from "@/lib/roles";
+import { formatClubDateTime } from "@/lib/date-format";
 
 export const metadata = {
   title: "Tablon de socios | Bilbohammer",
@@ -19,6 +20,7 @@ type RawMember = {
   name: string | null;
   nick: string | null;
   avatarUrl: string | null;
+  oauthAvatarUrl: string | null;
   image: string | null;
   roles: Rol[];
   descripcion: string | null;
@@ -75,6 +77,7 @@ export default async function TablonSociosPage() {
       name: true,
       nick: true,
       avatarUrl: true,
+      oauthAvatarUrl: true,
       image: true,
       roles: true,
       descripcion: true,
@@ -135,12 +138,12 @@ export default async function TablonSociosPage() {
 
 function toMemberCard(member: RawMember): MemberCard {
   const displayName = member.nick || member.name || `Socio ${member.id}`;
-  const avatarUrl = member.avatarUrl || member.image;
+  const avatarUrl = member.avatarUrl || member.oauthAvatarUrl || member.image;
   const initials = toInitials(displayName);
   const highest = pickHighestRole(member.roles);
   const roleLabel = highest ? ROLE_LABEL[highest] : ROLE_LABEL.SOCIO;
   const memberSince = member.membershipSince
-    ? new Intl.DateTimeFormat("es-ES", { month: "short", year: "numeric" }).format(member.membershipSince)
+    ? formatClubDateTime(member.membershipSince, { month: "short", year: "numeric" })
     : null;
 
   return {

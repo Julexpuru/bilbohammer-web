@@ -54,7 +54,8 @@ type GameInfoRecord = {
   } | null;
 };
 
-export default async function JuegosPage() {
+export default async function JuegosPage({ searchParams }: { searchParams?: { open?: string } }) {
+  const openSlug = typeof searchParams?.open === "string" ? searchParams.open.toLowerCase() : undefined;
   const session = await auth();
   const roles = extractRoles(session);
   const canEdit = roles.includes("ADMIN") || roles.includes("JUNTA");
@@ -122,6 +123,7 @@ export default async function JuegosPage() {
               apiPath={`/api/admin/game-info/${game.slug}`}
               canMoveUp={canMoveUp}
               canMoveDown={canMoveDown}
+              initiallyOpen={openSlug === game.slug}
             />
           );
         })}

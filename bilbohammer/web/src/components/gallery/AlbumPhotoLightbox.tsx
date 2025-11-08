@@ -5,6 +5,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import type { GalleryImage, GalleryViewerEntry } from "@/components/gallery/types";
+import { formatClubDateTime } from "@/lib/date-format";
 
 export type StandalonePhotoEditPayload = {
   title: string | null;
@@ -82,9 +83,7 @@ export function AlbumPhotoLightbox({
         ...comment,
         formattedDate:
           comment.formattedDate ??
-          (createdAtDate
-            ? createdAtDate.toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })
-            : undefined),
+          (createdAtDate ? formatClubDateTime(createdAtDate, { dateStyle: "short", timeStyle: "short" }) : undefined),
       };
     });
   }, [image?.comments]);
@@ -266,7 +265,7 @@ export function AlbumPhotoLightbox({
           )}
           {lastSavedAt && (
             <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-              Cambios guardados {new Date(lastSavedAt).toLocaleTimeString("es-ES")}
+              Cambios guardados {formatClubDateTime(lastSavedAt, { hour: "2-digit", minute: "2-digit" })}
             </div>
           )}
 

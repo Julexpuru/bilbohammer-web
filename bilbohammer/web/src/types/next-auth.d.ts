@@ -7,7 +7,7 @@ declare module "next-auth" {
     rol?: string | null; // primer rol para compatibilidad
     nick?: string | null;
     avatarUrl?: string | null;
-    oauthImage?: string | null;
+    oauthAvatarUrl?: string | null;
   }
 
   interface Session {
@@ -20,7 +20,7 @@ declare module "next-auth" {
       rol?: string | null;
       nick?: string | null;
       avatarUrl?: string | null;
-      oauthImage?: string | null;
+      oauthAvatarUrl?: string | null;
     };
   }
 }
@@ -32,7 +32,6 @@ declare module "next-auth/jwt" {
     rol?: string | null;
     nick?: string | null;
     avatarUrl?: string | null;
-    oauthImage?: string | null;
+    oauthAvatarUrl?: string | null;
   }
 }
-

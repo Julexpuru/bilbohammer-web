@@ -14,6 +14,7 @@ export type PreparedRow = Record<string, string>;
 export const HIDDEN_COLUMNS = new Set([
   "emailVerified",
   "avatarUrl",
+  "oauthAvatarUrl",
   "nombre",
   "descripcion",
   "faccionesW40K",

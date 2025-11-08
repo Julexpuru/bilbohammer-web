@@ -23,6 +23,7 @@ type GameCardProps = {
   apiPath: string;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  initiallyOpen?: boolean;
 };
 
 type MemberSearchResult = {
@@ -50,15 +51,17 @@ export function GameCard(props: GameCardProps) {
     contactDisplay,
     contactUserId,
     contactEmail,
-    contactNote,
-    canEdit,
-    apiPath,
-    canMoveUp,
-    canMoveDown,
-  } = props;
+  contactNote,
+  canEdit,
+  apiPath,
+  canMoveUp,
+  canMoveDown,
+  initiallyOpen = false,
+} = props;
 
   const router = useRouter();
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
+  const autoOpenedRef = useRef(false);
 
   const [summaryState, setSummaryState] = useState(summary);
   const [contentState, setContentState] = useState(contentHtml);
@@ -127,6 +130,18 @@ export function GameCard(props: GameCardProps) {
     setContactDisplayState(contactDisplay);
     setContactEmailState(contactEmail);
   }, [summary, contentHtml, investment, playtime, learning, contactNote, initialContact, contactDisplay, contactEmail]);
+
+  useEffect(() => {
+    if (initiallyOpen && detailsRef.current && !autoOpenedRef.current) {
+      detailsRef.current.open = true;
+      autoOpenedRef.current = true;
+      if (typeof window !== "undefined") {
+        window.requestAnimationFrame(() => {
+          detailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+    }
+  }, [initiallyOpen]);
 
   const handleEditClick = () => {
     if (detailsRef.current && !detailsRef.current.open) {
@@ -264,7 +279,7 @@ export function GameCard(props: GameCardProps) {
   const coordinatorEmail = selectedContact?.email ?? contactEmailState;
 
   return (
-    <details ref={detailsRef} className="group rounded-3xl border border-[var(--hairline)] bg-[var(--card)] shadow-sm transition">
+    <details id={slug} ref={detailsRef} className="group rounded-3xl border border-[var(--hairline)] bg-[var(--card)] shadow-sm transition">
       <summary className="flex flex-col gap-4 rounded-3xl px-5 py-4 transition hover:bg-[var(--card-muted)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative h-36 w-36 overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)]">

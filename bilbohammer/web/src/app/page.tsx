@@ -1,62 +1,90 @@
-// web/src/app/page.tsx
+﻿// web/src/app/page.tsx
 import HeroCarousel from "@/components/home/HeroCarousel";
 import FeedTabs from "@/components/home/FeedTabs";
-import InstagramEmbed from "@/components/home/InstagramEmbed";
 import EventsCalendar from "@/components/home/EventsCalendar";
-import NoticesForMembers from "@/components/home/NoticesForMembers";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import InstagramFeed from "@/components/home/InstagramFeed";
+import { HOME_FEED_PAGE_SIZE } from "@/constants/feed";
+import { getArticlesByCategory } from "@/lib/novedades-repository";
+import type { Article } from "@/app/novedades/data";
+import type { Event, PostType } from "@prisma/client";
 
-// Importamos tipos de Prisma solo para construir un tipo UI local
-import type { Post as PrismaPost, PostType } from "@prisma/client";
-
-// Adaptador de tipos para la UI: garantizamos content: string
-type UiPost = Omit<PrismaPost, "content" | "createdAt"> & { content: string; createdAt: string };
+type UiPost = {
+  id: string;
+  type: PostType;
+  title: string;
+  content: string;
+  createdAt: string;
+  imageUrl?: string | null;
+  reactionScore?: number;
+};
 
 export default async function HomePage() {
   const session = await auth();
-  const isMember = !!session; // afinaremos por rol más adelante
+  const isMember = !!session; // afinaremos por rol mÃ¡s adelante
 
   // SSR: primera tanda para evitar parpadeo
-  const [anuncios, eventos] = await Promise.all([
-    prisma.post.findMany({
-      where: { published: true, type: "ANUNCIO" },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    }),
-    prisma.post.findMany({
-      where: { published: true, type: "EVENTO" },
-      orderBy: { createdAt: "desc" },
-      take: 10,
+  const [newsArticles, memberArticles, upcomingEvents] = await Promise.all([
+    getArticlesByCategory("news"),
+    isMember ? getArticlesByCategory("members") : Promise.resolve([]),
+    prisma.event.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: { startsAt: "asc" },
+      take: HOME_FEED_PAGE_SIZE,
     }),
   ]);
 
-  // Sanitizamos content para que siempre sea string y cuadre con FeedTabs
-  const anunciosUI: UiPost[] = anuncios.map((p) => ({
-    ...p,
-    content: p.content ?? "",
-    createdAt: (p.createdAt as Date).toISOString(),
-  }));
-  const eventosUI: UiPost[] = eventos.map((p) => ({
-    ...p,
-    content: p.content ?? "",
-    createdAt: (p.createdAt as Date).toISOString(),
-  }));
+  const anunciosUI = newsArticles.slice(0, HOME_FEED_PAGE_SIZE).map((article) => mapArticleToPost(article, "ANUNCIO"));
+  const eventosUI = upcomingEvents.map(mapEventToPost);
+  const privadasUI = isMember
+    ? memberArticles.slice(0, HOME_FEED_PAGE_SIZE).map((article) => mapArticleToPost(article, "NOTICIA_PRIVADA"))
+    : [];
 
   const initialByType: Partial<Record<PostType, UiPost[]>> = {
     ANUNCIO: anunciosUI,
     EVENTO: eventosUI,
-    // NOTICIA_PRIVADA: si quieres, puedes precargar aquí cuando gestiones roles
   };
+  if (isMember) {
+    initialByType.NOTICIA_PRIVADA = privadasUI;
+  }
 
   return (
     <>
       <HeroCarousel />
-      {isMember && <NoticesForMembers />}
       <FeedTabs showPrivate={isMember} initialByType={initialByType} />
-      <InstagramFeed />
       <EventsCalendar />
+      <InstagramFeed />
     </>
   );
 }
+
+function mapArticleToPost(article: Article, type: PostType): UiPost {
+  const fallback =
+    article.summary ||
+    article.body?.find((block) => block.type === "paragraph")?.text ||
+    "Consulta la ficha completa en la sección de novedades.";
+  return {
+    id: `article-${article.id}`,
+    type,
+    title: article.title,
+    content: fallback,
+    createdAt: article.date ?? new Date().toISOString(),
+    imageUrl: article.banner ?? null,
+    reactionScore: article.tags.length,
+  };
+}
+
+function mapEventToPost(event: Event): UiPost {
+  return {
+    id: `event-${event.id}`,
+    type: "EVENTO",
+    title: event.title,
+    content: event.details ?? event.location ?? "Consulta la ficha completa para ver todos los detalles.",
+    createdAt: event.startsAt.toISOString(),
+    imageUrl: event.bannerUrl ?? null,
+    reactionScore: 0,
+  };
+}
+
+

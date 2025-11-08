@@ -14,11 +14,11 @@ export async function actualizaPerfilGoogleSiNecesario(opts: {
   const { userId, perfil } = opts;
   const usuario = await prisma.user.findUnique({
     where: { id: userId },
-    select: { name: true, image: true },
+    select: { name: true, image: true, oauthAvatarUrl: true },
   });
   if (!usuario) return;
 
-  const updateData: { name?: string; image?: string | null } = {};
+  const updateData: { name?: string; image?: string | null; oauthAvatarUrl?: string | null } = {};
 
   if (!usuario.name && perfil.nombre) {
     updateData.name = perfil.nombre;
@@ -27,6 +27,9 @@ export async function actualizaPerfilGoogleSiNecesario(opts: {
   const imagenNormalizada = perfil.imagen?.trim?.();
   if (imagenNormalizada && imagenNormalizada !== usuario.image) {
     updateData.image = imagenNormalizada;
+  }
+  if (imagenNormalizada && imagenNormalizada !== usuario.oauthAvatarUrl) {
+    updateData.oauthAvatarUrl = imagenNormalizada;
   }
 
   if (Object.keys(updateData).length > 0) {

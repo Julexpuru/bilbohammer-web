@@ -26,13 +26,14 @@ export default function UserAvatarMenu({ size = 34, profileHref = "/mi-perfil", 
 
   const user = (session?.user ?? cachedUser) as any | undefined;
   const [fallbackAvatar, setFallbackAvatar] = useState(false);
-  const avatarUrl = !fallbackAvatar ? user?.avatarUrl || user?.image || null : null;
+  const resolvedAvatar = user?.avatarUrl || user?.oauthAvatarUrl || user?.image || null;
+  const avatarUrl = !fallbackAvatar ? resolvedAvatar : null;
   const displayName: string | undefined = user?.nick || user?.name || user?.email || undefined;
   const initial = useMemo(() => (displayName ? displayName.trim()[0]?.toUpperCase() : "?"), [displayName]);
 
   useEffect(() => {
     setFallbackAvatar(false);
-  }, [user?.avatarUrl, user?.image]);
+  }, [user?.avatarUrl, user?.oauthAvatarUrl, user?.image]);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {

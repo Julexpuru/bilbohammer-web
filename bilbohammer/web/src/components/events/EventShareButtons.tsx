@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { formatClubDateTime } from "@/lib/date-format";
 
 type Props = {
   eventId: string;
@@ -20,10 +21,10 @@ function formatDateForGoogleCalendar(iso: string) {
 
 function formatDateForMessage(iso: string) {
   try {
-    return new Intl.DateTimeFormat("es-ES", {
+    return formatClubDateTime(iso, {
       dateStyle: "full",
       timeStyle: "short",
-    }).format(new Date(iso));
+    });
   } catch {
     return iso;
   }

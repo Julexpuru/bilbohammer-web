@@ -39,15 +39,18 @@ export const authConfig = {
         const ok = await bcrypt.compare(contrasena, user.passwordHash);
         if (!ok) return null;
         const roles = normalizeRoles((user as AnyObject).roles);
+        const oauthAvatar = user.oauthAvatarUrl ?? user.image ?? null;
+        const resolvedImage = user.avatarUrl ?? oauthAvatar ?? null;
         const authUser: User = {
           id: user.id,
           email: user.email,
           name: user.name ?? user.nick ?? null,
-          image: user.avatarUrl ?? user.image ?? null,
+          image: resolvedImage,
           roles,
           rol: roles[0] ?? null,
           nick: user.nick ?? null,
           avatarUrl: user.avatarUrl ?? null,
+          oauthAvatarUrl: oauthAvatar,
         };
         return authUser;
       },
@@ -55,7 +58,7 @@ export const authConfig = {
   ],
   callbacks: {
     async jwt({ token, user, account, profile }) {
-      const providerImage =
+      const providerAvatar =
         account?.provider === "google"
           ? (profile as AnyObject)?.picture ?? (profile as AnyObject)?.image ?? null
           : null;
@@ -67,12 +70,13 @@ export const authConfig = {
         (token as AnyObject).rol = roles[0] ?? null;
         (token as AnyObject).nick = (user as AnyObject).nick ?? null;
         (token as AnyObject).avatarUrl = (user as AnyObject).avatarUrl ?? null;
-        const userImage = (user as AnyObject).image ?? null;
-        (token as AnyObject).oauthImage = providerImage ?? userImage ?? (token as AnyObject).oauthImage ?? null;
+        const userOauthAvatar = (user as AnyObject).oauthAvatarUrl ?? (user as AnyObject).image ?? null;
+        (token as AnyObject).oauthAvatarUrl =
+          providerAvatar ?? userOauthAvatar ?? (token as AnyObject).oauthAvatarUrl ?? null;
       } else if ((token as AnyObject).roles == null) {
         (token as AnyObject).roles = [];
       }
-      if (providerImage) (token as AnyObject).oauthImage = providerImage;
+      if (providerAvatar) (token as AnyObject).oauthAvatarUrl = providerAvatar;
       return token;
     },
     async session({ session, token }) {
@@ -85,11 +89,11 @@ export const authConfig = {
 
         const fallbackAssignFromToken = () => {
           const avatarFromToken = (token as AnyObject)?.avatarUrl ?? null;
-          const oauthImageFromToken = (token as AnyObject)?.oauthImage ?? null;
-          const chosen = avatarFromToken ?? oauthImageFromToken ?? null;
+          const oauthAvatarFromToken = (token as AnyObject)?.oauthAvatarUrl ?? null;
+          const chosen = avatarFromToken ?? oauthAvatarFromToken ?? null;
           (session.user as AnyObject).avatarUrl = avatarFromToken;
           (session.user as AnyObject).image = chosen;
-          (session.user as AnyObject).oauthImage = oauthImageFromToken;
+          (session.user as AnyObject).oauthAvatarUrl = oauthAvatarFromToken;
         };
 
         try {
@@ -103,6 +107,7 @@ export const authConfig = {
               where,
               select: {
                 avatarUrl: true,
+                oauthAvatarUrl: true,
                 image: true,
                 name: true,
                 nick: true,
@@ -110,24 +115,36 @@ export const authConfig = {
               },
             });
 
-            const oauthImage = (token as AnyObject)?.oauthImage ?? null;
+            const oauthAvatarFromToken = (token as AnyObject)?.oauthAvatarUrl ?? null;
 
-            if (oauthImage && u?.image !== oauthImage) {
+            if (oauthAvatarFromToken) {
+              const needsUpdate =
+                u?.oauthAvatarUrl !== oauthAvatarFromToken || u?.image !== oauthAvatarFromToken;
               try {
-                await prisma.user.update({
-                  where,
-                  data: { image: oauthImage },
-                });
-                if (u) {
-                  u = { ...u, image: oauthImage };
-                } else {
-                  u = {
-                    avatarUrl: null,
-                    image: oauthImage,
-                    name: null,
-                    nick: null,
-                    roles: [],
-                  };
+                if (needsUpdate) {
+                  await prisma.user.update({
+                    where,
+                    data: {
+                      oauthAvatarUrl: oauthAvatarFromToken,
+                      image: oauthAvatarFromToken,
+                    },
+                  });
+                  if (u) {
+                    u = {
+                      ...u,
+                      oauthAvatarUrl: oauthAvatarFromToken,
+                      image: oauthAvatarFromToken,
+                    };
+                  } else {
+                    u = {
+                      avatarUrl: null,
+                      oauthAvatarUrl: oauthAvatarFromToken,
+                      image: oauthAvatarFromToken,
+                      name: null,
+                      nick: null,
+                      roles: [],
+                    };
+                  }
                 }
               } catch {
                 // si falla la actualizacion no bloqueamos la sesion; se reintentara en el siguiente login
@@ -135,12 +152,13 @@ export const authConfig = {
             }
 
             if (u) {
-              const chosen = u.avatarUrl ?? u.image ?? oauthImage ?? null;
+              const oauthAvatar = u.oauthAvatarUrl ?? oauthAvatarFromToken ?? null;
+              const chosen = u.avatarUrl ?? oauthAvatar ?? null;
               (session.user as AnyObject).avatarUrl = u.avatarUrl ?? null;
+              (session.user as AnyObject).oauthAvatarUrl = oauthAvatar;
               (session.user as AnyObject).image = chosen;
-              (session.user as AnyObject).oauthImage = u.image ?? oauthImage ?? null;
               (token as AnyObject).avatarUrl = u.avatarUrl ?? null;
-              (token as AnyObject).oauthImage = u.image ?? oauthImage ?? null;
+              (token as AnyObject).oauthAvatarUrl = oauthAvatar;
               if (u.nick) (session.user as AnyObject).nick ??= u.nick;
               if (u.name) (session.user as AnyObject).name ??= u.name;
               if (u.roles) {
