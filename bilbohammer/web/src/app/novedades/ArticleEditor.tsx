@@ -116,7 +116,8 @@ export function ArticleEditor({
     setSaving(true);
     setStatusMessage("Guardando noticia...");
     try {
-      const selectedCategories = categories.length > 0 ? categories : ["news"];
+      const selectedCategories: ArticleCategory[] =
+        categories.length > 0 ? categories : (["news"] as ArticleCategory[]);
       const slugValue = (slug || generateSlug(title)).trim();
       const bannerDataUrl = bannerFile ? await fileToDataUrl(bannerFile) : banner;
       const bodyBlocks = await Promise.all(blocks.map((block) => serializeBlock(block)));
