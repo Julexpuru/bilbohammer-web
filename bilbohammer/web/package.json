@@ -9,6 +9,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "seed": "tsx prisma/seed.ts",
+    "seed:prod": "tsx prisma/seed.production.ts",
     "lint": "next lint"
   },
   "prisma": {
