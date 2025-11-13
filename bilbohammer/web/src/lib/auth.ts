@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { actualizaPerfilGoogleSiNecesario } from "@/servicios/usuario/actualiza-perfil-google";
 import { PrismaIntAdapter } from "@/lib/prisma-int-adapter";
+import { cacheRemoteAvatar, isHttpUrl } from "@/lib/oauth-avatar-cache";
 
 type AnyObject = Record<string, any>;
 
@@ -52,13 +53,14 @@ export const authConfig = {
           avatarUrl: user.avatarUrl ?? null,
           oauthAvatarUrl: oauthAvatar,
         };
+        (authUser as AnyObject).oauthAvatarRemote = user.image ?? null;
         return authUser;
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user, account, profile }) {
-      const providerAvatar =
+      const providerAvatarRemote =
         account?.provider === "google"
           ? (profile as AnyObject)?.picture ?? (profile as AnyObject)?.image ?? null
           : null;
@@ -70,13 +72,22 @@ export const authConfig = {
         (token as AnyObject).rol = roles[0] ?? null;
         (token as AnyObject).nick = (user as AnyObject).nick ?? null;
         (token as AnyObject).avatarUrl = (user as AnyObject).avatarUrl ?? null;
-        const userOauthAvatar = (user as AnyObject).oauthAvatarUrl ?? (user as AnyObject).image ?? null;
-        (token as AnyObject).oauthAvatarUrl =
-          providerAvatar ?? userOauthAvatar ?? (token as AnyObject).oauthAvatarUrl ?? null;
+        const localOauthAvatar =
+          (user as AnyObject).oauthAvatarUrl ?? (token as AnyObject).oauthAvatarUrl ?? null;
+        (token as AnyObject).oauthAvatarUrl = localOauthAvatar;
+        const remoteCandidate =
+          providerAvatarRemote ??
+          (user as AnyObject).oauthAvatarRemote ??
+          (user as AnyObject).image ??
+          (token as AnyObject).oauthAvatarRemote ??
+          null;
+        (token as AnyObject).oauthAvatarRemote = remoteCandidate;
       } else if ((token as AnyObject).roles == null) {
         (token as AnyObject).roles = [];
       }
-      if (providerAvatar) (token as AnyObject).oauthAvatarUrl = providerAvatar;
+      if (providerAvatarRemote) {
+        (token as AnyObject).oauthAvatarRemote = providerAvatarRemote;
+      }
       return token;
     },
     async session({ session, token }) {
@@ -106,6 +117,7 @@ export const authConfig = {
             let u = await prisma.user.findUnique({
               where,
               select: {
+                id: true,
                 avatarUrl: true,
                 oauthAvatarUrl: true,
                 image: true,
@@ -115,50 +127,51 @@ export const authConfig = {
               },
             });
 
-            const oauthAvatarFromToken = (token as AnyObject)?.oauthAvatarUrl ?? null;
-
-            if (oauthAvatarFromToken) {
-              const needsUpdate =
-                u?.oauthAvatarUrl !== oauthAvatarFromToken || u?.image !== oauthAvatarFromToken;
-              try {
-                if (needsUpdate) {
-                  await prisma.user.update({
-                    where,
-                    data: {
-                      oauthAvatarUrl: oauthAvatarFromToken,
-                      image: oauthAvatarFromToken,
-                    },
+            if (u) {
+              let remoteCandidate =
+                (token as AnyObject)?.oauthAvatarRemote ??
+                u.image ??
+                null;
+              const needsCache =
+                remoteCandidate &&
+                isHttpUrl(remoteCandidate) &&
+                (!u.oauthAvatarUrl ||
+                  isHttpUrl(u.oauthAvatarUrl) ||
+                  remoteCandidate !== (u.image ?? null));
+              if (needsCache && remoteCandidate) {
+                try {
+                  const cached = await cacheRemoteAvatar({
+                    userId: u.id ?? numericUserId ?? null,
+                    remoteUrl: remoteCandidate,
+                    currentLocalPath: u.oauthAvatarUrl ?? null,
                   });
-                  if (u) {
+                  if (cached) {
+                    await prisma.user.update({
+                      where,
+                      data: {
+                        oauthAvatarUrl: cached,
+                        image: remoteCandidate,
+                      },
+                    });
                     u = {
                       ...u,
-                      oauthAvatarUrl: oauthAvatarFromToken,
-                      image: oauthAvatarFromToken,
-                    };
-                  } else {
-                    u = {
-                      avatarUrl: null,
-                      oauthAvatarUrl: oauthAvatarFromToken,
-                      image: oauthAvatarFromToken,
-                      name: null,
-                      nick: null,
-                      roles: [],
+                      oauthAvatarUrl: cached,
+                      image: remoteCandidate,
                     };
                   }
+                } catch {
+                  // ignoramos fallos de cache; se reintentara mas tarde
                 }
-              } catch {
-                // si falla la actualizacion no bloqueamos la sesion; se reintentara en el siguiente login
               }
-            }
 
-            if (u) {
-              const oauthAvatar = u.oauthAvatarUrl ?? oauthAvatarFromToken ?? null;
+              const oauthAvatar = u.oauthAvatarUrl ?? null;
               const chosen = u.avatarUrl ?? oauthAvatar ?? null;
               (session.user as AnyObject).avatarUrl = u.avatarUrl ?? null;
               (session.user as AnyObject).oauthAvatarUrl = oauthAvatar;
               (session.user as AnyObject).image = chosen;
               (token as AnyObject).avatarUrl = u.avatarUrl ?? null;
               (token as AnyObject).oauthAvatarUrl = oauthAvatar;
+              (token as AnyObject).oauthAvatarRemote = remoteCandidate ?? null;
               if (u.nick) (session.user as AnyObject).nick ??= u.nick;
               if (u.name) (session.user as AnyObject).name ??= u.name;
               if (u.roles) {

@@ -30,6 +30,8 @@ services:
       - WATCHPACK_POLLING=true
       - CHOKIDAR_USEPOLLING=true
       - NEXTAUTH_URL=http://localhost:3000
+      - APP_BASE_URL=http://localhost:3000
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
     volumes:
       - ./web:/app          # montas el código local en /app
       - /app/node_modules   # node_modules queda en volumen

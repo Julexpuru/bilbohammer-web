@@ -6,6 +6,11 @@ import { Footer } from "@/components/Footer";
 export const metadata = {
   title: "Bilbohammer",
   description: "Club de juegos de mesa y wargames",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

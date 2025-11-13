@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeUsers } from "@/app/admin/gestion-usuarios/table-config";
 import type { PreparedRow } from "@/app/admin/gestion-usuarios/table-config";
+import type { Session } from "next-auth";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,15 @@ type ChangeSummary = {
   after: string | null;
 };
 
+type AppSession =
+  | (Session & {
+      user?: Session["user"] & {
+        roles?: string[] | null;
+        rol?: string | null;
+      };
+    })
+  | null;
+
 const ALLOWED_FIELDS = new Set([
   "name",
   "nick",
@@ -29,7 +39,7 @@ const ALLOWED_FIELDS = new Set([
   "descripcion",
 ]);
 
-function canManageUsers(session: Awaited<ReturnType<typeof auth>>): boolean {
+function canManageUsers(session: AppSession): boolean {
   if (!session?.user) return false;
   const roles = Array.isArray(session.user.roles)
     ? session.user.roles
@@ -116,7 +126,7 @@ function formatDisplayValue(key: string, value: unknown): string | null {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const session = (await auth()) as AppSession;
   if (!session?.user) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

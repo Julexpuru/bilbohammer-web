@@ -8,6 +8,7 @@ declare module "next-auth" {
     nick?: string | null;
     avatarUrl?: string | null;
     oauthAvatarUrl?: string | null;
+    oauthAvatarRemote?: string | null;
   }
 
   interface Session {
@@ -33,5 +34,6 @@ declare module "next-auth/jwt" {
     nick?: string | null;
     avatarUrl?: string | null;
     oauthAvatarUrl?: string | null;
+    oauthAvatarRemote?: string | null;
   }
 }

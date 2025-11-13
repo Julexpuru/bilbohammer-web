@@ -61,6 +61,13 @@ La protección de `/admin` se hace vía **middleware** + sesión NextAuth.
 - Puede desplegarse en Vercel + una base de datos Postgres gestionada (Railway, Supabase, Neon).
 - O en un VPS con Docker (Render, Fly.io, Hetzner).
 
+## HTTPS y CORS
+- El middleware fuerza HTTPS en producción (redirección 308) y añade cabeceras de seguridad (HSTS, CSP con `upgrade-insecure-requests`, `Referrer-Policy`, etc.). Si usas un proxy (Nginx, Traefik, Cloudflare), asegúrate de reenviar `x-forwarded-proto`.
+- Configura en `.env` o variables del despliegue:
+  - `APP_BASE_URL=https://tu-dominio.com`
+  - `CORS_ALLOWED_ORIGINS=https://tu-dominio.com,https://panel.tu-dominio.com`
+- Añade los orígenes externos que vayan a consumir la API para evitar futuros errores de CORS. En desarrollo, ya se permiten `http://localhost:3000` y `http://127.0.0.1:3000`.
+
 ## Edición de archivos por SFTP (opcional)
 En `docker-compose.yml` tienes un servicio `sftp` **comentado**. Si lo quieres usar en local:
 - Descomenta el bloque y ejecuta `docker compose up -d sftp`.

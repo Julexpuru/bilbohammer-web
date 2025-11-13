@@ -92,7 +92,7 @@ export default function HeroCarousel() {
               src={slide.src}
               alt={slide.alt}
               fill
-              priority={idx === index}
+              priority={idx === 0}
               sizes="100vw"
               className="object-cover pointer-events-none"
               style={{
