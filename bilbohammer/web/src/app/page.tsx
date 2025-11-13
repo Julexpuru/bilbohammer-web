@@ -8,7 +8,7 @@ import InstagramFeed from "@/components/home/InstagramFeed";
 import { HOME_FEED_PAGE_SIZE } from "@/constants/feed";
 import { getArticlesByCategory } from "@/lib/novedades-repository";
 import type { Article } from "@/app/novedades/data";
-import type { Event, PostType } from "@prisma/client";
+import type { Event as PrismaEvent, PostType } from "@prisma/client";
 
 type UiPost = {
   id: string;
@@ -75,7 +75,7 @@ function mapArticleToPost(article: Article, type: PostType): UiPost {
   };
 }
 
-function mapEventToPost(event: Event): UiPost {
+function mapEventToPost(event: PrismaEvent): UiPost {
   return {
     id: `event-${event.id}`,
     type: "EVENTO",
