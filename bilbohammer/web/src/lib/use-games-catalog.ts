@@ -31,20 +31,23 @@ function normalizeResponse(json: unknown): GameCatalogItem[] {
 }
 
 function mergeWithFallback(data: GameCatalogItem[]): GameCatalogEntry[] {
+  const fallbackEntries = fallbackGameList().map((item) => ({
+    id: item.slug,
+    slug: item.slug,
+    name: item.name,
+    iconImagePath: item.iconImagePath ?? null,
+    heroImagePath: item.heroImagePath ?? null,
+    legacyEnumKey: item.legacyEnumKey ?? null,
+    isDefault: item.isDefault ?? false,
+    sortOrder: item.sortOrder ?? 999,
+  }));
+
   if (!data.length) {
-    return fallbackGameList().map((item) => ({
-      id: item.slug,
-      slug: item.slug,
-      name: item.name,
-      iconImagePath: item.iconImagePath,
-      legacyEnumKey: item.legacyEnumKey,
-      isDefault: item.isDefault,
-      sortOrder: item.sortOrder,
-    }));
+    return fallbackEntries;
   }
 
   const fallbackMap = new Map(
-    fallbackGameList().map((entry) => [entry.slug, entry])
+    fallbackEntries.map((entry) => [entry.slug, entry])
   );
 
   const merged = data.map((game) => {
@@ -64,16 +67,7 @@ function mergeWithFallback(data: GameCatalogItem[]): GameCatalogEntry[] {
   const knownSlugs = new Set(merged.map((item) => item.slug));
   for (const fallback of fallbackMap.values()) {
     if (!knownSlugs.has(fallback.slug)) {
-      merged.push({
-        id: fallback.slug,
-        slug: fallback.slug,
-        name: fallback.name,
-      iconImagePath: fallback.iconImagePath,
-      heroImagePath: fallback.heroImagePath ?? null,
-        legacyEnumKey: fallback.legacyEnumKey,
-        isDefault: fallback.isDefault,
-        sortOrder: fallback.sortOrder,
-      });
+      merged.push(fallback);
     }
   }
 

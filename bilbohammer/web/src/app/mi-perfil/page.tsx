@@ -1,13 +1,14 @@
 ﻿// Server Component
 import { prisma } from "@/lib/prisma";
-import ClientEditWrapper from "./ClientEditWrapper";
+import dynamic from "next/dynamic";
 import { GamesSection } from "@/components/profile/GamesSection";
 import { EventsTabs } from "@/components/profile/EventsTabs";
 import { toUiId } from "@/lib/games_helpers";
 import { gameIconPath } from "@/lib/games";
 import { Avatar } from "@/components/profile/Avatar";
-
 import { auth } from "@/lib/auth";
+
+const ClientEditWrapper = dynamic(() => import("./ClientEditWrapper"), { ssr: false });
 
 const normalizeRoles = (value: unknown): string[] => {
   if (Array.isArray(value)) return value.map((role) => String(role));

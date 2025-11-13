@@ -5,6 +5,7 @@ import { buildGameContactDisplay } from "@/lib/game-info";
 import { fallbackGameList, gameHeroPath, gameIconPath } from "@/lib/games";
 import { prisma } from "@/lib/prisma";
 import { extractRoles } from "@/lib/roles";
+import type { Rol } from "@prisma/client";
 import { GameCard } from "./GameCard";
 import { NewGameForm } from "./NewGameForm";
 
@@ -50,7 +51,7 @@ type GameInfoRecord = {
     email: string | null;
     name: string | null;
     nick: string | null;
-    roles: string[];
+    roles: Rol[];
   } | null;
 };
 
