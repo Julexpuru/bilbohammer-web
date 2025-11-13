@@ -189,14 +189,18 @@ export function ArticleEditor({
 
   const updateBlock = (id: string, changes: Partial<EditableBlock>) => {
     setBlocks((prev) =>
-      prev.map((block) => {
+      prev.map<EditableBlock>((block) => {
         if (block.id !== id) return block;
         if (block.type === "image" && "previewUrl" in changes) {
-          if (block.previewUrl && block.previewUrl.startsWith("blob:") && block.previewUrl !== changes.previewUrl) {
+          if (
+            block.previewUrl &&
+            block.previewUrl.startsWith("blob:") &&
+            block.previewUrl !== changes.previewUrl
+          ) {
             URL.revokeObjectURL(block.previewUrl);
           }
         }
-        return { ...block, ...changes };
+        return { ...block, ...changes } as EditableBlock;
       }),
     );
   };
