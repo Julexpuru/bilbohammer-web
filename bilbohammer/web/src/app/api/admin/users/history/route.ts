@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { Session } from "next-auth";
 
 export const runtime = "nodejs";
 
-function canManageUsers(session: Awaited<ReturnType<typeof auth>>): boolean {
+type AppSession =
+  | (Session & {
+      user?: Session["user"] & {
+        roles?: string[] | null;
+        rol?: string | null;
+      };
+    })
+  | null;
+
+function canManageUsers(session: AppSession): boolean {
   if (!session?.user) return false;
   const roles = Array.isArray(session.user.roles)
     ? session.user.roles
@@ -15,7 +25,7 @@ function canManageUsers(session: Awaited<ReturnType<typeof auth>>): boolean {
 }
 
 export async function GET() {
-  const session = await auth();
+  const session = (await auth()) as AppSession;
   if (!session?.user) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
