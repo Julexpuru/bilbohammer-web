@@ -100,13 +100,11 @@ export default async function InviteRegisterPage({ params }: Props) {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-6 shadow-[0_10px_40px_rgba(0,0,0,0.25)]">
-        <RegistrationForm
-          defaultEmail={inviteState.email}
-          emailReadOnly
-          inviteToken={inviteState.token}
-          roleSummary={`Esta cuenta se creara con privilegios de ${inviteState.role}.`}
-        />
+      <div className="space-y-4 rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-6 shadow-[0_10px_40px_rgba(0,0,0,0.25)]">
+        <div className="rounded-xl border border-dashed border-[var(--hairline)] bg-[var(--card-muted)] px-4 py-3 text-sm text-[var(--muted)]">
+          Esta cuenta se creara con privilegios de <span className="font-semibold text-[var(--text)]">{inviteState.role}</span>.
+        </div>
+        <RegistrationForm defaultEmail={inviteState.email} emailReadOnly inviteToken={inviteState.token} />
       </div>
 
       <p className="text-center text-xs text-[var(--muted)]">

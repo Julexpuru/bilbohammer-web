@@ -27,6 +27,7 @@ type InviteResponse = {
 };
 
 type AnyObject = Record<string, unknown>;
+type InviteRow = Awaited<ReturnType<typeof prisma.userInvite.findFirst>>;
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const inviteModel = (prisma as AnyObject).userInvite as typeof prisma.userInvite | undefined;
+  const inviteModel = ((prisma as unknown) as AnyObject).userInvite as typeof prisma.userInvite | undefined;
   if (!inviteModel) {
     return NextResponse.json(
       {
@@ -134,10 +135,11 @@ export async function POST(request: Request) {
       { status: 503 },
     );
   }
+  const concreteInviteModel = inviteModel as typeof prisma.userInvite;
 
-  let pendingInvite: Awaited<ReturnType<typeof inviteModel.findFirst>> | null = null;
+  let pendingInvite: InviteRow | null = null;
   try {
-    pendingInvite = await inviteModel.findFirst({
+    pendingInvite = await concreteInviteModel.findFirst({
       where: { email: normalizedEmail, usedAt: null },
       orderBy: { createdAt: "desc" },
     });
@@ -166,9 +168,9 @@ export async function POST(request: Request) {
   const adminId = Number.parseInt(String(session.user.id ?? ""), 10);
   const createdById = Number.isFinite(adminId) ? adminId : null;
 
-  let invite: Awaited<ReturnType<typeof inviteModel.create>>;
+  let invite: Awaited<ReturnType<typeof prisma.userInvite.create>>;
   try {
-    invite = await inviteModel.create({
+    invite = await concreteInviteModel.create({
       data: {
         email: normalizedEmail,
         token: crypto.randomBytes(24).toString("hex"),

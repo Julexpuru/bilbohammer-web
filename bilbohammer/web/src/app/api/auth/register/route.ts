@@ -18,6 +18,7 @@ type RegisterPayload = {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 type AnyObject = Record<string, unknown>;
+type InviteRecord = Awaited<ReturnType<typeof prisma.userInvite.findUnique>>;
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -74,10 +75,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const inviteModel = (prisma as AnyObject).userInvite as typeof prisma.userInvite | undefined;
+  const inviteModel = ((prisma as unknown) as AnyObject).userInvite as typeof prisma.userInvite | undefined;
   const hasInviteModel = Boolean(inviteModel && typeof inviteModel.findUnique === "function");
 
-  let invite: Awaited<ReturnType<typeof inviteModel.findUnique>> | null = null;
+  let invite: InviteRecord | null = null;
   let inviteTableAvailable = hasInviteModel;
   if (inviteToken) {
     if (!hasInviteModel) {
@@ -90,8 +91,9 @@ export async function POST(req: Request) {
         { status: 503 },
       );
     }
+    const concreteInviteModel = inviteModel as typeof prisma.userInvite;
     try {
-      invite = await inviteModel.findUnique({ where: { token: inviteToken } });
+      invite = await concreteInviteModel.findUnique({ where: { token: inviteToken } });
     } catch (error) {
       if (isInviteTableMissing(error)) {
         return NextResponse.json(
@@ -152,7 +154,7 @@ export async function POST(req: Request) {
       });
 
       if (inviteTableAvailable) {
-        const txInviteModel = (tx as AnyObject).userInvite as
+        const txInviteModel = ((tx as unknown) as AnyObject).userInvite as
           | { updateMany: typeof prisma.userInvite.updateMany }
           | undefined;
         if (!txInviteModel || typeof txInviteModel.updateMany !== "function") {

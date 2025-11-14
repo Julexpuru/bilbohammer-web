@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { userCanManageEvents } from "@/lib/roles";
 import {
@@ -11,6 +12,8 @@ import {
 type RouteParams = {
   params: { id: string };
 };
+
+type AnyObject = Record<string, unknown>;
 
 function slugify(value: string): string {
   return value
@@ -96,13 +99,24 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const organizations = await resolveOrganizations(parsed.organizations);
     const isInternal = await computeInternalFlag(prisma, parsed.organizers, parsed.organizations, parsed.eventData.isInternal);
 
-    const { gameId, albumId, chronicleArticleId, ...eventData } = parsed.eventData;
+    const { gameId, albumId, chronicleArticleId, ...restEventData } = parsed.eventData;
+    const eventData = restEventData as Omit<Prisma.EventUpdateInput, "chronicleArticleId">;
+    delete (eventData as AnyObject).chronicleArticleId;
+    delete (eventData as AnyObject).gameId;
+    delete (eventData as AnyObject).albumId;
     const event = await prisma.$transaction(async (tx) => {
+      const chronicleData =
+        chronicleArticleId === undefined
+          ? {}
+          : chronicleArticleId
+          ? { chronicleArticle: { connect: { id: chronicleArticleId } } }
+          : { chronicleArticle: { disconnect: true } };
+
       await tx.event.update({
         where: { id: params.id },
         data: {
           ...eventData,
-          ...(chronicleArticleId === undefined ? {} : { chronicleArticleId }),
+          ...chronicleData,
           ...(gameId === undefined
             ? {}
             : gameId

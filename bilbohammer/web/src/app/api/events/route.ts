@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { userCanManageEvents } from "@/lib/roles";
 import {
@@ -41,6 +42,8 @@ async function resolveOrganizations(inputs: OrganizationInput[]) {
   }
   return created;
 }
+
+type AnyObject = Record<string, unknown>;
 
 function buildNestedCreate<T>(items: T[], mapper: (item: T) => any) {
   if (!items.length) return undefined;
@@ -82,12 +85,22 @@ export async function POST(request: Request) {
     const organizations = await resolveOrganizations(parsed.organizations);
     const isInternal = await computeInternalFlag(prisma, parsed.organizers, parsed.organizations, parsed.eventData.isInternal);
 
-    const { gameId, albumId, chronicleArticleId, ...eventData } = parsed.eventData;
+    const { gameId, albumId, chronicleArticleId, ...restEventData } = parsed.eventData;
+    const eventData = restEventData as Omit<Prisma.EventCreateInput, "chronicleArticle" | "game" | "album">;
+    delete (eventData as AnyObject).chronicleArticleId;
+    delete (eventData as AnyObject).gameId;
+    delete (eventData as AnyObject).albumId;
+    const chronicleData =
+      chronicleArticleId === undefined
+        ? {}
+        : chronicleArticleId
+        ? { chronicleArticle: { connect: { id: chronicleArticleId } } }
+        : {};
     const event = await prisma.$transaction(async (tx) => {
       const created = await tx.event.create({
         data: {
           ...eventData,
-          ...(chronicleArticleId === undefined ? {} : { chronicleArticleId }),
+          ...chronicleData,
           ...(gameId ? { game: { connect: { id: gameId } } } : {}),
           ...(albumId ? { album: { connect: { id: albumId } } } : {}),
           isInternal,
