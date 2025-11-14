@@ -18,18 +18,23 @@ type UiPost = {
   createdAt: string;
   imageUrl?: string | null;
   reactionScore?: number;
+  href?: string;
 };
 
 export default async function HomePage() {
   const session = await auth();
-  const isMember = !!session; // afinaremos por rol mÃ¡s adelante
+  const isMember = !!session; // afinaremos por rol más adelante
+  const now = new Date();
 
   // SSR: primera tanda para evitar parpadeo
   const [newsArticles, memberArticles, upcomingEvents] = await Promise.all([
     getArticlesByCategory("news"),
     isMember ? getArticlesByCategory("members") : Promise.resolve([]),
     prisma.event.findMany({
-      where: { status: "PUBLISHED" },
+      where: {
+        status: "PUBLISHED",
+        endsAt: { gte: now },
+      },
       orderBy: { startsAt: "asc" },
       take: HOME_FEED_PAGE_SIZE,
     }),
@@ -64,6 +69,7 @@ function mapArticleToPost(article: Article, type: PostType): UiPost {
     article.summary ||
     article.body?.find((block) => block.type === "paragraph")?.text ||
     "Consulta la ficha completa en la sección de novedades.";
+  const category = article.category || article.categories?.[0] || "news";
   return {
     id: `article-${article.id}`,
     type,
@@ -72,6 +78,7 @@ function mapArticleToPost(article: Article, type: PostType): UiPost {
     createdAt: article.date ?? new Date().toISOString(),
     imageUrl: article.banner ?? null,
     reactionScore: article.tags.length,
+    href: `/novedades/${category}/${article.slug}`,
   };
 }
 
@@ -93,6 +100,7 @@ function mapEventToPost(event: MinimalEvent): UiPost {
     createdAt: event.startsAt.toISOString(),
     imageUrl: event.bannerUrl ?? null,
     reactionScore: 0,
+    href: `/eventos/${event.id}`,
   };
 }
 

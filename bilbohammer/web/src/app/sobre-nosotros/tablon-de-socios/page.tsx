@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { extractRoles } from "@/lib/roles";
 import { formatClubDateTime } from "@/lib/date-format";
+import { SYSTEM_ACCOUNT_EMAILS } from "@/constants/system-users";
 
 export const metadata = {
   title: "Tablon de socios | Bilbohammer",
@@ -71,6 +72,9 @@ export default async function TablonSociosPage() {
     where: {
       isActive: true,
       roles: { hasSome: Array.from(ALLOWED_ROLES) },
+      NOT: {
+        email: { in: SYSTEM_ACCOUNT_EMAILS },
+      },
     },
     select: {
       id: true,

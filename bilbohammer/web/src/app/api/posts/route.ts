@@ -17,6 +17,7 @@ type FeedItem = {
   content: string;
   createdAt: string;
   imageUrl?: string | null;
+  href?: string;
 };
 
 const ARTICLE_CATEGORY_BY_TYPE: Record<Exclude<PostType, "EVENTO">, ArticleCategory> = {
@@ -64,13 +65,19 @@ async function fetchArticleFeed(type: Exclude<PostType, "EVENTO">, cursor: strin
       "Consulta la ficha completa en la sección de novedades.",
     createdAt: article.date ?? new Date().toISOString(),
     imageUrl: article.banner ?? null,
+    href: `/novedades/${article.category || category}/${article.slug}`,
   }));
 
   return NextResponse.json({ items, nextCursor });
 }
 
 async function fetchEventFeed(cursor: string | undefined, take: number) {
+  const now = new Date();
   const events = await prisma.event.findMany({
+    where: {
+      status: "PUBLISHED",
+      endsAt: { gte: now },
+    },
     orderBy: { startsAt: "asc" },
     take: take + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -85,6 +92,7 @@ async function fetchEventFeed(cursor: string | undefined, take: number) {
     content: event.details ?? event.location ?? "Consulta la ficha del evento para más información.",
     createdAt: event.startsAt.toISOString(),
     imageUrl: event.bannerUrl ?? null,
+    href: `/eventos/${event.id}`,
   }));
   return NextResponse.json({ items, nextCursor });
 }

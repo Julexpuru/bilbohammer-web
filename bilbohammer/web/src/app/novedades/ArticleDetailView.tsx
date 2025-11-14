@@ -34,7 +34,7 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
     if (!canComment) return;
     const trimmed = newComment.trim();
     if (!trimmed) {
-      setStatusMessage("El comentario no puede estar vacÃÂ­o.");
+      setStatusMessage("El comentario no puede estar vacío.");
       return;
     }
     const comment = buildComment(trimmed, currentUserName);
@@ -47,7 +47,7 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
     if (!canComment) return;
     const trimmed = replyDrafts[parentId]?.trim() ?? "";
     if (!trimmed) {
-      setStatusMessage("La respuesta no puede estar vacÃÂ­a.");
+      setStatusMessage("La respuesta no puede estar vacía.");
       return;
     }
     const reply = buildComment(trimmed, currentUserName);
@@ -57,7 +57,7 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
   };
 
   const handleDelete = () => {
-    setStatusMessage("AcciÃÂ³n de eliminar pendiente de implementaciÃÂ³n.");
+    setStatusMessage("Acción de eliminar pendiente de implementación.");
   };
 
   return (
@@ -217,7 +217,7 @@ function CommentsSection({
     <div className="space-y-6">
       {canComment ? (
         <div className="rounded-3xl border border-[var(--hairline)] bg-[var(--card-muted)] p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">AÃÂ±adir comentario</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">Añadir comentario</p>
           <textarea
             value={newComment}
             onChange={(event) => onNewCommentChange(event.target.value)}
@@ -237,14 +237,14 @@ function CommentsSection({
         </div>
       ) : (
         <p className="rounded-3xl border border-[var(--hairline)] bg-[var(--card-muted)] p-6 text-sm text-[var(--muted)]">
-          Solo las personas registradas pueden participar en los comentarios. Inicia sesiÃÂ³n para sumarte a la conversaciÃÂ³n.
+          Solo las personas registradas pueden participar en los comentarios. Inicia sesión para sumarte a la conversación.
         </p>
       )}
 
       <div className="space-y-6">
         {comments.length === 0 ? (
           <p className="rounded-3xl border border-dashed border-[var(--hairline)] bg-[var(--card-muted)] p-6 text-center text-sm text-[var(--muted)]">
-            TodavÃÂ­a no hay comentarios. ÃÂ¡SÃÂ© la primera persona en opinar!
+            Todavía no hay comentarios. ¡Sé la primera persona en opinar!
           </p>
         ) : (
           comments.map((comment) => (
@@ -424,10 +424,10 @@ function ArticleBody({ blocks }: ArticleBodyProps) {
                 key={index}
                 className="rounded-3xl border border-[var(--accent-200)] bg-[var(--accent-50)] px-6 py-5 text-base italic text-[var(--accent-700)]"
               >
-                <p>Ã¢â¬Å{block.text}Ã¢â¬Â</p>
+                <p>&ldquo;{block.text}&rdquo;</p>
                 {block.attribution && (
                   <footer className="mt-2 text-right text-xs uppercase tracking-[0.2em] text-[var(--accent-600)]">
-                    Ã¢â¬â {block.attribution}
+                    &mdash; {block.attribution}
                   </footer>
                 )}
               </blockquote>

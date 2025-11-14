@@ -1,41 +1,31 @@
-"use client";
+import Link from "next/link";
+import { RegistrationForm } from "@/components/auth/RegistrationForm";
 
-import { useState } from "react";
+export const metadata = {
+  title: "Registro abierto - Bilbohammer",
+};
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState("");
-  const [contrasena, setContrasena] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [nick, setNick] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
-
   return (
-    <div className="max-w-sm mx-auto space-y-4 p-6">
-      <h1 className="text-xl font-semibold">Crear cuenta</h1>
+    <section className="mx-auto max-w-lg space-y-6 px-4 py-10">
+      <div className="space-y-3 text-center">
+        <h1 className="text-3xl font-semibold text-[var(--text)]">Create tu cuenta</h1>
+        <p className="text-sm text-[var(--muted)]">
+          Hasta que sea promocionado por un administrador, los usuarios registrados sin invitacion no tendran permisos
+          de socio.
+        </p>
+      </div>
 
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setMsg(null);
-          const res = await fetch("/api/auth/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, contrasena, nombre, nick }),
-          });
-          const data = await res.json();
-          if (res.ok) setMsg("Cuenta creada. Ya puedes iniciar sesión.");
-          else setMsg(data.error || "Error al crear la cuenta");
-        }}
-        className="space-y-2"
-      >
-        <input className="w-full border p-2 rounded" placeholder="Email" type="email" value={email} onChange={(e)=>setEmail(e.target.value)} />
-        <input className="w-full border p-2 rounded" placeholder="Contraseña" type="password" value={contrasena} onChange={(e)=>setContrasena(e.target.value)} />
-        <input className="w-full border p-2 rounded" placeholder="Nombre (opcional)" value={nombre} onChange={(e)=>setNombre(e.target.value)} />
-        <input className="w-full border p-2 rounded" placeholder="Nick (opcional)" value={nick} onChange={(e)=>setNick(e.target.value)} />
-        <button className="w-full bg-black text-white p-2 rounded">Crear cuenta</button>
-      </form>
+      <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-6 shadow-[0_10px_40px_rgba(0,0,0,0.25)]">
+        <RegistrationForm />
+      </div>
 
-      {msg && <p className="text-sm">{msg}</p>}
-    </div>
+      <p className="text-center text-sm text-[var(--muted)]">
+        Ya tienes cuenta?{" "}
+        <Link href="/login" className="font-semibold text-[var(--text)] underline-offset-4 hover:underline">
+          Inicia sesion
+        </Link>
+      </p>
+    </section>
   );
 }

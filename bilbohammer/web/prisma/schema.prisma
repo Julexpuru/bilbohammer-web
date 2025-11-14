@@ -47,6 +47,28 @@ enum EventHighlightType {
   AWARD
 }
 
+model NewsArticle {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  summary         String   @db.Text
+  banner          String?  @db.Text
+  author          String?
+  date            DateTime @default(now())
+  tags            String[] @default([])
+  primaryCategory String
+  categories      String[] @default([])
+  body            Json
+  comments        Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  chronicleEvents Event[]  @relation("EventChronicle")
+
+  @@index([primaryCategory])
+  @@index([date])
+}
+
 // ===== Modelos =====
 model User {
   id            Int       @id @default(autoincrement())
@@ -89,6 +111,8 @@ model User {
   coordinatedGames    GameInfo[]                 @relation("GameInfoContact")
   managedChangeLogs   UserChangeLog[]            @relation("UserChangeLogAdmin")
   receivedChangeLogs  UserChangeLog[]            @relation("UserChangeLogTarget")
+  createdInvites      UserInvite[]               @relation("UserInviteCreator")
+  claimedInvites      UserInvite[]               @relation("UserInviteTarget")
 }
 
 model Account {
@@ -244,17 +268,18 @@ model Event {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
-  posts         Post[]
-  organizers    EventOrganizer[]
-  organizations EventOrganization[]
-  tags          EventTag[]
-  attachments   EventAttachment[]
-  links         EventLink[]
-  highlights    EventHighlight[]
-  rankings      EventRankingEntry[]
-  galleryImages GalleryImage[]
-  album         GalleryAlbum?       @relation("EventAlbum", fields: [albumId], references: [id], onDelete: SetNull)
-  game          Game?               @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  posts            Post[]
+  organizers       EventOrganizer[]
+  organizations    EventOrganization[]
+  tags             EventTag[]
+  attachments      EventAttachment[]
+  links            EventLink[]
+  highlights       EventHighlight[]
+  rankings         EventRankingEntry[]
+  galleryImages    GalleryImage[]
+  album            GalleryAlbum?    @relation("EventAlbum", fields: [albumId], references: [id], onDelete: SetNull)
+  game             Game?            @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  chronicleArticle NewsArticle?     @relation("EventChronicle", fields: [chronicleArticleId], references: [id], onDelete: SetNull)
 }
 
 model Notification {
@@ -529,4 +554,22 @@ model SiteContent {
   key       String   @id
   content   Json
   updatedAt DateTime @updatedAt
+}
+
+model UserInvite {
+  id          String   @id @default(cuid())
+  email       String
+  token       String   @unique
+  role        Rol      @default(SOCIO)
+  createdById Int?
+  createdBy   User?    @relation("UserInviteCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  usedById    Int?
+  usedBy      User?    @relation("UserInviteTarget", fields: [usedById], references: [id], onDelete: SetNull)
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  usedAt      DateTime?
+
+  @@index([email])
+  @@index([createdAt])
 }

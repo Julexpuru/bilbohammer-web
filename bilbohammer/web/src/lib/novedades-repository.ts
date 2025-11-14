@@ -1,22 +1,15 @@
-﻿"use server";
+"use server";
 
-import { promises as fs } from "fs";
-import path from "path";
 import { randomUUID } from "crypto";
+import type { NewsArticle } from "@prisma/client";
 
 import {
   CATEGORY_LABELS,
   type Article,
   type ArticleCategory,
   type ArticlesByCategory,
-  listStaticArticles,
 } from "@/app/novedades/data";
-
-const STORAGE_PATH = path.join(process.cwd(), "data", "novedades.json");
-
-type StorageSchema = {
-  articles: Article[];
-};
+import { prisma } from "@/lib/prisma";
 
 const ALLOWED_CATEGORIES: ArticleCategory[] = ["news", "chronicles", "members"];
 
@@ -33,6 +26,17 @@ function ensureCategories(article: Article): Article {
   };
 }
 
+function normalizeDateString(value?: string | null): string {
+  if (!value) {
+    return new Date().toISOString().slice(0, 10);
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date().toISOString().slice(0, 10);
+  }
+  return parsed.toISOString().slice(0, 10);
+}
+
 function normalizeArticle(article: Article): Article {
   const normalized: Article = ensureCategories({
     ...article,
@@ -43,32 +47,9 @@ function normalizeArticle(article: Article): Article {
     summary: article.summary.trim(),
     tags: article.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0),
     comments: article.comments ?? [],
+    date: normalizeDateString(article.date),
   });
   return normalized;
-}
-
-async function readStorage(): Promise<Article[]> {
-  try {
-    const raw = await fs.readFile(STORAGE_PATH, "utf-8");
-    const parsed = JSON.parse(raw) as StorageSchema;
-    if (!parsed || !Array.isArray(parsed.articles)) {
-      return [];
-    }
-    return parsed.articles.map((article) => ensureCategories(article));
-  } catch (error: unknown) {
-    const code = (error as NodeJS.ErrnoException)?.code;
-    if (code === "ENOENT") {
-      return [];
-    }
-    console.error("[novedades] No se pudo leer el almacen de noticias", error);
-    return [];
-  }
-}
-
-async function writeStorage(articles: Article[]) {
-  const payload: StorageSchema = { articles };
-  await fs.mkdir(path.dirname(STORAGE_PATH), { recursive: true });
-  await fs.writeFile(STORAGE_PATH, JSON.stringify(payload, null, 2), "utf-8");
 }
 
 function sortArticles(articles: Article[]): Article[] {
@@ -79,49 +60,92 @@ function sortArticles(articles: Article[]): Article[] {
   return [...articles].sort((a, b) => toTimestamp(b.date) - toTimestamp(a.date));
 }
 
-export async function saveArticle(article: Article): Promise<Article> {
-  const normalized = normalizeArticle(article);
-  const stored = await readStorage();
-  const indexById = stored.findIndex((item) => item.id === normalized.id);
-  if (indexById !== -1) {
-    stored[indexById] = normalized;
-  } else {
-    const indexBySlug = stored.findIndex((item) => item.slug === normalized.slug);
-    if (indexBySlug !== -1) {
-      stored[indexBySlug] = normalized;
-    } else {
-      stored.push(normalized);
-    }
-  }
-  await writeStorage(stored);
-  return normalized;
+function mapRecordToArticle(record: NewsArticle): Article {
+  return ensureCategories({
+    id: record.id,
+    category: (record.primaryCategory as ArticleCategory) ?? "news",
+    categories: (record.categories?.length
+      ? record.categories
+      : [record.primaryCategory]) as ArticleCategory[],
+    slug: record.slug,
+    title: record.title,
+    author: record.author ?? "",
+    date: normalizeDateString(record.date.toISOString()),
+    banner: record.banner ?? "",
+    tags: record.tags ?? [],
+    summary: record.summary,
+    body: (record.body ?? []) as Article["body"],
+    comments: (record.comments ?? []) as Article["comments"],
+  });
 }
 
-function mergeArticles(staticArticles: Article[], storedArticles: Article[]): Article[] {
-  const map = new Map<string, Article>();
-  for (const article of staticArticles) {
-    const key = `${article.category}__${article.slug}`;
-    map.set(key, ensureCategories(article));
+function mapArticleToPersistence(article: Article) {
+  return {
+    id: article.id,
+    slug: article.slug,
+    title: article.title,
+    summary: article.summary,
+    banner: article.banner,
+    author: article.author,
+    date: new Date(article.date),
+    tags: article.tags,
+    primaryCategory: article.category,
+    categories: article.categories,
+    body: article.body,
+    comments: article.comments,
+  };
+}
+
+export async function saveArticle(article: Article): Promise<Article> {
+  let normalized = normalizeArticle(article);
+  let record: NewsArticle | null = null;
+
+  if (normalized.id) {
+    const existingById = await prisma.newsArticle.findUnique({ where: { id: normalized.id } });
+    if (existingById) {
+      record = await prisma.newsArticle.update({
+        where: { id: existingById.id },
+        data: mapArticleToPersistence(normalized),
+      });
+      return mapRecordToArticle(record);
+    }
   }
-  for (const article of storedArticles) {
-    const key = `${article.category}__${article.slug}`;
-    map.set(key, ensureCategories(article));
+
+  const existingBySlug = await prisma.newsArticle.findUnique({
+    where: { slug: normalized.slug },
+  });
+  if (existingBySlug) {
+    normalized = { ...normalized, id: existingBySlug.id };
+    record = await prisma.newsArticle.update({
+      where: { slug: normalized.slug },
+      data: mapArticleToPersistence(normalized),
+    });
+    return mapRecordToArticle(record);
   }
-  return sortArticles(Array.from(map.values()));
+
+  record = await prisma.newsArticle.create({
+    data: mapArticleToPersistence(normalized),
+  });
+  return mapRecordToArticle(record);
 }
 
 export async function getAllArticles(): Promise<Article[]> {
-  const staticArticles = listStaticArticles();
-  const storedArticles = await readStorage();
-  return mergeArticles(staticArticles, storedArticles);
+  const records = await prisma.newsArticle.findMany({
+    orderBy: { date: "desc" },
+  });
+  return records.map(mapRecordToArticle);
 }
 
 export async function getArticlesByCategory(category: ArticleCategory): Promise<Article[]> {
-  const all = await getAllArticles();
-  return all.filter((article) => {
-    const categories = article.categories?.length ? article.categories : [article.category];
-    return categories.includes(category);
+  const records = await prisma.newsArticle.findMany({
+    where: {
+      categories: {
+        has: category,
+      },
+    },
+    orderBy: { date: "desc" },
   });
+  return records.map(mapRecordToArticle);
 }
 
 export async function getArticlesGrouped(): Promise<ArticlesByCategory> {
@@ -130,9 +154,14 @@ export async function getArticlesGrouped(): Promise<ArticlesByCategory> {
     chronicles: [],
     members: [],
   };
-  const articles = await getAllArticles();
-  for (const article of articles) {
-    const uniqueCategories = Array.from(new Set(article.categories.length > 0 ? article.categories : [article.category]));
+  const records = await prisma.newsArticle.findMany({
+    orderBy: { date: "desc" },
+  });
+  for (const record of records) {
+    const article = mapRecordToArticle(record);
+    const uniqueCategories = Array.from(
+      new Set(article.categories.length > 0 ? article.categories : [article.category]),
+    );
     for (const category of uniqueCategories) {
       if (CATEGORY_LABELS[category]) {
         grouped[category].push(article);
@@ -149,34 +178,40 @@ export async function findArticleByCategoryAndSlug(
   category: ArticleCategory,
   slug: string,
 ): Promise<Article | null> {
-  const all = await getAllArticles();
-  return (
-    all.find((article) => article.slug === slug && article.categories.includes(category)) ?? null
-  );
+  const record = await prisma.newsArticle.findFirst({
+    where: {
+      slug,
+      categories: { has: category },
+    },
+  });
+  return record ? mapRecordToArticle(record) : null;
 }
 
 export async function findArticleById(articleId: string): Promise<Article | null> {
   if (!articleId) return null;
-  const all = await getAllArticles();
-  return all.find((article) => article.id === articleId) ?? null;
+  const record = await prisma.newsArticle.findUnique({
+    where: { id: articleId },
+  });
+  return record ? mapRecordToArticle(record) : null;
 }
 
 export async function searchChronicles(query: string, limit = 25): Promise<Article[]> {
-  const normalized = query.trim().toLowerCase();
-  const all = await getAllArticles();
-  const chronicles = all.filter((article) => article.categories.includes("chronicles"));
-  if (!normalized) {
-    return chronicles.slice(0, limit);
-  }
-  return chronicles
-    .filter((article) => {
-      const haystack = [article.title, article.summary, article.author]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(normalized);
-    })
-    .slice(0, limit);
+  const normalized = query.trim();
+  const records = await prisma.newsArticle.findMany({
+    where: {
+      categories: { has: "chronicles" },
+      ...(normalized
+        ? {
+            OR: [
+              { title: { contains: normalized, mode: "insensitive" } },
+              { summary: { contains: normalized, mode: "insensitive" } },
+              { author: { contains: normalized, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: { date: "desc" },
+    take: limit,
+  });
+  return records.map(mapRecordToArticle);
 }
-
-

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import clsx from "clsx";
 import { Avatar } from "@/components/profile/Avatar";
 import type { ColumnConfig, PreparedRow } from "./table-config";
@@ -12,6 +12,13 @@ type RowData = PreparedRow;
 type Props = {
   columns: ColumnConfig[];
   initialRows: RowData[];
+};
+
+type InviteResult = {
+  status: "created" | "pending" | string;
+  url: string;
+  email: string;
+  message?: string | null;
 };
 
 const ROLE_OPTIONS = ["ADMIN", "JUNTA", "SOCIO", "AMIGO"] as const;
@@ -256,6 +263,34 @@ type EditFormState = {
   notes: string;
 };
 
+const NEW_USER_TEMP_PASSWORD = "NuevoSocio";
+
+type NewUserFormState = {
+  name: string;
+  nick: string;
+  email: string;
+  roles: string;
+  etiquetas: string;
+  isActive: boolean;
+  membershipSince: string;
+  membershipUntil: string;
+  descripcion: string;
+};
+
+function createEmptyNewUserForm(): NewUserFormState {
+  return {
+    name: "",
+    nick: "",
+    email: "",
+    roles: "SOCIO",
+    etiquetas: "",
+    isActive: true,
+    membershipSince: "",
+    membershipUntil: "",
+    descripcion: "",
+  };
+}
+
 function getRowKey(row: RowData, index: number): string {
   return getRowId(row) ?? `row-${index}`;
 }
@@ -337,6 +372,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
   const [rows, setRows] = useState(initialRows);
   const [originalMap, setOriginalMap] = useState(() => buildOriginalMap(initialRows));
   const [pendingChanges, setPendingChanges] = useState<Map<string, Set<string>>>(new Map());
+  const [searchQuery, setSearchQuery] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [sortState, setSortState] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
@@ -353,12 +389,34 @@ export function UserManagementView({ columns, initialRows }: Props) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [newUserOpen, setNewUserOpen] = useState(false);
+  const [newUserForm, setNewUserForm] = useState<NewUserFormState>(createEmptyNewUserForm());
+  const [newUserLoading, setNewUserLoading] = useState(false);
+  const [newUserError, setNewUserError] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteResult, setInviteResult] = useState<InviteResult | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteCopied, setInviteCopied] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [editedRow, setEditedRow] = useState<RowData | null>(null);
   const [editedRowIndex, setEditedRowIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const headerRowTop = `calc(${NAV_HEIGHT_CSS_VAR} + ${HEADER_OFFSET_PX}px)`;
   const overlayTop = `calc(-1 * (${NAV_HEIGHT_CSS_VAR} + ${HEADER_OFFSET_PX}px))`;
+
+  const recomputeHeaderOverlay = useCallback(() => {
+    if (typeof document === "undefined") return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const root = document.documentElement;
+    const navValue = getComputedStyle(root).getPropertyValue("--nav-h").trim();
+    const navHeight = Number.parseFloat(navValue.replace("px", "")) || 0;
+    const threshold = navHeight + HEADER_OFFSET_PX;
+    const rect = sentinel.getBoundingClientRect();
+    setHasScrolled(rect.top < threshold);
+  }, []);
 
   useEffect(() => {
     setRows(initialRows);
@@ -369,6 +427,12 @@ export function UserManagementView({ columns, initialRows }: Props) {
   useEffect(() => {
     setHasHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!inviteResult) {
+      setInviteCopied(false);
+    }
+  }, [inviteResult]);
 
   useEffect(() => {
     const table = tableScrollRef.current;
@@ -417,17 +481,8 @@ export function UserManagementView({ columns, initialRows }: Props) {
   }, [rows, columns]);
 
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const root = document.documentElement;
-    const navValue = getComputedStyle(root).getPropertyValue("--nav-h").trim();
-    const navHeight = Number.parseFloat(navValue.replace("px", "")) || 0;
-    const threshold = navHeight + HEADER_OFFSET_PX;
-
     const update = () => {
-      const rect = sentinel.getBoundingClientRect();
-      setHasScrolled(rect.top < threshold);
+      recomputeHeaderOverlay();
     };
 
     update();
@@ -438,6 +493,168 @@ export function UserManagementView({ columns, initialRows }: Props) {
       window.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
+  }, [recomputeHeaderOverlay]);
+
+  const handleResetSearch = useCallback(() => {
+    setSearchQuery("");
+  }, []);
+
+  const handleOpenNewUser = useCallback(() => {
+    setNewUserOpen(true);
+    setNewUserForm(createEmptyNewUserForm());
+    setNewUserError(null);
+    setNewUserLoading(false);
+  }, []);
+
+  const handleCloseNewUser = useCallback(() => {
+    setNewUserOpen(false);
+    setNewUserLoading(false);
+    setNewUserError(null);
+  }, []);
+
+  const handleNewUserFormChange = useCallback((patch: Partial<NewUserFormState>) => {
+    setNewUserForm((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const handleCreateUser = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (newUserLoading) return;
+      if (!newUserForm.email.trim()) {
+        setNewUserError("El email es obligatorio.");
+        return;
+      }
+
+      setNewUserError(null);
+      setNewUserLoading(true);
+      try {
+        const response = await fetch("/api/admin/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: newUserForm.name,
+            nick: newUserForm.nick,
+            email: newUserForm.email,
+            roles: newUserForm.roles,
+            etiquetas: newUserForm.etiquetas,
+            isActive: newUserForm.isActive,
+            membershipSince: newUserForm.membershipSince,
+            membershipUntil: newUserForm.membershipUntil,
+            descripcion: newUserForm.descripcion,
+          }),
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.row) {
+          const message = typeof data?.error === "string" ? data.error : "No se pudo crear el usuario.";
+          throw new Error(message);
+        }
+        const row = data.row as RowData;
+        setRows((prev) => [row, ...prev]);
+        setOriginalMap((prev) => {
+          const map = new Map(prev);
+          const key = getRowId(row) ?? `row-${Date.now()}`;
+          map.set(key, { ...row });
+          return map;
+        });
+        setPendingChanges((prev) => new Map(prev));
+        setSaveInfo("Nuevo usuario creado correctamente.");
+        setNewUserOpen(false);
+        setNewUserForm(createEmptyNewUserForm());
+      } catch (error) {
+        console.error("[gestion-usuarios] create-user", error);
+        setNewUserError(error instanceof Error ? error.message : "No se pudo crear el usuario.");
+      } finally {
+        setNewUserLoading(false);
+      }
+    },
+    [newUserForm, newUserLoading],
+  );
+
+  const handleOpenInvite = useCallback(() => {
+    setInviteOpen(true);
+    setInviteEmail("");
+    setInviteResult(null);
+    setInviteError(null);
+    setInviteCopied(false);
+    setInviteLoading(false);
+  }, []);
+
+  const handleCloseInvite = useCallback(() => {
+    setInviteOpen(false);
+    setInviteLoading(false);
+    setInviteCopied(false);
+  }, []);
+
+  const handleInviteSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const targetEmail = inviteEmail.trim();
+      if (!targetEmail) {
+        setInviteError("Introduce un correo valido.");
+        return;
+      }
+      setInviteLoading(true);
+      setInviteError(null);
+      setInviteResult(null);
+
+      try {
+        const response = await fetch("/api/admin/user-invitations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: targetEmail }),
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data) {
+          const message =
+            typeof data?.error === "string" ? data.error : "No se pudo crear el enlace.";
+          throw new Error(message);
+        }
+
+        const inviteInfo = (data.invite ?? {}) as Record<string, unknown>;
+        const inviteUrlRaw =
+          typeof inviteInfo.url === "string"
+            ? inviteInfo.url
+            : typeof data.inviteUrl === "string"
+            ? data.inviteUrl
+            : "";
+        if (!inviteUrlRaw) {
+          throw new Error("El servidor no devolvio la URL de invitacion.");
+        }
+
+        setInviteResult({
+          status: String(data.status ?? "created"),
+          url: inviteUrlRaw,
+          email: typeof inviteInfo.email === "string" ? inviteInfo.email : targetEmail,
+          message: typeof data.message === "string" ? data.message : null,
+        });
+      } catch (error) {
+        setInviteError(error instanceof Error ? error.message : "No se pudo crear el enlace.");
+      } finally {
+        setInviteLoading(false);
+      }
+    },
+    [inviteEmail],
+  );
+
+  const handleCopyInvite = useCallback(async () => {
+    if (!inviteResult?.url) return;
+    try {
+      if (typeof navigator === "undefined" || !navigator.clipboard) {
+        throw new Error("Clipboard API no disponible");
+      }
+      await navigator.clipboard.writeText(inviteResult.url);
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 2000);
+    } catch {
+      setInviteError("No se pudo copiar el enlace. Copialo manualmente.");
+    }
+  }, [inviteResult]);
+
+  const handleInviteReset = useCallback(() => {
+    setInviteResult(null);
+    setInviteEmail("");
+    setInviteError(null);
+    setInviteCopied(false);
   }, []);
 
   const fetchHistory = useCallback(async () => {
@@ -835,8 +1052,28 @@ export function UserManagementView({ columns, initialRows }: Props) {
     });
   };
 
-  const sortedEntries = useMemo(() => {
+  const filteredEntries = useMemo(() => {
     const entries = rows.map((row, index) => ({ row, index }));
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return entries;
+    return entries.filter(({ row }) => {
+      const haystack = [
+        row.id,
+        row.name,
+        row.nick,
+        row.email,
+        row.roles,
+        row.etiquetas,
+        row.descripcion,
+      ]
+        .filter((value): value is string => typeof value === "string" && value.length > 0)
+        .some((value) => value.toLowerCase().includes(term));
+      return haystack;
+    });
+  }, [rows, searchQuery]);
+
+  const sortedEntries = useMemo(() => {
+    const entries = [...filteredEntries];
     if (!sortState) return entries;
     const { key, direction } = sortState;
     const multiplier = direction === "asc" ? 1 : -1;
@@ -851,7 +1088,23 @@ export function UserManagementView({ columns, initialRows }: Props) {
       if (left.value > right.value) return 1 * multiplier;
       return 0;
     });
-  }, [rows, sortState]);
+  }, [filteredEntries, sortState]);
+
+  useEffect(() => {
+    const table = tableScrollRef.current;
+    const top = topScrollRef.current;
+    if (table) {
+      table.scrollTop = 0;
+    }
+    if (top) {
+      top.scrollLeft = 0;
+    }
+    recomputeHeaderOverlay();
+  }, [filteredEntries.length, searchQuery, recomputeHeaderOverlay]);
+
+  useEffect(() => {
+    recomputeHeaderOverlay();
+  }, [rows.length, filteredEntries.length, sortedEntries.length, recomputeHeaderOverlay]);
 
   const pendingCount = useMemo(() => {
     let total = 0;
@@ -899,6 +1152,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
     pendingCount > 0
       ? `${pendingCount} cambios pendientes de guardar.`
       : saveInfo ?? "Edicion en vivo sin guardar por ahora.";
+  const hasSearch = searchQuery.trim().length > 0;
 
   return (
     <>
@@ -912,11 +1166,11 @@ export function UserManagementView({ columns, initialRows }: Props) {
       </header>
 
       <div className="flex flex-wrap gap-3">
-        <button type="button" className="btn btn-accent">
+        <button type="button" className="btn btn-accent" onClick={handleOpenNewUser}>
           Nuevo usuario
         </button>
-        <button type="button" className="btn">
-          Invitar por correo
+        <button type="button" className="btn" onClick={handleOpenInvite}>
+          Invitar con correo
         </button>
         <button type="button" className="btn" onClick={handleExport}>
           Exportar datos
@@ -941,9 +1195,30 @@ export function UserManagementView({ columns, initialRows }: Props) {
         </button>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--hairline)] bg-[var(--card)] px-4 py-3">
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Buscar por nombre, nick, email o rol"
+          className="min-w-[220px] flex-1 rounded-lg border border-[var(--hairline)] bg-[var(--card-muted)] px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none"
+          aria-label="Filtrar usuarios"
+        />
+        {hasSearch && (
+          <button type="button" className="btn text-sm" onClick={handleResetSearch}>
+            Limpiar
+          </button>
+        )}
+        <p className="text-xs text-[var(--muted)]">
+          Mostrando {sortedEntries.length} de {rows.length} usuarios
+        </p>
+      </div>
+
       <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-4">
         {sortedEntries.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">Todavia no hay usuarios registrados.</p>
+          <p className="text-sm text-[var(--muted)]">
+            {hasSearch ? "No hay usuarios que coincidan con la busqueda." : "Todavia no hay usuarios registrados."}
+          </p>
         ) : (
           <div className="relative">
             <div ref={sentinelRef} aria-hidden="true" className="h-0" />
@@ -1303,6 +1578,241 @@ export function UserManagementView({ columns, initialRows }: Props) {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {newUserOpen && (
+        <div
+          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+          onClick={handleCloseNewUser}
+        >
+          <div
+            className="w-full max-w-3xl rounded-3xl border border-[var(--hairline)] bg-[var(--card)] shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="flex items-center justify-between border-b border-[var(--hairline)] px-6 py-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Alta manual</p>
+                <h2 className="text-lg font-semibold text-[var(--text)]">Crear nuevo usuario</h2>
+              </div>
+              <button type="button" className="btn" onClick={handleCloseNewUser}>
+                Cerrar
+              </button>
+            </header>
+            <form onSubmit={handleCreateUser} className="space-y-5 px-6 py-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[var(--text)]">Nombre completo</label>
+                  <input
+                    type="text"
+                    value={newUserForm.name}
+                    onChange={(event) => handleNewUserFormChange({ name: event.target.value })}
+                    className="w-full rounded-xl border border-[var(--hairline)] bg-transparent px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[var(--text)]">Nick</label>
+                  <input
+                    type="text"
+                    value={newUserForm.nick}
+                    onChange={(event) => handleNewUserFormChange({ nick: event.target.value })}
+                    className="w-full rounded-xl border border-[var(--hairline)] bg-transparent px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <label className="text-sm font-semibold text-[var(--text)]">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={newUserForm.email}
+                    onChange={(event) => handleNewUserFormChange({ email: event.target.value })}
+                    className="w-full rounded-xl border border-[var(--hairline)] bg-transparent px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none"
+                    placeholder="persona@email.com"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[var(--text)]">Roles</label>
+                  <RolesDropdown value={newUserForm.roles} onChange={(value) => handleNewUserFormChange({ roles: value })} />
+                  <p className="text-xs text-[var(--muted)]">Selecciona uno o varios roles. Por defecto se asigna SOCIO.</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[var(--text)]">Etiquetas</label>
+                  <input
+                    type="text"
+                    value={newUserForm.etiquetas}
+                    onChange={(event) => handleNewUserFormChange({ etiquetas: event.target.value })}
+                    className="w-full rounded-xl border border-[var(--hairline)] bg-transparent px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none"
+                    placeholder="pago, llaves, liga"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[var(--text)]">Miembro desde</label>
+                  <input
+                    type="date"
+                    value={newUserForm.membershipSince}
+                    onChange={(event) => handleNewUserFormChange({ membershipSince: event.target.value })}
+                    className="w-full rounded-xl border border-[var(--hairline)] bg-transparent px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[var(--text)]">Miembro hasta</label>
+                  <input
+                    type="date"
+                    value={newUserForm.membershipUntil}
+                    onChange={(event) => handleNewUserFormChange({ membershipUntil: event.target.value })}
+                    className="w-full rounded-xl border border-[var(--hairline)] bg-transparent px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--hairline)] bg-[var(--card-muted)] px-4 py-3">
+                <span className="text-sm font-semibold text-[var(--text)]">Estado</span>
+                <label className="inline-flex items-center gap-2 text-sm text-[var(--muted)]">
+                  <input
+                    type="checkbox"
+                    checked={newUserForm.isActive}
+                    onChange={(event) => handleNewUserFormChange({ isActive: event.target.checked })}
+                    className="h-4 w-4 rounded border-[var(--hairline)] bg-[var(--card)]"
+                  />
+                  {newUserForm.isActive ? "Activo" : "Inactivo"}
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-[var(--text)]">Notas internas</label>
+                <textarea
+                  rows={3}
+                  value={newUserForm.descripcion}
+                  onChange={(event) => handleNewUserFormChange({ descripcion: event.target.value })}
+                  className="w-full rounded-xl border border-[var(--hairline)] bg-transparent px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none"
+                  placeholder="Observaciones, exenciones, etc."
+                />
+              </div>
+
+              <div className="rounded-xl border border-dashed border-[var(--hairline)] bg-[var(--card-muted)] px-4 py-3 text-sm text-[var(--muted)]">
+                La cuenta se creara con la contrasena temporal{" "}
+                <span className="font-semibold text-[var(--text)]">{NEW_USER_TEMP_PASSWORD}</span>. El sistema la
+                hasheara automaticamente y podras solicitar al socio que la cambie tras el primer acceso.
+              </div>
+
+              {newUserError && <p className="text-sm text-red-400">{newUserError}</p>}
+
+              <div className="flex justify-end gap-3">
+                <button type="button" className="btn" onClick={handleCloseNewUser}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-accent" disabled={newUserLoading}>
+                  {newUserLoading ? "Creando..." : "Crear usuario"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {inviteOpen && (
+        <div
+          className="fixed inset-0 z-[998] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+          onClick={handleCloseInvite}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-2xl border border-[var(--hairline)] bg-[var(--card)] shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="flex items-center justify-between border-b border-[var(--hairline)] px-6 py-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Invitaciones</p>
+                <h2 className="text-lg font-semibold text-[var(--text)]">Generar enlace por correo</h2>
+              </div>
+              <button type="button" className="btn" onClick={handleCloseInvite}>
+                Cerrar
+              </button>
+            </header>
+            <div className="space-y-4 px-6 py-5">
+              {inviteResult ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-[var(--hairline)] bg-[var(--card-muted)] p-4">
+                    <p className="text-sm font-semibold text-[var(--text)]">
+                      {inviteResult.status === "pending" ? "Formulario pendiente" : "Enlace listo"}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">
+                      {inviteResult.message ??
+                        (inviteResult.status === "pending"
+                          ? "Ese correo ya tenia un formulario sin usar. Reutiliza el mismo enlace."
+                          : "Comparte este enlace con la persona invitada. Deja de funcionar en cuanto complete el registro.")}
+                    </p>
+                    <p className="mt-2 text-xs text-[var(--muted)]">
+                      Correo vinculado: <span className="font-semibold text-[var(--text)]">{inviteResult.email}</span>
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase text-[var(--muted)]">Enlace de registro</label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="text"
+                        readOnly
+                        value={inviteResult.url}
+                        className="flex-1 rounded-xl border border-[var(--hairline)] bg-[var(--card)] px-3 py-2 text-sm"
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-accent whitespace-nowrap"
+                        onClick={handleCopyInvite}
+                      >
+                        {inviteCopied ? "Copiado" : "Copiar"}
+                      </button>
+                    </div>
+                    <p className="text-xs text-[var(--muted)]">
+                      Si el navegador no permite copiar automaticamente, selecciona y copia el enlace manualmente.
+                    </p>
+                  </div>
+                  {inviteError && <p className="text-sm text-red-400">{inviteError}</p>}
+                  <div className="flex flex-wrap justify-between gap-3">
+                    <button type="button" className="btn" onClick={handleInviteReset}>
+                      Generar nuevo enlace
+                    </button>
+                    <button type="button" className="btn btn-accent" onClick={handleCloseInvite}>
+                      Listo
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleInviteSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-[var(--text)]">Correo del invitado</label>
+                    <input
+                      type="email"
+                      required
+                      autoFocus
+                      value={inviteEmail}
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                      className="w-full rounded-xl border border-[var(--hairline)] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+                      placeholder="persona@email.com"
+                      disabled={inviteLoading}
+                    />
+                    <p className="text-xs text-[var(--muted)]">
+                      Se generara un enlace unico para ese correo. Si ya existe uno pendiente, se mostrara el mismo.
+                    </p>
+                  </div>
+                  {inviteError && <p className="text-sm text-red-400">{inviteError}</p>}
+                  <div className="flex justify-end gap-3">
+                    <button type="button" className="btn" onClick={handleCloseInvite}>
+                      Cancelar
+                    </button>
+                    <button type="submit" className="btn btn-accent" disabled={inviteLoading}>
+                      {inviteLoading ? "Generando..." : "Generar enlace"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>

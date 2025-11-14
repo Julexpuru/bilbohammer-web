@@ -3,9 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import ThemeToggle from "@/components/ThemeToggle";
 import UserAvatarMenu from "@/components/UserAvatarMenu";
+import LoginModal from "@/components/auth/LoginModal";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
@@ -77,6 +78,7 @@ export default function TopBar() {
   const clubRef = useRef<HTMLDivElement | null>(null);
   const clubHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [clubOpen, setClubOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
 
   const cancelScheduledClose = useCallback(() => {
     if (hoverTimer.current) {
@@ -136,7 +138,8 @@ export default function TopBar() {
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
 
   return (
-    <div className="header-grid">
+    <>
+      <div className="header-grid">
       <div className="justify-self-start brand-container">
         <Link href="/" aria-label="Ir a inicio · Bilbohammer" className="brand-link">
           <Image
@@ -259,12 +262,14 @@ export default function TopBar() {
         {session?.user ? (
           <UserAvatarMenu profileHref="/mi-perfil" />
         ) : (
-          <button className="btn btn-accent" onClick={() => signIn()}>
+          <button className="btn btn-accent" onClick={() => setLoginOpen(true)}>
             Entrar
           </button>
         )}
       </div>
-    </div>
+      </div>
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+    </>
   );
 }
 

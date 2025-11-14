@@ -93,7 +93,7 @@ export function NovedadesContent({ articlesByCategory, showMembersTab, canManage
   if (tabs.length === 0) {
     return (
       <section className="rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-10 text-center text-[var(--muted)]">
-        No hay secciones de novedades disponibles todavÃ­a.
+        No hay secciones de novedades disponibles todavía.
       </section>
     );
   }
@@ -110,7 +110,7 @@ export function NovedadesContent({ articlesByCategory, showMembersTab, canManage
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="TÃ­tulo, autor o tag"
+            placeholder="Título, autor o tag"
             className="mt-2 w-full rounded-2xl border border-[var(--hairline)] bg-[var(--card)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)] focus:border-[var(--accent-400)] focus:outline-none"
           />
         </div>
@@ -210,7 +210,7 @@ function toExcerpt(summary: string) {
   if (words.length <= 100) {
     return summary.trim();
   }
-  return `${words.slice(0, 100).join(" ")}â€¦`;
+  return `${words.slice(0, 100).join(" ")}...`;
 }
 
 function formatReadableDate(value: string) {
@@ -268,4 +268,5 @@ function HeroCard({ article }: HeroCardProps) {
     </article>
   );
 }
+
 

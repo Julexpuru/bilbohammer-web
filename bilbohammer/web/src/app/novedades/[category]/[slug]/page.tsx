@@ -5,7 +5,7 @@ import { extractRoles } from "@/lib/roles";
 import { findArticleByCategoryAndSlug } from "@/lib/novedades-repository";
 
 import { ArticleDetailView } from "../../ArticleDetailView";
-import { collectArticleImages, type ArticleCategory, CATEGORY_LABELS, listStaticArticles } from "../../data";
+import { collectArticleImages, type ArticleCategory, CATEGORY_LABELS } from "../../data";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +18,6 @@ type PageParams = {
 
 function isArticleCategory(value: string): value is ArticleCategory {
   return value === "news" || value === "chronicles" || value === "members";
-}
-
-export function generateStaticParams() {
-  return listStaticArticles().map((article) => ({
-    category: article.category,
-    slug: article.slug,
-  }));
 }
 
 export async function generateMetadata({ params }: { params: PageParams }) {

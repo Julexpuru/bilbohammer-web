@@ -196,8 +196,9 @@ export default function EventsExplore({ canCreate }: Props) {
     return () => io.disconnect();
   }, [fetchPage, nextCursor, loading]);
 
-  const renderFilterChip = (label: string, active: boolean, onClick: () => void) => (
+  const renderFilterChip = (label: string, active: boolean, onClick: () => void, key?: React.Key) => (
     <button
+      key={key}
       type="button"
       onClick={onClick}
       className={clsx(
@@ -283,7 +284,9 @@ export default function EventsExplore({ canCreate }: Props) {
           <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Formato</h3>
             <div className="flex flex-wrap gap-2">
-              {ALL_TYPES.map((type) => renderFilterChip(TYPE_LABEL[type], types.includes(type), () => toggleType(type)))}
+              {ALL_TYPES.map((type) =>
+                renderFilterChip(TYPE_LABEL[type], types.includes(type), () => toggleType(type), type)
+              )}
             </div>
           </section>
 
@@ -294,7 +297,8 @@ export default function EventsExplore({ canCreate }: Props) {
                 renderFilterChip(
                   game.name ?? game.slug,
                   selectedGames.includes(game.slug),
-                  () => toggleGame(game.slug)
+                  () => toggleGame(game.slug),
+                  game.slug
                 )
               )}
             </div>

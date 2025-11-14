@@ -18,6 +18,7 @@ type Post = {
   createdAt: string;
   event?: any;
   reactionScore?: number | null;
+  href?: string;
 };
 
 const ALL_TABS: readonly { key: PostType; label: string }[] = [
@@ -67,7 +68,7 @@ function formatTime(value: string) {
 function buildExcerpt(text: string, max = 220) {
   const compact = text.replace(/\s+/g, " ").trim();
   if (compact.length <= max) return compact;
-  return `${compact.slice(0, max - 1)}â€¦`;
+  return `${compact.slice(0, Math.max(0, max - 3))}...`;
 }
 
 export default function FeedTabs({
@@ -109,6 +110,12 @@ export default function FeedTabs({
     return initial;
   });
 
+  const [requestedTabs, setRequestedTabs] = useState<Record<PostType, boolean>>(() => ({
+    ANUNCIO: Boolean(initialByType?.ANUNCIO?.length),
+    EVENTO: Boolean(initialByType?.EVENTO?.length),
+    NOTICIA_PRIVADA: Boolean(initialByType?.NOTICIA_PRIVADA?.length),
+  }));
+
   const [loading, setLoading] = useState(false);
 
   const loadPage = useCallback(
@@ -140,14 +147,23 @@ export default function FeedTabs({
     [tab, cursorByTab, hasMoreByTab, loading]
   );
 
+  const alreadyLoaded = (itemsByTab[tab] && itemsByTab[tab].length > 0) || false;
+
   useEffect(() => {
-    const alreadyLoaded = itemsByTab[tab] && itemsByTab[tab].length > 0;
-    if (!alreadyLoaded) {
-      setCursorByTab((prev) => ({ ...prev, [tab]: null }));
-      setHasMoreByTab((prev) => ({ ...prev, [tab]: true }));
-      loadPage(true);
+    if (alreadyLoaded || loading || requestedTabs[tab]) {
+      return;
     }
-  }, [tab, itemsByTab, loadPage]);
+    setRequestedTabs((prev) => (prev[tab] ? prev : { ...prev, [tab]: true }));
+    setCursorByTab((prev) => {
+      if (prev[tab] === null) return prev;
+      return { ...prev, [tab]: null };
+    });
+    setHasMoreByTab((prev) => {
+      if (prev[tab] === true) return prev;
+      return { ...prev, [tab]: true };
+    });
+    loadPage(true);
+  }, [alreadyLoaded, loadPage, loading, requestedTabs, tab]);
 
   const items = itemsByTab[tab] || [];
   const hasItems = items.length > 0;
@@ -183,13 +199,13 @@ export default function FeedTabs({
 
       {loading && !hasItems ? (
         <div className="rounded-3xl border border-dashed border-[var(--hairline)] bg-[var(--card)] p-8 text-center text-sm text-[var(--muted)]">
-          Cargando publicacionesâ€¦
+          Cargando publicaciones...
         </div>
       ) : null}
 
       {!loading && !hasItems ? (
         <div className="rounded-3xl border border-dashed border-[var(--hairline)] bg-[var(--card)] p-8 text-center text-sm text-[var(--muted)]">
-          No hay publicaciones en esta categorÃ­a todavÃ­a. Cuando publiquemos algo nuevo aparecerÃ¡ aquÃ­ mismo.
+          No hay publicaciones en esta categoría todavía. Cuando publiquemos algo nuevo aparecerá aquí mismo.
         </div>
       ) : null}
 
@@ -217,7 +233,18 @@ export default function FeedTabs({
                 <time suppressHydrationWarning>{formatDate(featured.createdAt)}</time>
               </div>
               <div className="space-y-4">
-                <h3 className="text-2xl font-semibold leading-tight md:text-3xl">{featured.title}</h3>
+                <h3 className="text-2xl font-semibold leading-tight md:text-3xl">
+                  {featured.href ? (
+                    <Link
+                      href={featured.href}
+                      className="inline-flex items-center gap-2 text-white transition hover:text-[var(--accent-200)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                    >
+                      {featured.title}
+                    </Link>
+                  ) : (
+                    featured.title
+                  )}
+                </h3>
                 <p className="text-sm text-white/80 md:text-base">{buildExcerpt(featured.content, 280)}</p>
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
@@ -240,7 +267,16 @@ export default function FeedTabs({
                   <time suppressHydrationWarning>{formatDate(post.createdAt)}</time>
                 </div>
                 <h4 className="mt-3 text-lg font-semibold text-[var(--text)] transition group-hover:text-[var(--accent-600)]">
-                  {post.title}
+                  {post.href ? (
+                    <Link
+                      href={post.href}
+                      className="inline-flex items-center gap-1 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-600)]"
+                    >
+                      {post.title}
+                    </Link>
+                  ) : (
+                    post.title
+                  )}
                 </h4>
                 <p className="mt-2 text-sm text-[var(--muted)]">{buildExcerpt(post.content)}</p>
               </article>
@@ -258,7 +294,7 @@ export default function FeedTabs({
               disabled={loading}
               className="rounded-full border border-[var(--hairline)] bg-[var(--card)] px-6 py-2 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--border)] hover:text-white disabled:opacity-60"
             >
-              {loading ? "Cargandoâ€¦" : "Ver mÃ¡s"}
+              {loading ? "Cargando..." : "Ver más"}
             </button>
           ) : archiveLink ? (
             <Link
@@ -274,5 +310,7 @@ export default function FeedTabs({
     </section>
   );
 }
+
+
 
 

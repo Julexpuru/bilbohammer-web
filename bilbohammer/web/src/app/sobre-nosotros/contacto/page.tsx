@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { extractRoles } from "@/lib/roles";
 import { loadContactContent } from "@/lib/contact-content";
+import { SYSTEM_ACCOUNT_EMAILS } from "@/constants/system-users";
 import { ContactContentView } from "./ContactContentView";
 
 export const metadata = {
@@ -25,6 +26,9 @@ export default async function ContactoPage() {
       where: {
         isActive: true,
         roles: { has: "SOCIO" },
+        NOT: {
+          email: { in: SYSTEM_ACCOUNT_EMAILS },
+        },
       },
     }),
   ]);

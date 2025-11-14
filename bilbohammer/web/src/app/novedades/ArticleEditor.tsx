@@ -355,7 +355,7 @@ export function ArticleEditor({
               onChange={(event) => setSummary(event.target.value)}
               rows={4}
               className="w-full rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)] px-4 py-3 text-sm text-[var(--text)] focus:border-[var(--accent-400)] focus:outline-none"
-              placeholder="Describe en pocas líneas el contenido principal…"
+          placeholder="Describe en pocas líneas el contenido principal..."
               required
             />
           </LabeledInput>
@@ -514,7 +514,7 @@ function BlockEditor({ block, index, onChange, onRemove }: BlockEditorProps) {
           onChange={(event) => onChange({ text: event.target.value })}
           rows={4}
           className="w-full rounded-2xl border border-[var(--hairline)] bg-[var(--card)] px-4 py-3 text-sm text-[var(--text)] focus:border-[var(--accent-400)] focus:outline-none"
-          placeholder="Escribe el párrafo…"
+          placeholder="Escribe el párrafo..."
         />
       )}
 

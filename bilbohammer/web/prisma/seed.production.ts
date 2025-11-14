@@ -148,6 +148,7 @@ async function run() {
     const gameIndex = await seedGames();
     await seedGameInfo(gameIndex);
     await seedContactContent();
+    await prisma.newsArticle.deleteMany();
     await ensureAdmin(gameIndex);
     console.log("✅ Production seed completed");
   } catch (error) {

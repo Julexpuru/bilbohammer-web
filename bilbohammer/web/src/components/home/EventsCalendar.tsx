@@ -307,7 +307,7 @@ export default function EventsCalendar() {
 
           {isLoading ? (
             <div className="mt-6 rounded-3xl border border-dashed border-[var(--hairline)] bg-[var(--card)] p-6 text-center text-sm text-[var(--muted)]">
-              Cargando eventos…
+          Cargando eventos...
             </div>
           ) : null}
           {error ? (

@@ -471,6 +471,7 @@ const SAMPLE_USERS: SeedUser[] = [
 async function main() {
   const gameIndex = await seedGames();
   await seedGameInfo(gameIndex);
+  await prisma.newsArticle.deleteMany();
   await prisma.post.deleteMany();
   await prisma.event.deleteMany();
   const hash = await bcrypt.hash("DemoSegura123!", 12);
