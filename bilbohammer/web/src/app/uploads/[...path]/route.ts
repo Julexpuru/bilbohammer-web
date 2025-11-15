@@ -35,7 +35,9 @@ export async function GET(_: Request, { params }: { params: { path: string[] } }
   try {
     const { absolute, stats } = await statUploadFile(relativePath);
     const file = await fs.readFile(absolute);
-    return new NextResponse(file, {
+    const arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
+    const blob = new Blob([arrayBuffer]);
+    return new NextResponse(blob, {
       status: 200,
       headers: {
         "Content-Type": resolveMimeType(absolute),

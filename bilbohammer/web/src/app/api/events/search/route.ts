@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     : [];
   const canViewDrafts = normalizedRoles.includes("ADMIN") || normalizedRoles.includes("JUNTA");
   let viewerUserId: number | null = null;
-  const rawUserId = session?.user?.id;
+  const rawUserId = session?.user?.id as unknown;
   if (typeof rawUserId === "number") {
     viewerUserId = Number.isFinite(rawUserId) ? rawUserId : null;
   } else if (typeof rawUserId === "string" && rawUserId.trim().length > 0) {
