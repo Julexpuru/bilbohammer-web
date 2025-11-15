@@ -56,6 +56,12 @@ export default async function HomePage() {
 
   return (
     <>
+      <section className="mx-auto mb-14 w-full max-w-5xl px-4 sm:px-6 lg:px-0">
+        <div className="rounded-3xl border border-[var(--accent-200)] bg-gradient-to-r from-[#ffe08a] via-[#ffc163] to-[#ff9f45] p-4 text-center text-sm font-medium text-[#2d1f00] shadow-lg dark:border-[var(--accent-400)] dark:text-[#1a1200]">
+          Esta pagina actualmente esta ultimando su desarrollo y contenido y la información mostrada en ella puede no
+          corresponderse totalmente con la realidad.
+        </div>
+      </section>
       <HeroCarousel />
       <FeedTabs showPrivate={isMember} initialByType={initialByType} />
       <EventsCalendar />

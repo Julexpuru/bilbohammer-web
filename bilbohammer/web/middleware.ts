@@ -15,6 +15,9 @@ const CORS_METHODS = "GET,POST,PUT,PATCH,DELETE,OPTIONS";
 const CORS_HEADERS = "Origin, X-Requested-With, Content-Type, Accept, Authorization";
 
 const allowedOrigins = buildAllowedOrigins();
+const canonicalOrigin = normalizeOrigin(process.env.APP_BASE_URL ?? inferVercelUrl());
+const canonicalHost = canonicalOrigin ? new URL(canonicalOrigin).host.toLowerCase() : null;
+const ENFORCE_CANONICAL_HOST = process.env.NODE_ENV === "production";
 
 export function middleware(request: NextRequest) {
   const protocol = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")).toLowerCase();
@@ -24,6 +27,15 @@ export function middleware(request: NextRequest) {
     const httpsUrl = request.nextUrl.clone();
     httpsUrl.protocol = "https";
     return NextResponse.redirect(httpsUrl, 308);
+  }
+
+  if (ENFORCE_CANONICAL_HOST && canonicalHost) {
+    const requestHost = request.headers.get("host");
+    if (requestHost && !hostsMatch(requestHost, canonicalHost)) {
+      const canonicalUrl = request.nextUrl.clone();
+      canonicalUrl.host = canonicalHost;
+      return NextResponse.redirect(canonicalUrl, 308);
+    }
   }
 
   const isApiRoute = request.nextUrl.pathname.startsWith("/api");
@@ -72,6 +84,10 @@ function resolveAllowedOrigin(originHeader: string | null, serverOrigin: string)
   if (originHeader === serverOrigin) return originHeader;
   if (allowedOrigins.size === 0) return originHeader;
   return allowedOrigins.has(originHeader) ? originHeader : null;
+}
+
+function hostsMatch(requestHost: string, targetHost: string) {
+  return requestHost.trim().toLowerCase() === targetHost;
 }
 
 function buildAllowedOrigins() {

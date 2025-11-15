@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { auth } from "@/auth";
-import { userCanManageEvents } from "@/lib/roles";
+import { userCanEditEvent } from "@/lib/roles";
 import { slugify } from "@/lib/slugify";
+import { joinUploadRelativePath, saveUploadFile, toPublicPath } from "@/lib/uploads/storage";
 
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = new Set([
@@ -59,16 +59,20 @@ function resolveExtension(file: File, fallbackName: string): string {
 
 export async function POST(request: Request) {
   const session = await auth();
-  if (!userCanManageEvents(session)) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
-  }
-
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {
     return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
   }
 
   const form = await request.formData();
+  const eventIdValue = form.get("eventId");
+  const eventId =
+    typeof eventIdValue === "string" && eventIdValue.trim().length ? eventIdValue.trim() : null;
+  const canEdit = await userCanEditEvent(session, eventId);
+  if (!canEdit) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+  }
+
   const file = form.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Archivo requerido." }, { status: 400 });
@@ -98,11 +102,10 @@ export async function POST(request: Request) {
   const fileName = `${baseName}-${randomUUID()}${extension}`;
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "event-attachments");
-  await fs.mkdir(uploadDir, { recursive: true });
-  await fs.writeFile(path.join(uploadDir, fileName), buffer);
+  const relativePath = joinUploadRelativePath("event-attachments", fileName);
+  await saveUploadFile(relativePath, buffer);
 
-  const url = `/uploads/event-attachments/${fileName}`;
+  const url = toPublicPath(relativePath);
 
   return NextResponse.json({ url }, { status: 201 });
 }

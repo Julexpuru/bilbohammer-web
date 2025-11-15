@@ -6,9 +6,9 @@ import { promises as fs } from "fs";
 import { auth } from "@/auth";
 import { userCanEditAlbum } from "@/lib/roles";
 import prisma from "@/lib/prisma";
+import { joinUploadRelativePath, resolveUploadAbsolute } from "@/lib/uploads/storage";
 
-const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
-const ALBUMS_DIR = path.join(UPLOAD_ROOT, "gallery", "albums");
+const ALBUMS_DIR = joinUploadRelativePath("gallery", "albums");
 
 export async function DELETE(_: Request, { params }: { params: { slug: string } }) {
   try {
@@ -38,9 +38,11 @@ export async function DELETE(_: Request, { params }: { params: { slug: string } 
       await tx.galleryAlbum.delete({ where: { id: album.id } });
     });
 
-    const currentDir = path.join(ALBUMS_DIR, album.slug);
+    const currentDir = resolveUploadAbsolute(joinUploadRelativePath("gallery", "albums", album.slug));
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const targetDir = path.join(ALBUMS_DIR, `${album.slug}__removed__${timestamp}`);
+    const targetDir = resolveUploadAbsolute(
+      joinUploadRelativePath("gallery", "albums", `${album.slug}__removed__${timestamp}`),
+    );
     try {
       await fs.rename(currentDir, targetDir);
     } catch (error) {

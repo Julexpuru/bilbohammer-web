@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
-import path from "path";
-import { promises as fs } from "fs";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { extractRoles } from "@/lib/roles";
 import { slugify } from "@/lib/slugify";
 import prisma from "@/lib/prisma";
 import { GAME_DEFAULT_CONTENT } from "@/lib/game-default-content";
-
-const MEDIA_ROOT = path.join(process.cwd(), "public", "uploads", "games");
-const ICON_DIR = path.join(MEDIA_ROOT, "icons");
-const HERO_DIR = path.join(MEDIA_ROOT, "hero");
+import { joinUploadRelativePath, saveUploadFile, toPublicPath } from "@/lib/uploads/storage";
 
 type CreatePayload = {
   name?: string;
@@ -67,8 +62,6 @@ export async function POST(request: Request) {
         isActive: true,
       },
     });
-
-    await ensureMediaDirectories();
 
     let iconImagePath: string | null = null;
     if (body.iconDataUrl) {
@@ -128,18 +121,16 @@ export async function POST(request: Request) {
   }
 }
 
-async function ensureMediaDirectories() {
-  await fs.mkdir(ICON_DIR, { recursive: true });
-  await fs.mkdir(HERO_DIR, { recursive: true });
-}
-
 async function saveMediaFile(slug: string, dataUrl: string, kind: "icon" | "hero") {
   const { buffer, extension } = parseDataUrl(dataUrl);
   const filename = `${slug}-${kind}-${Date.now()}.${extension}`;
-  const targetDir = kind === "icon" ? ICON_DIR : HERO_DIR;
-  const targetPath = path.join(targetDir, filename);
-  await fs.writeFile(targetPath, buffer);
-  return kind === "icon" ? `/uploads/games/icons/${filename}` : `/uploads/games/hero/${filename}`;
+  const relativePath = joinUploadRelativePath(
+    "games",
+    kind === "icon" ? "icons" : "hero",
+    filename,
+  );
+  await saveUploadFile(relativePath, buffer);
+  return toPublicPath(relativePath);
 }
 
 function parseDataUrl(dataUrl: string) {

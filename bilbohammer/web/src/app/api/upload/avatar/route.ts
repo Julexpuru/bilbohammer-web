@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { promises as fs } from "fs";
-import path from "path";
+import { joinUploadRelativePath, saveUploadFile, toPublicPath } from "@/lib/uploads/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,14 +22,10 @@ export async function POST(req: Request) {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const uploadsDir = path.join(process.cwd(), "public", "uploads", "avatars");
-  await fs.mkdir(uploadsDir, { recursive: true });
-
   const filename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9_.-]/g, "")}`;
-  const dest = path.join(uploadsDir, filename);
-  await fs.writeFile(dest, buffer);
-
-  const url = `/uploads/avatars/${filename}`;
+  const relativePath = joinUploadRelativePath("avatars", filename);
+  await saveUploadFile(relativePath, buffer);
+  const url = toPublicPath(relativePath);
 
   // IMPORTANTE: no escribimos en BD aquí. Se persiste en PATCH /api/me/profile
   return NextResponse.json({ url });

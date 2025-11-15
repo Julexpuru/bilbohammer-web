@@ -3,10 +3,22 @@
 import * as React from "react";
 import Link from "next/link";
 import type { ProfileEventRef } from "@/types/profile";
+import { formatClubDateTime } from "@/lib/date-format";
+
+const EVENT_DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+};
+
+function formatEventDate(value?: string | null) {
+  if (!value) return "Fecha sin especificar";
+  const formatted = formatClubDateTime(value, EVENT_DATE_FORMAT);
+  return formatted || "Fecha sin especificar";
+}
 
 function EventItem({ ev }: { ev: ProfileEventRef }) {
-  const d = ev.date ? new Date(ev.date) : null;
-  const fmt = d ? d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" }) : "Fecha sin especificar";
+  const fmt = formatEventDate(ev.date);
   return (
     <Link
       href={`/eventos/${ev.id}`}

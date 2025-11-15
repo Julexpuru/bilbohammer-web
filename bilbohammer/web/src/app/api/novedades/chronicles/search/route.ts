@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { userCanManageEvents } from "@/lib/roles";
+import { userCanEditEvent } from "@/lib/roles";
 import { findArticleById, searchChronicles } from "@/lib/novedades-repository";
 
 const mapArticle = (article: Awaited<ReturnType<typeof findArticleById>>) => {
@@ -18,11 +18,12 @@ const mapArticle = (article: Awaited<ReturnType<typeof findArticleById>>) => {
 
 export async function GET(request: Request) {
   const session = await auth();
-  if (!userCanManageEvents(session)) {
+  const url = new URL(request.url);
+  const eventId = url.searchParams.get("eventId");
+  if (!(await userCanEditEvent(session, eventId))) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
 
-  const url = new URL(request.url);
   const id = url.searchParams.get("id")?.trim() ?? "";
   if (id) {
     const article = await findArticleById(id);

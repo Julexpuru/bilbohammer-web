@@ -6,6 +6,11 @@ import { userCanEditAlbum, userCanManageGallery } from "@/lib/roles";
 import prisma from "@/lib/prisma";
 import { slugify } from "@/lib/slugify";
 import { mapAlbum, mapStandaloneImage } from "@/lib/gallery/mappers";
+import {
+  joinUploadRelativePath,
+  resolveUploadAbsolute,
+  saveUploadFile,
+} from "@/lib/uploads/storage";
 
 type UploadMode = "album" | "standalone";
 
@@ -40,15 +45,14 @@ type UploadRequestBody = {
   albumId?: string;
 };
 
-const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
-const ALBUMS_DIR = path.join(UPLOAD_ROOT, "gallery", "albums");
-const STANDALONE_DIR = path.join(UPLOAD_ROOT, "gallery", "standalone");
+const ALBUMS_DIR = joinUploadRelativePath("gallery", "albums");
+const STANDALONE_DIR = joinUploadRelativePath("gallery", "standalone");
 const ALLOWED_FORMATS = new Set(["Exposición", "Liga", "Otros", "Social", "Taller", "Torneo"]);
 const LEGACY_FORMAT_NORMALIZATION = new Map<string, string>([["Exposicion", "Exposición"]]);
 
 async function ensureBaseDirectories() {
-  await fs.mkdir(ALBUMS_DIR, { recursive: true });
-  await fs.mkdir(STANDALONE_DIR, { recursive: true });
+  await fs.mkdir(resolveUploadAbsolute(ALBUMS_DIR), { recursive: true });
+  await fs.mkdir(resolveUploadAbsolute(STANDALONE_DIR), { recursive: true });
 }
 
 function parseDataUrl(dataUrl: string) {
@@ -142,7 +146,9 @@ function getFacetYear(date: Date | null) {
 async function handleStandaloneUpload(photos: IncomingPhoto[], uploaderId: number | null) {
   const savedPhotos = [];
   const now = new Date();
-  const yearDir = path.join(STANDALONE_DIR, String(now.getFullYear()));
+  const yearSegment = String(now.getFullYear());
+  const yearDirRelative = joinUploadRelativePath("gallery", "standalone", yearSegment);
+  const yearDir = resolveUploadAbsolute(yearDirRelative);
   await fs.mkdir(yearDir, { recursive: true });
 
   for (const photo of photos) {
@@ -154,10 +160,8 @@ async function handleStandaloneUpload(photos: IncomingPhoto[], uploaderId: numbe
     const baseNameSeed = normalizedTitle ?? photo.originalName ?? photo.id;
     const baseName = sanitizeFilename(baseNameSeed);
     const filename = await uniqueFilename(yearDir, baseName, extension);
-    const relativePath = path.posix.join("gallery", "standalone", String(now.getFullYear()), filename);
-    const filePath = path.join(UPLOAD_ROOT, relativePath);
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, buffer);
+    const relativePath = joinUploadRelativePath("gallery", "standalone", yearSegment, filename);
+    await saveUploadFile(relativePath, buffer);
 
     const takenAt = safeDateInput(photo.date);
 
@@ -195,7 +199,8 @@ async function createAlbum(meta: IncomingAlbumMeta, photos: IncomingPhoto[], upl
   const displayDate = formatDisplayDate(eventDate);
   const facetYear = getFacetYear(eventDate);
   const albumSlug = await generateAlbumSlug(meta.title);
-  const albumDir = path.join(ALBUMS_DIR, albumSlug);
+  const albumDirRelative = joinUploadRelativePath("gallery", "albums", albumSlug);
+  const albumDir = resolveUploadAbsolute(albumDirRelative);
   await fs.mkdir(albumDir, { recursive: true });
 
   const collaboratorIds = meta.collaborators
@@ -254,10 +259,8 @@ async function createAlbum(meta: IncomingAlbumMeta, photos: IncomingPhoto[], upl
       const baseNameSeed = normalizedTitle ?? photo.originalName ?? photo.id;
       const baseName = sanitizeFilename(baseNameSeed);
       const filename = await uniqueFilename(albumDir, baseName, extension);
-      const relativePath = path.posix.join("gallery", "albums", albumSlug, filename);
-      const filePath = path.join(UPLOAD_ROOT, relativePath);
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, buffer);
+      const relativePath = joinUploadRelativePath("gallery", "albums", albumSlug, filename);
+      await saveUploadFile(relativePath, buffer);
 
       const takenAt = safeDateInput(photo.date);
       const position = typeof photo.order === "number" ? photo.order : createdPhotos.length;
@@ -339,8 +342,8 @@ async function updateAlbum(
   const normalizedFormat = normalizeFormat(meta.format);
 
   const newSlug = await generateAlbumSlug(meta.title, albumId);
-  const currentDir = path.join(ALBUMS_DIR, existing.slug);
-  const targetDir = path.join(ALBUMS_DIR, newSlug);
+  const currentDir = resolveUploadAbsolute(joinUploadRelativePath("gallery", "albums", existing.slug));
+  const targetDir = resolveUploadAbsolute(joinUploadRelativePath("gallery", "albums", newSlug));
   if (existing.slug !== newSlug) {
     try {
       await fs.mkdir(path.dirname(targetDir), { recursive: true });
@@ -435,10 +438,8 @@ async function updateAlbum(
         const baseNameSeed = normalizedTitle ?? photo.originalName ?? photo.id;
         const baseName = sanitizeFilename(baseNameSeed);
         const filename = await uniqueFilename(targetDir, baseName, extension);
-        const relativePath = path.posix.join("gallery", "albums", albumRecord.slug, filename);
-        const filePath = path.join(UPLOAD_ROOT, relativePath);
-        await fs.mkdir(path.dirname(filePath), { recursive: true });
-        await fs.writeFile(filePath, buffer);
+        const relativePath = joinUploadRelativePath("gallery", "albums", albumRecord.slug, filename);
+        await saveUploadFile(relativePath, buffer);
 
         const takenAt = safeDateInput(photo.date);
         const imageRecord = await tx.galleryImage.create({

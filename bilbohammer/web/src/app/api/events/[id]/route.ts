@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
-import { userCanManageEvents } from "@/lib/roles";
+import { userCanEditEvent } from "@/lib/roles";
 import {
   parseEventPayload,
   computeInternalFlag,
@@ -77,7 +77,7 @@ export async function GET(_: Request, { params }: RouteParams) {
 
 export async function PUT(request: Request, { params }: RouteParams) {
   const session = await auth();
-  if (!userCanManageEvents(session)) {
+  if (!(await userCanEditEvent(session, params.id))) {
     return NextResponse.json({ error: "No tienes permisos para editar eventos." }, { status: 403 });
   }
 
@@ -239,7 +239,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
 export async function DELETE(_: Request, { params }: RouteParams) {
   const session = await auth();
-  if (!userCanManageEvents(session)) {
+  if (!(await userCanEditEvent(session, params.id))) {
     return NextResponse.json({ error: "No tienes permisos para eliminar eventos." }, { status: 403 });
   }
 

@@ -823,7 +823,12 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     setChronicleLoading(true);
     setChronicleError(null);
 
-    fetch(`/api/novedades/chronicles/search?id=${encodeURIComponent(chronicleId)}`)
+    const params = new URLSearchParams({ id: chronicleId });
+    if (currentEventId) {
+      params.set("eventId", currentEventId);
+    }
+
+    fetch(`/api/novedades/chronicles/search?${params.toString()}`)
       .then(async (response) => {
         if (!response.ok) {
           const data = await response.json().catch(() => null);
@@ -853,7 +858,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     return () => {
       cancelled = true;
     };
-  }, [state.chronicleArticleId]);
+  }, [state.chronicleArticleId, currentEventId]);
 
   useEffect(() => {
     if (chronicleActionBusy) {
@@ -884,12 +889,13 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       setChronicleBusy(true);
       setChronicleError(null);
       try {
-        const response = await fetch(
-          `/api/novedades/chronicles/search?q=${encodeURIComponent(trimmed)}`,
-          {
-            signal: controller.signal,
-          },
-        );
+        const params = new URLSearchParams({ q: trimmed });
+        if (currentEventId) {
+          params.set("eventId", currentEventId);
+        }
+        const response = await fetch(`/api/novedades/chronicles/search?${params.toString()}`, {
+          signal: controller.signal,
+        });
         if (!response.ok) {
           const data = await response.json().catch(() => null);
           throw new Error(data?.error ?? "No se pudo buscar cronicas.");
@@ -911,7 +917,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [chronicleQuery, selectedChronicle, chronicleActionBusy]);
+  }, [chronicleQuery, selectedChronicle, chronicleActionBusy, currentEventId]);
 
   useEffect(() => {
     const trimmed = albumQuery.trim();
@@ -1213,7 +1219,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     setBannerUploading(true);
 
     try {
-      const uploadedUrl = await uploadBannerFile(file);
+      const uploadedUrl = await uploadBannerFile(file, { eventId: currentEventId });
       updateField("bannerUrl", uploadedUrl);
       setBannerError(null);
       if (bannerPreviewUrl.current) {
@@ -1453,7 +1459,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     }));
 
     try {
-      const uploadedUrl = await uploadAttachmentFile(file);
+      const uploadedUrl = await uploadAttachmentFile(file, { eventId: currentEventId });
       setState((prev) => ({
         ...prev,
         attachments: prev.attachments.map((item) => {

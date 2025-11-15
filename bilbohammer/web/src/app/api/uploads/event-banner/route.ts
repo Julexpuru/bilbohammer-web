@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { auth } from "@/auth";
-import { userCanManageEvents } from "@/lib/roles";
+import { userCanEditEvent } from "@/lib/roles";
 import { slugify } from "@/lib/slugify";
+import { joinUploadRelativePath, saveUploadFile, toPublicPath } from "@/lib/uploads/storage";
 
 const MAX_FILE_SIZE = 6 * 1024 * 1024; // 6MB
 const ALLOWED_TYPES = new Set([
@@ -39,16 +39,20 @@ function resolveExtension(file: File, fallbackName: string): string {
 
 export async function POST(request: Request) {
   const session = await auth();
-  if (!userCanManageEvents(session)) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
-  }
-
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {
     return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
   }
 
   const form = await request.formData();
+  const eventIdValue = form.get("eventId");
+  const eventId =
+    typeof eventIdValue === "string" && eventIdValue.trim().length ? eventIdValue.trim() : null;
+  const canEdit = await userCanEditEvent(session, eventId);
+  if (!canEdit) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+  }
+
   const file = form.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Archivo requerido." }, { status: 400 });
@@ -80,13 +84,9 @@ export async function POST(request: Request) {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "event-banners");
-  await fs.mkdir(uploadDir, { recursive: true });
-
-  const targetPath = path.join(uploadDir, uniqueName);
-  await fs.writeFile(targetPath, buffer);
-
-  const url = `/uploads/event-banners/${uniqueName}`;
+  const relativePath = joinUploadRelativePath("event-banners", uniqueName);
+  await saveUploadFile(relativePath, buffer);
+  const url = toPublicPath(relativePath);
 
   return NextResponse.json({ url }, { status: 201 });
 }

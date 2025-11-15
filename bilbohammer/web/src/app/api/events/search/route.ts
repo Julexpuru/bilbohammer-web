@@ -50,6 +50,14 @@ export async function GET(request: Request) {
     ? session.user.roles.map((role) => String(role).toUpperCase())
     : [];
   const canViewDrafts = normalizedRoles.includes("ADMIN") || normalizedRoles.includes("JUNTA");
+  let viewerUserId: number | null = null;
+  const rawUserId = session?.user?.id;
+  if (typeof rawUserId === "number") {
+    viewerUserId = Number.isFinite(rawUserId) ? rawUserId : null;
+  } else if (typeof rawUserId === "string" && rawUserId.trim().length > 0) {
+    const parsed = Number(rawUserId);
+    viewerUserId = Number.isFinite(parsed) ? parsed : null;
+  }
 
   const url = new URL(request.url);
   const q = url.searchParams.get("q")?.trim() || null;
@@ -83,7 +91,16 @@ export async function GET(request: Request) {
   const andFilters: Prisma.EventWhereInput[] = [];
 
   if (!canViewDrafts) {
-    andFilters.push({ status: { not: EventStatus.DRAFT } });
+    if (viewerUserId != null) {
+      andFilters.push({
+        OR: [
+          { status: { not: EventStatus.DRAFT } },
+          { organizers: { some: { userId: viewerUserId } } },
+        ],
+      });
+    } else {
+      andFilters.push({ status: { not: EventStatus.DRAFT } });
+    }
   }
 
   if (orgs.includes("bilbohammer")) {

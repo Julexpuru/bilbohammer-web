@@ -5,7 +5,7 @@ import EventStatusBadge from "@/components/events/EventStatusBadge";
 import EventShareButtons from "@/components/events/EventShareButtons";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { userCanManageEvents } from "@/lib/roles";
+import { userCanEditEvent } from "@/lib/roles";
 import { findArticleById } from "@/lib/novedades-repository";
 
 type Params = {
@@ -79,8 +79,6 @@ export default async function EventDetailPage({
   searchParams?: SearchParams;
 }) {
   const session = await auth();
-  const canManage = userCanManageEvents(session);
-
   const event = await prisma.event.findUnique({
     where: { id: params.slug },
     include: {
@@ -104,6 +102,8 @@ export default async function EventDetailPage({
   if (!event) {
     notFound();
   }
+
+  const canManage = await userCanEditEvent(session, event.id);
 
   const chronicleArticle = event.chronicleArticleId
     ? await findArticleById(event.chronicleArticleId)

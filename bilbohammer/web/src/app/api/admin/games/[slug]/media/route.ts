@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import path from "path";
-import { promises as fs } from "fs";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { extractRoles } from "@/lib/roles";
 import prisma from "@/lib/prisma";
-
-const MEDIA_ROOT = path.join(process.cwd(), "public", "uploads", "games");
-const ICON_DIR = path.join(MEDIA_ROOT, "icons");
-const HERO_DIR = path.join(MEDIA_ROOT, "hero");
+import {
+  deleteUploadFile,
+  joinUploadRelativePath,
+  saveUploadFile,
+  toPublicPath,
+} from "@/lib/uploads/storage";
 
 type MediaPayload = {
   kind?: "icon" | "hero";
@@ -42,22 +42,22 @@ export async function POST(request: Request, { params }: { params: { slug: strin
   }
 
   try {
-    await ensureMediaDirectories();
     const { buffer, extension } = parseDataUrl(body.dataUrl);
     const timestamp = Date.now();
     const filename = `${game.slug}-${timestamp}.${extension}`;
-    const targetDir = body.kind === "icon" ? ICON_DIR : HERO_DIR;
-    const targetPath = path.join(targetDir, filename);
-    await fs.writeFile(targetPath, buffer);
+    const relativePath = joinUploadRelativePath(
+      "games",
+      body.kind === "icon" ? "icons" : "hero",
+      filename,
+    );
+    await saveUploadFile(relativePath, buffer);
+    const publicPath = toPublicPath(relativePath);
 
-    const publicPath =
-      body.kind === "icon" ? `/uploads/games/icons/${filename}` : `/uploads/games/hero/${filename}`;
-
-    if (body.kind === "icon" && game.iconImagePath?.startsWith("/uploads/games/icons/")) {
-      void deleteIfExists(path.join(process.cwd(), "public", game.iconImagePath));
+    if (body.kind === "icon" && game.iconImagePath) {
+      void deleteUploadFile(game.iconImagePath);
     }
-    if (body.kind === "hero" && game.heroImagePath?.startsWith("/uploads/games/hero/")) {
-      void deleteIfExists(path.join(process.cwd(), "public", game.heroImagePath));
+    if (body.kind === "hero" && game.heroImagePath) {
+      void deleteUploadFile(game.heroImagePath);
     }
 
     const update =
@@ -80,11 +80,6 @@ export async function POST(request: Request, { params }: { params: { slug: strin
       { status: 500 },
     );
   }
-}
-
-async function ensureMediaDirectories() {
-  await fs.mkdir(ICON_DIR, { recursive: true });
-  await fs.mkdir(HERO_DIR, { recursive: true });
 }
 
 function parseDataUrl(dataUrl: string) {
@@ -112,13 +107,5 @@ function mimeToExtension(mime: string) {
       return "gif";
     default:
       return "bin";
-  }
-}
-
-async function deleteIfExists(fullPath: string) {
-  try {
-    await fs.unlink(fullPath);
-  } catch {
-    // Ignore
   }
 }

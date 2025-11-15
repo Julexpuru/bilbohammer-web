@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import { EventStatus, type Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { userCanManageEvents } from "@/lib/roles";
 import {
@@ -53,6 +53,9 @@ function buildNestedCreate<T>(items: T[], mapper: (item: T) => any) {
 export async function GET() {
   try {
     const events = await prisma.event.findMany({
+      where: {
+        status: { in: [EventStatus.PUBLISHED, EventStatus.FINALIZED] },
+      },
       orderBy: { startsAt: "asc" },
       take: 100,
       include: {

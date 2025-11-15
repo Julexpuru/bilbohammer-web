@@ -14,7 +14,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
-import { fallbackGameList } from "@/lib/games";
+import { useGamesCatalog } from "@/lib/use-games-catalog";
 
 type GameEntry = {
   slug: string;
@@ -36,15 +36,16 @@ function normalizeOffset(index: number, active: number, length: number) {
 
 export default function GameCarousel3D({ className }: { className?: string }) {
   const router = useRouter();
+  const { games: catalog } = useGamesCatalog();
   const games = useMemo<GameEntry[]>(() => {
-    return fallbackGameList()
+    return catalog
       .filter((game) => !EXCLUDED_SLUGS.has(game.slug))
       .map((game) => ({
         slug: game.slug,
         name: game.name,
-        iconImagePath: game.iconImagePath,
+        iconImagePath: game.iconImagePath ?? `/assets/icons/games/${game.slug}.png`,
       }));
-  }, []);
+  }, [catalog]);
 
   const [rotation, setRotation] = useState(0);
   const [isHovered, setIsHovered] = useState(false);

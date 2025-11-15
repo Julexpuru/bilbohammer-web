@@ -2,13 +2,11 @@
 
 import { NextResponse } from "next/server";
 import path from "path";
-import { promises as fs } from "fs";
 import { auth } from "@/auth";
 import { userCanManageGallery } from "@/lib/roles";
 import prisma from "@/lib/prisma";
 import { mapStandaloneImage } from "@/lib/gallery/mappers";
-
-const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
+import { deleteUploadFile } from "@/lib/uploads/storage";
 
 function normalizeString(value: unknown) {
   if (typeof value !== "string") {
@@ -113,9 +111,8 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     });
 
     if (photo.storagePath) {
-      const currentPath = path.join(UPLOAD_ROOT, photo.storagePath);
       try {
-        await fs.unlink(currentPath);
+        await deleteUploadFile(photo.storagePath);
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
         if (code !== "ENOENT") {

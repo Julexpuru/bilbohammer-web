@@ -1,9 +1,13 @@
-import { promises as fs } from "fs";
-import path from "path";
 import crypto from "crypto";
+import {
+  deleteUploadFile,
+  joinUploadRelativePath,
+  relativeFromPublicPath,
+  saveUploadFile,
+  toPublicPath,
+} from "@/lib/uploads/storage";
 
-const PUBLIC_PREFIX = "/uploads/oauth-cache";
-const CACHE_DIR = path.join(process.cwd(), "public", PUBLIC_PREFIX.replace(/^\//, ""));
+const CACHE_DIR = joinUploadRelativePath("oauth-cache");
 
 type CacheParams = {
   userId: number | null;
@@ -24,10 +28,11 @@ const extensionFromMime = (mime: string | null): string => {
 };
 
 const deleteLocalIfNeeded = async (localPath?: string | null) => {
-  if (!localPath || !localPath.startsWith(`${PUBLIC_PREFIX}/`)) return;
-  const absPath = path.join(process.cwd(), "public", localPath.replace(/^\//, ""));
+  if (!localPath) return;
+  const relative = relativeFromPublicPath(localPath);
+  if (!relative || !relative.startsWith(CACHE_DIR)) return;
   try {
-    await fs.unlink(absPath);
+    await deleteUploadFile(localPath);
   } catch (err) {
     if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") {
       throw err;
@@ -49,14 +54,13 @@ export async function cacheRemoteAvatar({ userId, remoteUrl, currentLocalPath }:
     if (!contentType.toLowerCase().startsWith("image/")) return null;
     const arrayBuffer = await res.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    await fs.mkdir(CACHE_DIR, { recursive: true });
     const hash = crypto.createHash("sha1").update(buffer).digest("hex").slice(0, 10);
     const safeUser = Number.isFinite(userId) && userId != null ? userId : "anon";
     const filename = `oauth_${safeUser}_${Date.now()}_${hash}${extensionFromMime(contentType)}`;
-    const absDest = path.join(CACHE_DIR, filename);
-    await fs.writeFile(absDest, buffer);
+    const relativePath = joinUploadRelativePath("oauth-cache", filename);
+    await saveUploadFile(relativePath, buffer);
     await deleteLocalIfNeeded(currentLocalPath ?? null);
-    return `${PUBLIC_PREFIX}/${filename}`;
+    return toPublicPath(relativePath);
   } catch {
     return null;
   }

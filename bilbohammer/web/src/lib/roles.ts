@@ -1,4 +1,5 @@
 ﻿import type { Session } from "next-auth";
+import { prisma } from "@/lib/prisma";
 
 const CLUB_PRIVILEGE_ROLES = new Set(["ADMIN", "JUNTA"]);
 
@@ -27,6 +28,51 @@ export function userCanManageEvents(session: Session | null | undefined): boolea
   return hasClubPrivileges(session);
 }
 
+function resolveSessionUserId(session: Session | null | undefined): number | null {
+  const rawId = (session?.user as any)?.id;
+  if (typeof rawId === "number" && Number.isFinite(rawId)) {
+    return rawId;
+  }
+  if (typeof rawId === "string") {
+    const trimmed = rawId.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function normalizeEventId(eventId: string | null | undefined): string | null {
+  if (typeof eventId !== "string") return null;
+  const trimmed = eventId.trim();
+  return trimmed.length ? trimmed : null;
+}
+
+export async function userIsEventOrganizer(
+  session: Session | null | undefined,
+  eventId: string | null | undefined
+): Promise<boolean> {
+  const normalizedEventId = normalizeEventId(eventId);
+  if (!normalizedEventId) return false;
+  const userId = resolveSessionUserId(session);
+  if (userId == null) return false;
+  const organizer = await prisma.eventOrganizer.findFirst({
+    where: { eventId: normalizedEventId, userId },
+    select: { id: true },
+  });
+  return Boolean(organizer);
+}
+
+export async function userCanEditEvent(
+  session: Session | null | undefined,
+  eventId: string | null | undefined
+): Promise<boolean> {
+  if (userCanManageEvents(session)) {
+    return true;
+  }
+  return userIsEventOrganizer(session, eventId);
+}
+
 export function userCanEditAlbum(
   session: Session | null | undefined,
   collaboratorIds: string[]
@@ -42,4 +88,3 @@ export function userCanEditAlbum(
 
   return "none";
 }
-

@@ -9,6 +9,7 @@ const ALLOWED_BANNER_TYPES = new Set([
 
 export type UploadBannerOptions = {
   signal?: AbortSignal;
+  eventId?: string | null;
 };
 
 export async function uploadBannerFile(file: File, options?: UploadBannerOptions): Promise<string> {
@@ -32,6 +33,10 @@ export async function uploadBannerFile(file: File, options?: UploadBannerOptions
   formData.append("file", file);
   if (file.name) {
     formData.append("filename", file.name);
+  }
+  const bannerEventId = options?.eventId?.trim();
+  if (bannerEventId) {
+    formData.append("eventId", bannerEventId);
   }
 
   const response = await fetch("/api/uploads/event-banner", {
@@ -74,6 +79,7 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
 
 export type UploadAttachmentOptions = {
   signal?: AbortSignal;
+  eventId?: string | null;
 };
 
 export async function uploadAttachmentFile(
@@ -100,6 +106,10 @@ export async function uploadAttachmentFile(
   formData.append("file", file);
   if (file.name) {
     formData.append("filename", file.name);
+  }
+  const attachmentEventId = options?.eventId?.trim();
+  if (attachmentEventId) {
+    formData.append("eventId", attachmentEventId);
   }
 
   const response = await fetch("/api/uploads/event-attachment", {

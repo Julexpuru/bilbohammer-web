@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import EventForm, { EventFormInitialData } from "@/components/events/EventForm";
 import { auth } from "@/auth";
-import { userCanManageEvents } from "@/lib/roles";
+import { userCanEditEvent } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { findArticleById } from "@/lib/novedades-repository";
@@ -126,10 +126,6 @@ async function mapEventToInitialData(event: LoadedEvent): Promise<EventFormIniti
 
 export default async function EditEventPage({ params }: { params: Params }) {
   const session = await auth();
-  if (!userCanManageEvents(session)) {
-    redirect(`/eventos/${params.slug}`);
-  }
-
   const event = await prisma.event.findUnique({
     where: { id: params.slug },
     include: {
@@ -151,6 +147,11 @@ export default async function EditEventPage({ params }: { params: Params }) {
 
   if (!event) {
     notFound();
+  }
+
+  const canEdit = await userCanEditEvent(session, event.id);
+  if (!canEdit) {
+    redirect(`/eventos/${params.slug}`);
   }
 
   const initialData = await mapEventToInitialData(event);

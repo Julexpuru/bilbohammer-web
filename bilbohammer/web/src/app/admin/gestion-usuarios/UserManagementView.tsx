@@ -277,6 +277,17 @@ type NewUserFormState = {
   descripcion: string;
 };
 
+type PasswordModalTarget = {
+  id: number;
+  displayName: string;
+  email: string;
+};
+
+type PasswordFormState = {
+  password: string;
+  confirm: string;
+};
+
 function createEmptyNewUserForm(): NewUserFormState {
   return {
     name: "",
@@ -399,6 +410,11 @@ export function UserManagementView({ columns, initialRows }: Props) {
   const [inviteResult, setInviteResult] = useState<InviteResult | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
+  const [passwordTarget, setPasswordTarget] = useState<PasswordModalTarget | null>(null);
+  const [passwordFields, setPasswordFields] = useState<PasswordFormState>({ password: "", confirm: "" });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [editedRow, setEditedRow] = useState<RowData | null>(null);
   const [editedRowIndex, setEditedRowIndex] = useState<number | null>(null);
@@ -989,11 +1005,93 @@ export function UserManagementView({ columns, initialRows }: Props) {
     closeEditModal();
   }, [applyEditChanges, closeEditModal, currentEditedRow, editForm, editedRowIndex, rows]);
 
+  const handleOpenPasswordModal = useCallback((row: RowData) => {
+    const rowId = getRowId(row);
+    if (!rowId) {
+      alert("No se pudo determinar el identificador del usuario.");
+      return;
+    }
+    const numericId = Number.parseInt(rowId, 10);
+    if (!Number.isFinite(numericId)) {
+      alert("Identificador de usuario invalido.");
+      return;
+    }
+    setPasswordTarget({
+      id: numericId,
+      displayName: row.name || row.nick || row.email || `Usuario ${rowId}`,
+      email: row.email || "Sin email",
+    });
+    setPasswordFields({ password: "", confirm: "" });
+    setPasswordError(null);
+    setPasswordSuccess(null);
+  }, []);
+
+  const handleClosePasswordModal = useCallback(() => {
+    setPasswordTarget(null);
+    setPasswordFields({ password: "", confirm: "" });
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    setPasswordLoading(false);
+  }, []);
+
+  const handlePasswordFieldChange = useCallback((patch: Partial<PasswordFormState>) => {
+    setPasswordFields((prev) => ({ ...prev, ...patch }));
+    setPasswordError(null);
+    setPasswordSuccess(null);
+  }, []);
+
+  const handlePasswordSubmit = useCallback(
+    async (event?: FormEvent<HTMLFormElement>) => {
+      event?.preventDefault();
+      if (!passwordTarget) {
+        setPasswordError("No se pudo determinar el usuario objetivo.");
+        return;
+      }
+      const passwordValue = passwordFields.password.trim();
+      const confirmValue = passwordFields.confirm.trim();
+      if (passwordValue.length < 8) {
+        setPasswordError("La contraseña debe tener al menos 8 caracteres.");
+        return;
+      }
+      if (passwordValue !== confirmValue) {
+        setPasswordError("Las contraseñas no coinciden.");
+        return;
+      }
+      setPasswordLoading(true);
+      setPasswordError(null);
+      setPasswordSuccess(null);
+      try {
+        const response = await fetch(`/api/admin/users/${passwordTarget.id}/password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: passwordValue, confirm: confirmValue }),
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.ok) {
+          throw new Error(data?.error ?? "No se pudo actualizar la contraseña.");
+        }
+        setPasswordSuccess("Contraseña actualizada correctamente.");
+        setPasswordFields({ password: "", confirm: "" });
+      } catch (error) {
+        console.error("[gestion-usuarios] password", error);
+        setPasswordError(error instanceof Error ? error.message : "No se pudo actualizar la contraseña.");
+      } finally {
+        setPasswordLoading(false);
+      }
+    },
+    [passwordFields.confirm, passwordFields.password, passwordTarget]
+  );
+
   const handleButtonAction = async (column: ColumnConfig, row: RowData, rowIndex: number) => {
     if (column.key === "__edit") {
       setEditedRow(row);
       setEditedRowIndex(rowIndex);
       setEditForm(createEditForm(row));
+      return;
+    }
+
+    if (column.key === "passwordHash") {
+      handleOpenPasswordModal(row);
       return;
     }
 
@@ -1579,6 +1677,78 @@ export function UserManagementView({ columns, initialRows }: Props) {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {passwordTarget && (
+        <div
+          className="fixed inset-0 z-[985] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+          onClick={handleClosePasswordModal}
+        >
+          <div
+            className="w-full max-w-lg rounded-3xl border border-[var(--hairline)] bg-[var(--card)] shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="flex items-center justify-between border-b border-[var(--hairline)] px-6 py-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">ID {passwordTarget.id}</p>
+                <h2 className="text-lg font-semibold text-[var(--text)]">{passwordTarget.displayName}</h2>
+                <p className="text-xs text-[var(--muted)]">{passwordTarget.email}</p>
+              </div>
+              <button type="button" className="btn" onClick={handleClosePasswordModal} disabled={passwordLoading}>
+                Cerrar
+              </button>
+            </header>
+            <form onSubmit={handlePasswordSubmit} className="space-y-5 px-6 py-5">
+              {passwordError && (
+                <div className="rounded-2xl border border-red-500 bg-red-500/10 px-4 py-2 text-sm text-red-100">
+                  {passwordError}
+                </div>
+              )}
+              {passwordSuccess && (
+                <div className="rounded-2xl border border-emerald-500 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-100">
+                  {passwordSuccess}
+                </div>
+              )}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                  Nueva contraseña
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  className="w-full rounded-2xl border border-[var(--hairline)] bg-transparent px-4 py-3 text-sm"
+                  value={passwordFields.password}
+                  onChange={(event) => handlePasswordFieldChange({ password: event.target.value })}
+                  placeholder="Introduce la nueva contraseña"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                  Confirmar contraseña
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  className="w-full rounded-2xl border border-[var(--hairline)] bg-transparent px-4 py-3 text-sm"
+                  value={passwordFields.confirm}
+                  onChange={(event) => handlePasswordFieldChange({ confirm: event.target.value })}
+                  placeholder="Repite la contraseña"
+                />
+              </div>
+              <p className="text-xs text-[var(--muted)]">
+                La contraseña se guardará inmediatamente, se hasheará con bcrypt y quedará registrada en el historial.
+              </p>
+              <div className="mt-4 flex items-center justify-end gap-3 border-t border-[var(--hairline)] pt-4">
+                <button type="button" className="btn" onClick={handleClosePasswordModal} disabled={passwordLoading}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-accent" disabled={passwordLoading}>
+                  {passwordLoading ? "Actualizando..." : "Guardar contraseña"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

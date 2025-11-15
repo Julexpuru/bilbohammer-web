@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { userCanManageEvents } from "@/lib/roles";
+import { userCanEditEvent } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 type RouteParams = {
@@ -14,7 +14,7 @@ type ChroniclePayload = {
 
 export async function PUT(request: Request, { params }: RouteParams) {
   const session = await auth();
-  if (!userCanManageEvents(session)) {
+  if (!(await userCanEditEvent(session, params.id))) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
 
