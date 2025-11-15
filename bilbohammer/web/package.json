@@ -10,7 +10,8 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "seed": "tsx prisma/seed.ts",
     "seed:prod": "tsx prisma/seed.production.ts",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate:legacy-media": "tsx scripts/migrate-legacy-game-media.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
