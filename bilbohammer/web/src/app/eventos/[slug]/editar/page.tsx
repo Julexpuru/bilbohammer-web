@@ -5,6 +5,7 @@ import { userCanEditEvent } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { findArticleById } from "@/lib/novedades-repository";
+import { buildEventSlug, extractEventIdFromSlug } from "@/lib/events/slug";
 
 type Params = {
   slug: string;
@@ -126,8 +127,9 @@ async function mapEventToInitialData(event: LoadedEvent): Promise<EventFormIniti
 
 export default async function EditEventPage({ params }: { params: Params }) {
   const session = await auth();
+  const eventId = extractEventIdFromSlug(params.slug);
   const event = await prisma.event.findUnique({
-    where: { id: params.slug },
+    where: { id: eventId },
     include: {
       tags: true,
       game: true,
@@ -151,7 +153,7 @@ export default async function EditEventPage({ params }: { params: Params }) {
 
   const canEdit = await userCanEditEvent(session, event.id);
   if (!canEdit) {
-    redirect(`/eventos/${params.slug}`);
+    redirect(`/eventos/${buildEventSlug(event.id, event.title)}`);
   }
 
   const initialData = await mapEventToInitialData(event);

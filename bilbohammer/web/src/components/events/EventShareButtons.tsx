@@ -4,7 +4,7 @@ import * as React from "react";
 import { formatClubDateTime } from "@/lib/date-format";
 
 type Props = {
-  eventId: string;
+  eventSlug: string;
   title: string;
   startsAt: string;
   endsAt: string;
@@ -97,7 +97,7 @@ function LinkIcon() {
   );
 }
 
-export function EventShareButtons({ eventId, title, startsAt, endsAt, location }: Props) {
+export function EventShareButtons({ eventSlug, title, startsAt, endsAt, location }: Props) {
   const [shareUrl, setShareUrl] = React.useState("");
   const [copied, setCopied] = React.useState(false);
   const rawGradientId = React.useId();
@@ -106,8 +106,8 @@ export function EventShareButtons({ eventId, title, startsAt, endsAt, location }
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const origin = window.location.origin;
-    setShareUrl(`${origin}/eventos/${eventId}`);
-  }, [eventId]);
+    setShareUrl(`${origin}/eventos/${eventSlug}`);
+  }, [eventSlug]);
 
   const formattedStart = React.useMemo(() => formatDateForMessage(startsAt), [startsAt]);
 

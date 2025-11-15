@@ -270,9 +270,6 @@ export async function parseEventPayload(raw: RawPayload): Promise<ParsedEventPay
 
   const systemTags = new Set<string>();
   systemTags.add(EVENT_TYPE_TAG_LABELS[type] ?? type);
-  if (selectedGame && !selectedGame.isDefault) {
-    systemTags.add(selectedGame.name ?? selectedGame.slug);
-  }
   const tags = Array.from(new Set([...baseTags, ...systemTags]));
 
   const organizers = Array.isArray(raw.organizers)

@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { ProfileEventRef } from "@/types/profile";
 import { formatClubDateTime } from "@/lib/date-format";
+import { buildEventSlug } from "@/lib/events/slug";
 
 const EVENT_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   day: "2-digit",
@@ -19,9 +20,10 @@ function formatEventDate(value?: string | null) {
 
 function EventItem({ ev }: { ev: ProfileEventRef }) {
   const fmt = formatEventDate(ev.date);
+  const slug = buildEventSlug(ev.id, ev.title);
   return (
     <Link
-      href={`/eventos/${ev.id}`}
+      href={`/eventos/${slug}`}
       className="flex items-center justify-between border-b border-white/10 py-2 transition hover:bg-white/5"
     >
       <span className="text-sm">{ev.title}</span>

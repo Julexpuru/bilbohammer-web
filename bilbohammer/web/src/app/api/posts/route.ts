@@ -9,6 +9,7 @@ import { HOME_FEED_PAGE_SIZE } from "@/constants/feed";
 import { auth } from "@/auth";
 import type { ArticleCategory } from "@/app/novedades/data";
 import type { PostType } from "@prisma/client";
+import { buildEventSlug } from "@/lib/events/slug";
 
 type FeedItem = {
   id: string;
@@ -92,7 +93,7 @@ async function fetchEventFeed(cursor: string | undefined, take: number) {
     content: event.details ?? event.location ?? "Consulta la ficha del evento para más información.",
     createdAt: event.startsAt.toISOString(),
     imageUrl: event.bannerUrl ?? null,
-    href: `/eventos/${event.id}`,
+    href: `/eventos/${buildEventSlug(event.id, event.title)}`,
   }));
   return NextResponse.json({ items, nextCursor });
 }

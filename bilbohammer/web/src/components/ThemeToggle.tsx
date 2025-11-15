@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-export default function ThemeToggle() {
+type ThemeToggleProps = {
+  variant?: "nav" | "surface";
+};
+
+export default function ThemeToggle({ variant = "nav" }: ThemeToggleProps) {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
@@ -28,6 +32,11 @@ export default function ThemeToggle() {
 
   const isDark = theme === "dark";
 
+  const palette =
+    variant === "nav"
+      ? { color: "var(--nav-text)", borderColor: "var(--nav-hairline)", backgroundColor: "transparent" }
+      : { color: "var(--text)", borderColor: "var(--hairline)", backgroundColor: "var(--card)" };
+
   return (
     <button
       type="button"
@@ -35,7 +44,7 @@ export default function ThemeToggle() {
       className="btn"
       title={isDark ? "Cambiar a claro" : "Cambiar a oscuro"}
       aria-label="Cambiar tema claro/oscuro"
-      style={{ color: "var(--nav-text)", borderColor: "var(--nav-hairline)" }}
+      style={palette}
     >
       {isDark ? (
         // Luna

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma, EventStatus, EventType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { loadActiveGames, resolveGameIdsFromInput } from "@/lib/game-catalog";
+import { buildEventSlug } from "@/lib/events/slug";
 
 const TAKE_DEFAULT = 12;
 const TAKE_MAX = 48;
@@ -177,7 +178,7 @@ export async function GET(request: Request) {
 
       return {
         id: event.id,
-        slug: event.id,
+        slug: buildEventSlug(event.id, event.title),
         title: event.title,
         subtitle: event.details ? event.details.trim().split(/\r?\n/, 1)[0] ?? null : null,
         startsAt: event.startsAt.toISOString(),

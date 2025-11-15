@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { userCanEditEvent } from "@/lib/roles";
 import { findArticleById } from "@/lib/novedades-repository";
+import { buildEventSlug, extractEventIdFromSlug } from "@/lib/events/slug";
 
 type Params = {
   slug: string;
@@ -79,8 +80,9 @@ export default async function EventDetailPage({
   searchParams?: SearchParams;
 }) {
   const session = await auth();
+  const eventId = extractEventIdFromSlug(params.slug);
   const event = await prisma.event.findUnique({
-    where: { id: params.slug },
+    where: { id: eventId },
     include: {
       tags: true,
       organizers: {
@@ -332,12 +334,13 @@ export default async function EventDetailPage({
     mapEmbedSrc = toEmbedUrl(locationLabel);
   }
 
-  const baseHref = `/eventos/${event.id}`;
+  const canonicalSlug = buildEventSlug(event.id, event.title);
+  const baseHref = `/eventos/${canonicalSlug}`;
   const manageButton =
     canManage &&
     (
-      <Link
-        href={`/eventos/${event.id}/editar`}
+        <Link
+          href={`/eventos/${canonicalSlug}/editar`}
         className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-white/10"
       >
         Editar evento
@@ -362,7 +365,7 @@ export default async function EventDetailPage({
                 {showShareButtons && (
                   <div className="ml-2">
                     <EventShareButtons
-                      eventId={event.id}
+                      eventSlug={canonicalSlug}
                       title={event.title}
                       startsAt={event.startsAt.toISOString()}
                       endsAt={event.endsAt.toISOString()}

@@ -374,7 +374,7 @@ export function GalleryPageContent({
     const formatOptions = toOptions(Array.from(formatMap.entries()), (a, b) => a[0].localeCompare(b[0]));
 
     return [
-      { id: "year", title: "Anio", options: yearOptions },
+      { id: "year", title: "Año", options: yearOptions },
       { id: "game", title: "Juego", options: gameOptions },
       { id: "format", title: "Formato", options: formatOptions },
     ];

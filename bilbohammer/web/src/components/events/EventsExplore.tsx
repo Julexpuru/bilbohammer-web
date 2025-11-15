@@ -368,15 +368,15 @@ export default function EventsExplore({ canCreate }: Props) {
               <article key={ev.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-xl bg-white/5 p-4 shadow-sm transition hover:bg-white/10">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link href={`/eventos/${ev.slug}`} className="text-lg font-medium hover:underline">
-                      {ev.title}
-                    </Link>
+                      <Link href={`/eventos/${ev.slug}`} className="text-lg font-medium hover:underline">
+                        {ev.title}
+                      </Link>
                     {ev.status !== "DRAFT" && ev.status !== "CANCELLED" && (
-                      <EventShareButtons
-                        eventId={ev.slug}
-                        title={ev.title}
-                        startsAt={ev.startsAt}
-                        endsAt={ev.endsAt}
+                        <EventShareButtons
+                          eventSlug={ev.slug}
+                          title={ev.title}
+                          startsAt={ev.startsAt}
+                          endsAt={ev.endsAt}
                         location={where || undefined}
                       />
                     )}

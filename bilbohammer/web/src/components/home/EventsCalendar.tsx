@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { getClubDateTimeFormatter } from "@/lib/date-format";
+import { buildEventSlug } from "@/lib/events/slug";
 
 type EventPayload = {
   id: string;
@@ -344,7 +345,7 @@ export default function EventsCalendar() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="space-y-1">
                         <Link
-                          href={`/eventos/${event.id}`}
+                          href={`/eventos/${buildEventSlug(event.id, event.title)}`}
                           className="text-base font-semibold text-[var(--text)] hover:text-[var(--accent-600)]"
                           prefetch={false}
                         >
@@ -386,7 +387,7 @@ export default function EventsCalendar() {
                   <li key={event.id} className="flex items-center justify-between gap-3">
                     <div className="space-y-1">
                       <Link
-                        href={`/eventos/${event.id}`}
+                        href={`/eventos/${buildEventSlug(event.id, event.title)}`}
                         className="text-sm font-semibold text-[var(--text)] hover:text-[var(--accent-600)]"
                         prefetch={false}
                       >

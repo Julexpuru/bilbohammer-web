@@ -9,6 +9,7 @@ import { HOME_FEED_PAGE_SIZE } from "@/constants/feed";
 import { getArticlesByCategory } from "@/lib/novedades-repository";
 import type { Article } from "@/app/novedades/data";
 import type { PostType } from "@prisma/client";
+import { buildEventSlug } from "@/lib/events/slug";
 
 type UiPost = {
   id: string;
@@ -106,7 +107,7 @@ function mapEventToPost(event: MinimalEvent): UiPost {
     createdAt: event.startsAt.toISOString(),
     imageUrl: event.bannerUrl ?? null,
     reactionScore: 0,
-    href: `/eventos/${event.id}`,
+    href: `/eventos/${buildEventSlug(event.id, event.title)}`,
   };
 }
 

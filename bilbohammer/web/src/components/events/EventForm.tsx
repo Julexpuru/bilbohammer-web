@@ -13,6 +13,7 @@ import type {
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { uploadAttachmentFile, uploadBannerFile } from "@/lib/events/uploads";
 import { slugify } from "@/lib/slugify";
+import { buildEventSlug } from "@/lib/events/slug";
 import type { ArticleCategory } from "@/app/novedades/data";
 
 type Juego = string;
@@ -282,25 +283,19 @@ const EVENT_TYPE_LABEL_MAP = EVENT_TYPE_OPTIONS.reduce(
   {} as Record<EventType, string>
 );
 
-const GAME_LABEL_MAP = GAME_OPTIONS.reduce(
-  (map, option) => {
-    map[option.value] = option.label;
-    return map;
-  },
-  {} as Record<Juego, string>
-);
-
-function computeSystemTags(type: EventType, game: Juego | ""): string[] {
-  const tags: string[] = [];
-  tags.push(EVENT_TYPE_LABEL_MAP[type] ?? type);
-  if (game && game !== "OTROS") {
-    tags.push(GAME_LABEL_MAP[game] ?? game);
-  }
-  return tags;
+function computeSystemTags(type: EventType): string[] {
+  const label = EVENT_TYPE_LABEL_MAP[type] ?? type;
+  return label ? [label] : [];
 }
 
-function syncSystemTags(existing: string[], systemTags: string[]): { tags: string[]; lockedTags: string[] } {
-  const merged = Array.from(new Set([...existing, ...systemTags]));
+function syncSystemTags(
+  existing: string[],
+  systemTags: string[],
+  previousLocked: string[] = []
+): { tags: string[]; lockedTags: string[] } {
+  const previousLockedSet = new Set(previousLocked.map((tag) => tag.toLowerCase()));
+  const filtered = existing.filter((tag) => !previousLockedSet.has(tag.toLowerCase()));
+  const merged = Array.from(new Set([...systemTags, ...filtered]));
   return { tags: merged, lockedTags: systemTags };
 }
 
@@ -322,7 +317,14 @@ function createBilboOrganization(): OrganizationState {
   };
 }
 
-function ensureBilboOrganization(list: OrganizationState[]): OrganizationState[] {
+function hasAssignedOrganizer(list: OrganizerState[]): boolean {
+  return list.some((item) => item.userId && item.userId.toString().trim().length > 0);
+}
+
+function syncBilboOrganization(
+  list: OrganizationState[],
+  organizers: OrganizerState[]
+): OrganizationState[] {
   const normalized = list.map((item) => ({
     ...item,
     locked: item.locked ?? false,
@@ -330,19 +332,24 @@ function ensureBilboOrganization(list: OrganizationState[]): OrganizationState[]
   const existingIndex = normalized.findIndex((item) =>
     isBilboOrganizationMatch({ slug: item.slug, name: item.name })
   );
-  if (existingIndex >= 0) {
-    const existing = normalized[existingIndex];
-    const updated: OrganizationState = {
-      ...existing,
-      slug: existing.slug || BILBO_ORGANIZATION_SLUG,
-      name: existing.name || BILBO_ORGANIZATION_NAME,
-      isClub: true,
-      locked: true,
-    };
-    const others = normalized.filter((_, index) => index !== existingIndex);
-    return [updated, ...others];
+  const others =
+    existingIndex >= 0
+      ? normalized.filter((_, index) => index !== existingIndex)
+      : normalized;
+  if (!hasAssignedOrganizer(organizers)) {
+    return others;
   }
-  return [createBilboOrganization(), ...normalized];
+  const existing = existingIndex >= 0 ? normalized[existingIndex] : null;
+  const bilboEntry: OrganizationState = existing
+    ? {
+        ...existing,
+        slug: existing.slug || BILBO_ORGANIZATION_SLUG,
+        name: existing.name || BILBO_ORGANIZATION_NAME,
+        isClub: true,
+        locked: true,
+      }
+    : createBilboOrganization();
+  return [bilboEntry, ...others];
 }
 
 const HIGHLIGHT_TYPE_OPTIONS: { value: EventHighlightType; label: string }[] = [
@@ -495,9 +502,9 @@ function buildInitialState(initialData?: EventFormInitialData): EventFormState {
       highlights: [],
       rankings: [],
     };
-    const systemTags = computeSystemTags(baseState.type, baseState.game);
-    const { tags, lockedTags } = syncSystemTags(baseState.tags, systemTags);
-    const organizations = ensureBilboOrganization(baseState.organizations);
+    const systemTags = computeSystemTags(baseState.type);
+    const { tags, lockedTags } = syncSystemTags(baseState.tags, systemTags, baseState.lockedTags);
+    const organizations = syncBilboOrganization(baseState.organizations, baseState.organizers);
     const stateWithDerived: EventFormState = {
       ...baseState,
       tags,
@@ -591,8 +598,8 @@ function buildInitialState(initialData?: EventFormInitialData): EventFormState {
     })),
   };
 
-  const systemTags = computeSystemTags(baseState.type, baseState.game);
-  const { tags, lockedTags } = syncSystemTags(baseState.tags, systemTags);
+  const systemTags = computeSystemTags(baseState.type);
+  const { tags, lockedTags } = syncSystemTags(baseState.tags, systemTags, baseState.lockedTags);
   const mappedOrganizations = initialData.organizations.map((item) => ({
     key: generateKey(),
     id: item.organization.id,
@@ -605,7 +612,7 @@ function buildInitialState(initialData?: EventFormInitialData): EventFormState {
       name: item.organization.name,
     }),
   }));
-  const organizations = ensureBilboOrganization(mappedOrganizations);
+  const organizations = syncBilboOrganization(mappedOrganizations, baseState.organizers);
   const stateWithDerived: EventFormState = {
     ...baseState,
     tags,
@@ -858,7 +865,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     return () => {
       cancelled = true;
     };
-  }, [state.chronicleArticleId, currentEventId]);
+  }, [state.chronicleArticleId, currentEventId, selectedChronicle]);
 
   useEffect(() => {
     if (chronicleActionBusy) {
@@ -1057,11 +1064,9 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
   function updateField<K extends keyof EventFormState>(field: K, value: EventFormState[K]) {
     setState((prev) => {
       const next: EventFormState = { ...prev, [field]: value };
-      if (field === "type" || field === "game") {
-        const nextType = field === "type" ? (value as EventType) : next.type;
-        const nextGame = field === "game" ? (value as Juego | "") : next.game;
-        const systemTags = computeSystemTags(nextType, nextGame);
-        const { tags, lockedTags } = syncSystemTags(prev.tags, systemTags);
+      if (field === "type") {
+        const systemTags = computeSystemTags(value as EventType);
+        const { tags, lockedTags } = syncSystemTags(prev.tags, systemTags, prev.lockedTags);
         next.tags = tags;
         next.lockedTags = lockedTags;
       }
@@ -1091,10 +1096,16 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
   }, []);
 
   function updateOrganizer(key: string, patch: Partial<OrganizerState>) {
-    setState((prev) => ({
-      ...prev,
-      organizers: prev.organizers.map((item) => (item.key === key ? { ...item, ...patch } : item)),
-    }));
+    setState((prev) => {
+      const nextOrganizers = prev.organizers.map((item) =>
+        item.key === key ? { ...item, ...patch } : item
+      );
+      return {
+        ...prev,
+        organizers: nextOrganizers,
+        organizations: syncBilboOrganization(prev.organizations, nextOrganizers),
+      };
+    });
   }
 
   function updateOrganization(key: string, patch: Partial<OrganizationState>) {
@@ -1305,26 +1316,23 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     });
   }
 
-  const handleChronicleSelect = useCallback(
-    (chronicle: ChronicleSearchResult) => {
-      setSelectedChronicle(chronicle);
-      setChronicleQuery(chronicle.title);
-      setChronicleResults([]);
-      setChronicleError(null);
-      updateField("chronicleArticleId", chronicle.id);
-    },
-    [updateField],
-  );
+  function handleChronicleSelect(chronicle: ChronicleSearchResult) {
+    setSelectedChronicle(chronicle);
+    setChronicleQuery(chronicle.title);
+    setChronicleResults([]);
+    setChronicleError(null);
+    updateField("chronicleArticleId", chronicle.id);
+  }
 
-  const handleChronicleClear = useCallback(() => {
+  function handleChronicleClear() {
     setSelectedChronicle(null);
     setChronicleQuery("");
     setChronicleResults([]);
     setChronicleError(null);
     updateField("chronicleArticleId", "");
-  }, [updateField]);
+  }
 
-  const handleChronicleCreate = useCallback(async () => {
+  async function handleChronicleCreate() {
     setChronicleError(null);
     setChronicleActionBusy(true);
     try {
@@ -1333,7 +1341,8 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
         setChronicleError("No se pudieron guardar los cambios del evento. Revisa los campos marcados e intentalo de nuevo.");
         return;
       }
-      const returnUrl = `/eventos/${eventId}/editar`;
+      const slug = buildEventSlug(eventId, state.title);
+      const returnUrl = `/eventos/${slug}/editar`;
       router.push(
         `/novedades/nueva?category=chronicles&linkEvent=${encodeURIComponent(
           eventId,
@@ -1346,9 +1355,9 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     } finally {
       setChronicleActionBusy(false);
     }
-  }, [persistEventSilently, router]);
+  }
 
-  const handleChronicleEdit = useCallback(async () => {
+  async function handleChronicleEdit() {
     if (!selectedChronicle || !selectedChronicle.slug) {
       return;
     }
@@ -1360,7 +1369,8 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
         setChronicleError("No se pudieron guardar los cambios del evento. Revisa los campos marcados e intentalo de nuevo.");
         return;
       }
-      const returnUrl = `/eventos/${eventId}/editar`;
+      const slug = buildEventSlug(eventId, state.title);
+      const returnUrl = `/eventos/${slug}/editar`;
       router.push(
         `/novedades/${selectedChronicle.category}/${selectedChronicle.slug}/editar?linkEvent=${encodeURIComponent(
           eventId,
@@ -1373,7 +1383,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     } finally {
       setChronicleActionBusy(false);
     }
-  }, [persistEventSilently, router, selectedChronicle]);
+  }
 
   function handleAddTag() {
     const trimmed = tagInput.trim();
@@ -1415,11 +1425,13 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
           return prev;
         }
         const nextOrganizers = prev.organizers.map((item) =>
-          item.key === targetKey
-            ? { ...item, userId: member.id, displayName: member.name }
-            : item
+          item.key === targetKey ? { ...item, userId: member.id, displayName: member.name } : item
         );
-        return { ...prev, organizers: nextOrganizers };
+        return {
+          ...prev,
+          organizers: nextOrganizers,
+          organizations: syncBilboOrganization(prev.organizations, nextOrganizers),
+        };
       }
 
       if (prev.organizers.some((item) => Number(item.userId) === Number(member.id))) {
@@ -1427,12 +1439,14 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
         return prev;
       }
 
+      const nextOrganizers = [
+        ...prev.organizers,
+        { key: generateKey(), userId: member.id, role: "", displayName: member.name },
+      ];
       return {
         ...prev,
-        organizers: [
-          ...prev.organizers,
-          { key: generateKey(), userId: member.id, role: "", displayName: member.name },
-        ],
+        organizers: nextOrganizers,
+        organizations: syncBilboOrganization(prev.organizations, nextOrganizers),
       };
     });
 
@@ -1890,7 +1904,8 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
         persistedEventId = eventId;
       }
       if (eventId && !skipRedirect) {
-        router.push(`/eventos/${eventId}`);
+        const slug = buildEventSlug(eventId, state.title);
+        router.push(`/eventos/${slug}`);
         router.refresh();
       } else if (!skipRedirect && mode === "create") {
         router.push("/eventos");
@@ -2213,9 +2228,6 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
             <span className="text-sm text-[var(--muted)]">Inscripcion solo para socios</span>
           </label>
         </div>
-        <p className="text-xs text-[var(--muted)]">
-          Si asignas socios como organizadores, el evento se marcara automaticamente como interno.
-        </p>
       </section>
 
       <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -2332,13 +2344,17 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
             className="rounded-2xl border border-white/20 px-3 py-2 text-sm text-white hover:border-white/40"
             onClick={() => {
               const newKey = generateKey();
-              setState((prev) => ({
-                ...prev,
-                organizers: [
+              setState((prev) => {
+                const nextOrganizers = [
                   ...prev.organizers,
                   { key: newKey, userId: "", role: "", displayName: "" },
-                ],
-              }));
+                ];
+                return {
+                  ...prev,
+                  organizers: nextOrganizers,
+                  organizations: syncBilboOrganization(prev.organizations, nextOrganizers),
+                };
+              });
               setMemberSelectionTarget(newKey);
               setMemberNotice("Escribe y selecciona un socio para asignarlo.");
               setSearchTerm("");
@@ -2366,7 +2382,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                 ];
                 return {
                   ...prev,
-                  organizations: ensureBilboOrganization(nextOrganizations),
+                  organizations: syncBilboOrganization(nextOrganizations, prev.organizers),
                 };
               })
             }
@@ -2422,10 +2438,14 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                   type="button"
                   className="self-end rounded-full border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-200 hover:bg-red-500/20"
                   onClick={() => {
-                    setState((prev) => ({
-                      ...prev,
-                      organizers: removeItem(prev.organizers, organizer.key),
-                    }));
+                    setState((prev) => {
+                      const nextOrganizers = removeItem(prev.organizers, organizer.key);
+                      return {
+                        ...prev,
+                        organizers: nextOrganizers,
+                        organizations: syncBilboOrganization(prev.organizations, nextOrganizers),
+                      };
+                    });
                     if (memberSelectionTarget === organizer.key) {
                       setMemberSelectionTarget(null);
                     }
