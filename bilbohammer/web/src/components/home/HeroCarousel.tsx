@@ -164,6 +164,24 @@ export default function HeroCarousel() {
             />
           ))}
         </div>
+
+        <div className="absolute inset-x-0 bottom-8 flex justify-center gap-2 md:hidden z-20 pointer-events-auto">
+          {slides.map((_, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setIndex(idx)}
+              onFocus={handlePause}
+              onBlur={handleResume}
+              className="h-2.5 w-2.5 cursor-pointer rounded-full transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+              style={{
+                backgroundColor: idx === index ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)",
+                transform: idx === index ? "scale(1.3)" : "scale(1)",
+              }}
+              aria-label={`Mostrar slide ${idx + 1}`}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="-mt-24 sm:-mt-[120px] md:-mt-[136px]">

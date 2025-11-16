@@ -1,11 +1,23 @@
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Rol } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { extractRoles } from "@/lib/roles";
-import { formatClubDateTime } from "@/lib/date-format";
 import { SYSTEM_ACCOUNT_EMAILS } from "@/constants/system-users";
+import { RolePills } from "@/components/profile/RolePills";
+import {
+  BOARD_SLOT_CONFIG,
+  getBoardAssignments,
+  toMemberCard,
+  type BoardSlotConfig,
+  type MemberCard,
+  type RawMember,
+  type SingleBoardSlotId,
+} from "@/lib/member-directory";
+import { AssignBoardMemberButton, RemoveBoardMemberButton } from "./AssignBoardMemberButton";
+import { PonmeCaraButton } from "./PonmeCaraButton";
 
 export const metadata = {
   title: "Tablon de socios | Bilbohammer",
@@ -14,36 +26,6 @@ export const metadata = {
 };
 
 const ALLOWED_ROLES = new Set<Rol>(["SOCIO", "JUNTA", "ADMIN"]);
-const BOARD_ROLES = new Set<Rol>(["JUNTA", "ADMIN"]);
-
-type RawMember = {
-  id: number;
-  name: string | null;
-  nick: string | null;
-  avatarUrl: string | null;
-  oauthAvatarUrl: string | null;
-  image: string | null;
-  roles: Rol[];
-  descripcion: string | null;
-  membershipSince: Date | null;
-};
-
-type MemberCard = {
-  id: number;
-  displayName: string;
-  initials: string;
-  avatarUrl: string | null;
-  roleLabel: string;
-  memberSince: string | null;
-  bio: string | null;
-};
-
-const ROLE_LABEL: Record<Rol, string> = {
-  ADMIN: "Administracion del club",
-  JUNTA: "Junta directiva",
-  SOCIO: "Persona socia",
-  AMIGO: "Amigo del club",
-};
 
 export default async function TablonSociosPage() {
   const session = await auth();
@@ -68,33 +50,65 @@ export default async function TablonSociosPage() {
     );
   }
 
-  const rawMembers = await prisma.user.findMany({
-    where: {
-      isActive: true,
-      roles: { hasSome: Array.from(ALLOWED_ROLES) },
-      NOT: {
-        email: { in: SYSTEM_ACCOUNT_EMAILS },
+  const [rawMembers, boardAssignments] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        isActive: true,
+        roles: { hasSome: Array.from(ALLOWED_ROLES) },
+        NOT: {
+          email: { in: SYSTEM_ACCOUNT_EMAILS },
+        },
       },
-    },
-    select: {
-      id: true,
-      name: true,
-      nick: true,
-      avatarUrl: true,
-      oauthAvatarUrl: true,
-      image: true,
-      roles: true,
-      descripcion: true,
-      membershipSince: true,
-    },
+      select: {
+        id: true,
+        name: true,
+        nick: true,
+        avatarUrl: true,
+        oauthAvatarUrl: true,
+        facePhotoUrl: true,
+        image: true,
+        roles: true,
+        descripcion: true,
+        membershipSince: true,
+      },
+    }),
+    getBoardAssignments(),
+  ]);
+
+  const members = (rawMembers ?? []) as RawMember[];
+  const memberMap = new Map(members.map((member) => [member.id, member]));
+  const viewerId = session.user?.id ? String(session.user.id) : null;
+  const leadershipSlots = BOARD_SLOT_CONFIG.filter((slot) => slot.tier !== "vocales");
+  const leadershipCards = leadershipSlots.map((slot) => {
+    const slotId = slot.id as SingleBoardSlotId;
+    const assignedId = boardAssignments[slotId];
+    const assignedMember = assignedId ? memberMap.get(assignedId) ?? null : null;
+    return { slot, member: assignedMember ? toMemberCard(assignedMember) : null };
+  });
+  const pyramidTop = leadershipCards.filter((entry) => entry.slot.tier === "presidencia");
+  const pyramidCargos = leadershipCards.filter((entry) => entry.slot.tier === "cargos");
+
+  const assignedIds = new Set<number>();
+  leadershipCards.forEach(({ member }) => {
+    if (member) assignedIds.add(member.id);
   });
 
-  const boardMembers = rawMembers.filter((member) => member.roles.some((role) => BOARD_ROLES.has(role)));
-  const boardIds = new Set(boardMembers.map((member) => member.id));
-  const socios = rawMembers.filter((member) => !boardIds.has(member.id));
+  const vocalEntries = (boardAssignments.VOCAL ?? []).map((memberId, index) => {
+    const raw = memberMap.get(memberId) ?? null;
+    if (raw) assignedIds.add(raw.id);
+    return {
+      key: `vocal-${memberId}-${index}`,
+      assignedId: memberId,
+      member: raw ? toMemberCard(raw) : null,
+    };
+  });
 
-  const boardCards = boardMembers.map(toMemberCard).sort((a, b) => a.displayName.localeCompare(b.displayName, "es"));
-  const socioCards = socios.map(toMemberCard).sort((a, b) => a.displayName.localeCompare(b.displayName, "es"));
+  const socioCards = members
+    .filter((member) => !assignedIds.has(member.id))
+    .map((member) => toMemberCard(member))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName, "es"));
+
+  const canAssign = roles.includes("JUNTA") || roles.includes("ADMIN");
 
   return (
     <div className="space-y-10">
@@ -109,27 +123,84 @@ export default async function TablonSociosPage() {
         </p>
       </section>
 
-      {boardCards.length > 0 && (
-        <section className="card space-y-4">
-          <header className="space-y-1">
-            <h2 className="text-2xl font-semibold">Junta y coordinacion</h2>
-            <p className="text-sm text-[var(--muted)]">
-              Personas con rol de administracion o junta, visibles primero para consultas rapidas.
-            </p>
-          </header>
-          <MemberGrid members={boardCards} highlight />
-        </section>
-      )}
+      <section className="card space-y-6">
+        <header>
+          <h2 className="text-2xl font-semibold">Junta y coordinacion</h2>
+        </header>
+
+        <div className="flex flex-col gap-6">
+          {pyramidTop.length > 0 && (
+            <div className="mx-auto w-full max-w-2xl">
+              <ul className="grid gap-4">
+                {pyramidTop.map((entry) => (
+                  <LeadershipSlotCard
+                    key={entry.slot.id}
+                    slot={entry.slot}
+                    member={entry.member}
+                    canAssign={canAssign}
+                    viewerId={viewerId}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {pyramidCargos.length > 0 && (
+            <ul className="grid gap-4 md:grid-cols-3">
+              {pyramidCargos.map((entry) => (
+                <LeadershipSlotCard
+                  key={entry.slot.id}
+                  slot={entry.slot}
+                  member={entry.member}
+                  canAssign={canAssign}
+                  viewerId={viewerId}
+                />
+              ))}
+            </ul>
+          )}
+
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Base</p>
+                <h3 className="text-xl font-semibold text-[var(--text)]">Vocales</h3>
+              </div>
+              {canAssign && (
+                <AssignBoardMemberButton
+                  slotId="VOCAL"
+                  slotLabel="Nueva vocalia"
+                  mode="append"
+                  buttonLabel="Añadir vocal"
+                />
+              )}
+            </div>
+            {vocalEntries.length > 0 ? (
+              <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {vocalEntries.map((entry, index) => (
+                  <VocalCard
+                    key={entry.key}
+                    entry={entry}
+                    index={index}
+                    canAssign={canAssign}
+                    viewerId={viewerId}
+                  />
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-[var(--muted)]">
+                Todavia no hay vocalias activas. {canAssign ? "Pulsa en “Añadir vocal” para estrenar la base." : ""}
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
 
       <section className="card space-y-4">
-        <header className="space-y-1">
-          <h2 className="text-2xl font-semibold">Personas socias</h2>
-          <p className="text-sm text-[var(--muted)]">
-            El resto de socios y socias activos ordenados alfabeticamente por nick o nombre.
-          </p>
+        <header>
+          <h2 className="text-2xl font-semibold">Soci@s</h2>
         </header>
         {socioCards.length > 0 ? (
-          <MemberGrid members={socioCards} />
+          <MemberGrid members={socioCards} canViewProfiles={authorized} viewerId={viewerId} />
         ) : (
           <p className="text-sm text-[var(--muted)]">
             Todavia no hay socios activos registrados en el sistema. La junta actualizara este listado en breve.
@@ -140,67 +211,175 @@ export default async function TablonSociosPage() {
   );
 }
 
-function toMemberCard(member: RawMember): MemberCard {
-  const displayName = member.nick || member.name || `Socio ${member.id}`;
-  const avatarUrl = member.avatarUrl || member.oauthAvatarUrl || member.image;
-  const initials = toInitials(displayName);
-  const highest = pickHighestRole(member.roles);
-  const roleLabel = highest ? ROLE_LABEL[highest] : ROLE_LABEL.SOCIO;
-  const memberSince = member.membershipSince
-    ? formatClubDateTime(member.membershipSince, { month: "short", year: "numeric" })
-    : null;
-
-  return {
-    id: member.id,
-    displayName,
-    initials,
-    avatarUrl,
-    roleLabel,
-    memberSince,
-    bio: member.descripcion,
-  };
+function LeadershipSlotCard({
+  slot,
+  member,
+  canAssign,
+  viewerId,
+}: {
+  slot: BoardSlotConfig;
+  member: MemberCard | null;
+  canAssign: boolean;
+  viewerId: string | null;
+}) {
+  const highlight = slot.tier === "presidencia";
+  return (
+    <li
+      className={`flex flex-col gap-4 rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)] p-5 shadow-sm ${
+        highlight ? "ring-2 ring-[var(--accent-200)] ring-offset-2 ring-offset-[var(--card)]" : ""
+      }`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Cargo</p>
+          <h3 className="text-xl font-semibold text-[var(--text)]">{slot.label}</h3>
+        </div>
+        {canAssign && (
+          <AssignBoardMemberButton slotId={slot.id as SingleBoardSlotId} slotLabel={slot.label} buttonLabel="Asignar" />
+        )}
+      </div>
+      {member ? (
+        <>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar initials={member.initials} avatarUrl={member.avatarUrl} highlight={highlight} />
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-[var(--text)]">
+                  <Link href={member.profileHref} className="hover:text-[var(--accent)] focus-visible:underline">
+                    {member.displayName}
+                  </Link>
+                </p>
+                <RolePills roles={member.roles} />
+                {member.memberSince && (
+                  <p className="text-xs text-[var(--muted)]">En el club desde {member.memberSince}</p>
+                )}
+              </div>
+            </div>
+            <PonmeCaraButton
+              memberId={member.id}
+              displayName={member.displayName}
+              photoUrl={member.facePhotoUrl}
+              isCurrentUser={viewerId === String(member.id)}
+            />
+          </div>
+          {member.bio && <p className="text-sm text-[var(--muted)]">{member.bio}</p>}
+        </>
+      ) : (
+        <p className="text-sm text-[var(--muted)]">Sin perfil asignado.</p>
+      )}
+    </li>
+  );
 }
 
-function pickHighestRole(roles: Rol[]): Rol | null {
-  const priority: Rol[] = ["ADMIN", "JUNTA", "SOCIO", "AMIGO"];
-  for (const role of priority) {
-    if (roles.includes(role)) return role;
-  }
-  return roles[0] ?? null;
+type VocalEntry = { key: string; assignedId: number | null; member: MemberCard | null };
+
+function VocalCard({
+  entry,
+  index,
+  canAssign,
+  viewerId,
+}: {
+  entry: VocalEntry;
+  index: number;
+  canAssign: boolean;
+  viewerId: string | null;
+}) {
+  const { member, assignedId } = entry;
+  return (
+    <li className="flex flex-col gap-3 rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)] p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Vocal #{index + 1}</p>
+          {member ? (
+            <p className="text-lg font-semibold text-[var(--text)]">
+              <Link href={member.profileHref} className="hover:text-[var(--accent)] focus-visible:underline">
+                {member.displayName}
+              </Link>
+            </p>
+          ) : (
+            <p className="text-sm text-[var(--muted)]">Sin perfil asignado.</p>
+          )}
+        </div>
+        {canAssign && assignedId != null && (
+          <RemoveBoardMemberButton slotId="VOCAL" targetId={assignedId} buttonLabel="Quitar" />
+        )}
+      </div>
+      {member && (
+        <>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              <RolePills roles={member.roles} />
+              {member.memberSince && <p className="text-xs text-[var(--muted)]">En el club desde {member.memberSince}</p>}
+            </div>
+            <PonmeCaraButton
+              memberId={member.id}
+              displayName={member.displayName}
+              photoUrl={member.facePhotoUrl}
+              isCurrentUser={viewerId === String(member.id)}
+            />
+          </div>
+          {member.bio && <p className="text-sm text-[var(--muted)]">{member.bio}</p>}
+        </>
+      )}
+      {canAssign && (
+        <div className="pt-1">
+          <AssignBoardMemberButton
+            slotId="VOCAL"
+            slotLabel={`Vocal ${index + 1}`}
+            mode="replace"
+            targetId={assignedId}
+            buttonLabel={member ? "Reasignar" : "Asignar"}
+          />
+        </div>
+      )}
+    </li>
+  );
 }
 
-function toInitials(value: string): string {
-  const parts = value
-    .split(/[\s_-]+/)
-    .filter(Boolean)
-    .slice(0, 2);
-  if (parts.length === 0) return "BH";
-  return parts
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("")
-    .slice(0, 2);
-}
-
-function MemberGrid({ members, highlight = false }: { members: MemberCard[]; highlight?: boolean }) {
-  const baseCard =
-    "flex flex-col gap-4 rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)] p-5 shadow-sm transition";
-  const highlightCard = highlight ? "ring-2 ring-[var(--accent-200)] ring-offset-2 ring-offset-[var(--card)]" : "";
-
+function MemberGrid({
+  members,
+  canViewProfiles,
+  viewerId,
+}: {
+  members: MemberCard[];
+  canViewProfiles: boolean;
+  viewerId: string | null;
+}) {
   return (
     <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {members.map((member) => (
-        <li key={member.id} className={`${baseCard} ${highlightCard}`}>
-          <div className="flex items-center gap-4">
-            <Avatar initials={member.initials} avatarUrl={member.avatarUrl} highlight={highlight} />
-            <div className="space-y-1">
-              <p className="text-lg font-semibold text-[var(--text)]">{member.displayName}</p>
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--accent-600)]">
-                {member.roleLabel}
-              </p>
-              {member.memberSince && (
-                <p className="text-xs text-[var(--muted)]">En el club desde {member.memberSince}</p>
-              )}
+        <li
+          key={member.id}
+          className="flex flex-col gap-4 rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)] p-5 shadow-sm transition"
+        >
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar initials={member.initials} avatarUrl={member.avatarUrl} highlight={false} />
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-[var(--text)]">
+                  {canViewProfiles ? (
+                    <Link
+                      href={member.profileHref}
+                      className="hover:text-[var(--accent)] focus-visible:underline focus-visible:outline-none"
+                    >
+                      {member.displayName}
+                    </Link>
+                  ) : (
+                    member.displayName
+                  )}
+                </p>
+                <RolePills roles={member.roles} />
+                {member.memberSince && (
+                  <p className="text-xs text-[var(--muted)]">En el club desde {member.memberSince}</p>
+                )}
+              </div>
             </div>
+            <PonmeCaraButton
+              memberId={member.id}
+              displayName={member.displayName}
+              photoUrl={member.facePhotoUrl}
+              isCurrentUser={viewerId === String(member.id)}
+            />
           </div>
           {member.bio && <p className="text-sm text-[var(--muted)]">{member.bio}</p>}
         </li>

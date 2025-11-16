@@ -32,12 +32,12 @@ export default function EditToolbar({
   }, []);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
       {/* SIEMPRE rojo en claro y oscuro */}
       <button
         onClick={() => setOpenPwd(true)}
         disabled={editing}
-        className="px-3 py-1.5 rounded-md text-sm font-medium
+        className="px-3 py-1.5 rounded-md text-sm font-medium w-full sm:w-auto text-center
                    border border-red-500/60
                    bg-red-600 hover:bg-red-700
                    text-white
@@ -55,7 +55,7 @@ export default function EditToolbar({
           disabled={editing}
           title="Conectar cuenta de Google"
           style={{ backgroundColor: "#fff" }}
-          className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-white dark:text-gray-900"
+          className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-white dark:text-gray-900 w-full sm:w-auto"
         >
           <GoogleGlyph className="h-4 w-4" />
           <span className="whitespace-nowrap">Conectar con Google</span>
@@ -67,7 +67,7 @@ export default function EditToolbar({
           aria-disabled="true"
           title="Cuenta de Google conectada"
           style={{ backgroundColor: "#fff" }}
-          className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm dark:bg-white dark:text-gray-900 disabled:opacity-90 disabled:cursor-default"
+          className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm dark:bg-white dark:text-gray-900 disabled:opacity-90 disabled:cursor-default w-full sm:w-auto"
         >
           <CheckGlyph className="h-4 w-4" />
           <span className="whitespace-nowrap">Conectada</span>

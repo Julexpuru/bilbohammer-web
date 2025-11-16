@@ -235,11 +235,14 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
 
   return (
     <div>
-      <div className="flex gap-2">
-        <button className="px-3 py-1 rounded bg-amber-600 text-white hover:bg-amber-700" onClick={() => setOpen(true)}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <button
+          className="px-3 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 w-full text-center sm:w-auto"
+          onClick={() => setOpen(true)}
+        >
           Editar mis datos
         </button>
-                <EditToolbar editing={editing} setEditing={setEditing} />
+        <EditToolbar editing={editing} setEditing={setEditing} />
       </div>
 
       {open && (

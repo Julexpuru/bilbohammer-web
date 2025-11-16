@@ -84,6 +84,7 @@ export default function EventsExplore({ canCreate }: Props) {
   const [free, setFree] = React.useState(false);
   const [past, setPast] = React.useState(false);
   const [sort, setSort] = React.useState<"asc" | "desc">("asc");
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
 
   const { games: catalogGames } = useGamesCatalog();
   const gameFilters = catalogGames;
@@ -196,6 +197,17 @@ export default function EventsExplore({ canCreate }: Props) {
     return () => io.disconnect();
   }, [fetchPage, nextCursor, loading]);
 
+  const closeFilters = React.useCallback(() => setFiltersOpen(false), []);
+
+  React.useEffect(() => {
+    if (!filtersOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [filtersOpen]);
+
   const renderFilterChip = (label: string, active: boolean, onClick: () => void, key?: React.Key) => (
     <button
       key={key}
@@ -213,21 +225,105 @@ export default function EventsExplore({ canCreate }: Props) {
     </button>
   );
 
+  const FiltersPanel = ({ inputId }: { inputId: string }) => (
+    <div className="space-y-6">
+      <header className="space-y-4 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold text-[var(--text)]">Filtros</h2>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor={inputId} className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--muted)]">
+            Buscar por nombre o etiqueta
+          </label>
+          <input
+            id={inputId}
+            type="search"
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            placeholder="Ej. torneo, liga, narrativa"
+            className="w-full rounded-2xl border border-[var(--hairline)] bg-[var(--card)] px-4 py-2 text-sm shadow-sm focus:border-[var(--accent)] focus:outline-none"
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={resetFilters}
+          className={clsx("btn text-sm transition", hasFilters ? "opacity-100" : "opacity-50 cursor-not-allowed")}
+          disabled={!hasFilters}
+        >
+          Limpiar filtros
+        </button>
+      </header>
+
+      <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Organizador</h3>
+        <div className="flex flex-wrap gap-2">
+          {renderFilterChip("Bilbohammer", orgBilbo, () => toggleOrganizer("bilbo"))}
+          {renderFilterChip("Otros colectivos", orgOtros, () => toggleOrganizer("otros"))}
+        </div>
+      </section>
+
+      <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Formato</h3>
+        <div className="flex flex-wrap gap-2">
+          {ALL_TYPES.map((type) => renderFilterChip(TYPE_LABEL[type], types.includes(type), () => toggleType(type), type))}
+        </div>
+      </section>
+
+      <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Juego</h3>
+        <div className="flex flex-wrap gap-2">
+          {gameFilters.map((game) =>
+            renderFilterChip(
+              game.name ?? game.slug,
+              selectedGames.includes(game.slug),
+              () => toggleGame(game.slug),
+              game.slug
+            )
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Estado</h3>
+        <div className="flex flex-wrap gap-2">
+          {renderFilterChip("Solo gratuitos", free, () => setFree((prev) => !prev))}
+          {renderFilterChip("Incluir pasados", past, () => setPast((prev) => !prev))}
+        </div>
+      </section>
+    </div>
+  );
+
   return (
-    <main className="mx-auto max-w-6xl p-4 md:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold md:text-3xl">Eventos</h1>
-        <div className="flex items-center gap-2">
+    <>
+      <main className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.35em] text-[var(--muted)]">Agenda</p>
+          <h1 className="text-3xl font-semibold text-[var(--text)] sm:text-4xl">Eventos</h1>
+          <p className="text-sm text-[var(--muted)]">
+            Consulta partidas abiertas, jornadas temáticas y torneos tanto del club como de colectivos amigos.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <button
-            className="rounded-md border px-2 py-1 text-sm"
+            className="w-full rounded-full border border-[var(--hairline)] bg-[var(--card)] px-4 py-2 text-sm font-medium text-[var(--text)] shadow-sm transition hover:border-[var(--accent)] sm:w-auto"
             onClick={() => setSort((prev) => (prev === "asc" ? "desc" : "asc"))}
           >
             Orden: {sort === "asc" ? "ascendente" : "descendente"}
           </button>
+          <button
+            type="button"
+            className="w-full rounded-full border border-[var(--hairline)] bg-[var(--card)] px-4 py-2 text-sm font-medium text-[var(--text)] shadow-sm transition hover:border-[var(--accent)] sm:w-auto lg:hidden"
+            onClick={() => setFiltersOpen(true)}
+          >
+            Mostrar filtros
+          </button>
           {canCreate && (
             <Link
               href="/eventos/nuevo"
-              className="inline-flex items-center gap-2 rounded-md border border-emerald-700 bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500"
+              className="w-full rounded-full bg-emerald-500 px-4 py-2 text-center text-sm font-semibold text-white shadow transition hover:bg-emerald-400 sm:w-auto"
             >
               Crear evento
             </Link>
@@ -235,82 +331,9 @@ export default function EventsExplore({ canCreate }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
-        <aside className="sticky top-[calc(var(--nav-h)+1.5rem)] space-y-6">
-          <header className="space-y-4 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
-            <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Filtros</p>
-              <h2 className="text-2xl font-semibold leading-tight">Ajusta tus eventos</h2>
-              <p className="text-sm text-[var(--muted)]">
-                Combina texto, organizador, formato o juego para encontrar el evento ideal. Los resultados se actualizan al instante.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="events-search" className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--muted)]">
-                Buscar por nombre o etiqueta
-              </label>
-              <input
-                id="events-search"
-                type="search"
-                value={q}
-                onChange={(event) => setQ(event.target.value)}
-                placeholder="Ej. torneo, liga, narrativa"
-                className="w-full rounded-2xl border border-[var(--hairline)] bg-[var(--card)] px-4 py-2 text-sm shadow-sm focus:border-[var(--accent)] focus:outline-none"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={resetFilters}
-              className={clsx(
-                "btn text-sm transition",
-                hasFilters ? "opacity-100" : "opacity-50 cursor-not-allowed"
-              )}
-              disabled={!hasFilters}
-            >
-              Limpiar filtros
-            </button>
-          </header>
-
-          <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Organizador</h3>
-            <div className="flex flex-wrap gap-2">
-              {renderFilterChip("Bilbohammer", orgBilbo, () => toggleOrganizer("bilbo"))}
-              {renderFilterChip("Otros colectivos", orgOtros, () => toggleOrganizer("otros"))}
-            </div>
-          </section>
-
-          <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Formato</h3>
-            <div className="flex flex-wrap gap-2">
-              {ALL_TYPES.map((type) =>
-                renderFilterChip(TYPE_LABEL[type], types.includes(type), () => toggleType(type), type)
-              )}
-            </div>
-          </section>
-
-          <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Juego</h3>
-            <div className="flex flex-wrap gap-2">
-              {gameFilters.map((game) =>
-                renderFilterChip(
-                  game.name ?? game.slug,
-                  selectedGames.includes(game.slug),
-                  () => toggleGame(game.slug),
-                  game.slug
-                )
-              )}
-            </div>
-          </section>
-
-          <section className="space-y-3 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Estado</h3>
-            <div className="flex flex-wrap gap-2">
-              {renderFilterChip("Solo gratuitos", free, () => setFree((prev) => !prev))}
-              {renderFilterChip("Incluir pasados", past, () => setPast((prev) => !prev))}
-            </div>
-          </section>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+        <aside className="hidden lg:sticky lg:top-[calc(var(--nav-h)+1.5rem)] lg:block">
+          <FiltersPanel inputId="events-search-desktop" />
         </aside>
 
         <section className="space-y-3">
@@ -365,20 +388,31 @@ export default function EventsExplore({ canCreate }: Props) {
             const tags = Array.isArray(ev.tags) ? ev.tags : [];
 
             return (
-              <article key={ev.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-xl bg-white/5 p-4 shadow-sm transition hover:bg-white/10">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                      <Link href={`/eventos/${ev.slug}`} className="text-lg font-medium hover:underline">
-                        {ev.title}
-                      </Link>
+              <article
+                key={ev.id}
+                className="flex flex-col gap-4 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-4 shadow-sm transition hover:border-[var(--accent)] md:grid md:grid-cols-[minmax(0,1fr)_auto]"
+              >
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                      href={`/eventos/${ev.slug}`}
+                      className="text-lg font-semibold text-[var(--text)] hover:underline"
+                    >
+                      {ev.title}
+                    </Link>
+                    <span className="md:hidden">
+                      <EventStatusBadge status={ev.status as any} />
+                    </span>
                     {ev.status !== "DRAFT" && ev.status !== "CANCELLED" && (
+                      <div className="hidden md:flex items-center gap-2">
                         <EventShareButtons
                           eventSlug={ev.slug}
                           title={ev.title}
                           startsAt={ev.startsAt}
                           endsAt={ev.endsAt}
-                        location={where || undefined}
-                      />
+                          location={where || undefined}
+                        />
+                      </div>
                     )}
                   </div>
                   {ev.subtitle && <div className="text-sm opacity-80">{ev.subtitle}</div>}
@@ -422,10 +456,24 @@ export default function EventsExplore({ canCreate }: Props) {
                       ))}
                     </div>
                   )}
+                  {ev.status !== "DRAFT" && ev.status !== "CANCELLED" && (
+                    <div className="mt-3 space-y-1 md:hidden">
+                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">Compartir</p>
+                      <EventShareButtons
+                        eventSlug={ev.slug}
+                        title={ev.title}
+                        startsAt={ev.startsAt}
+                        endsAt={ev.endsAt}
+                        location={where || undefined}
+                      />
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-start gap-3">
-                  <EventStatusBadge status={ev.status as any} />
-                  <div className="relative grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-lg bg-black/30">
+                <div className="flex items-start gap-3 md:flex-col md:items-end md:gap-4">
+                  <span className="hidden md:block">
+                    <EventStatusBadge status={ev.status as any} />
+                  </span>
+                  <div className="relative grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-2xl bg-black/30 md:h-28 md:w-28">
                     {ev.bannerUrl ? (
                       <Image
                         src={ev.bannerUrl}
@@ -438,6 +486,17 @@ export default function EventsExplore({ canCreate }: Props) {
                       <div className="text-xs opacity-60">Sin imagen</div>
                     )}
                   </div>
+                  {ev.status !== "DRAFT" && ev.status !== "CANCELLED" && (
+                    <div className="hidden md:block">
+                      <EventShareButtons
+                        eventSlug={ev.slug}
+                        title={ev.title}
+                        startsAt={ev.startsAt}
+                        endsAt={ev.endsAt}
+                        location={where || undefined}
+                      />
+                    </div>
+                  )}
                 </div>
               </article>
             );
@@ -447,7 +506,29 @@ export default function EventsExplore({ canCreate }: Props) {
           {!loading && items.length === 0 && <div className="text-sm opacity-70">Sin resultados.</div>}
         </section>
       </div>
-    </main>
+      </main>
+
+      {filtersOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeFilters} aria-hidden="true" />
+          <div className="absolute inset-y-0 right-0 flex h-full w-full max-w-md flex-col overflow-hidden rounded-l-3xl bg-[var(--bg)] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--hairline)] px-6 py-4">
+              <p className="text-base font-semibold text-[var(--text)]">Filtros</p>
+              <button
+                type="button"
+                className="rounded-full border border-[var(--hairline)] px-4 py-1 text-sm text-[var(--text)]"
+                onClick={closeFilters}
+              >
+                Cerrar
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <FiltersPanel inputId="events-search-mobile" />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

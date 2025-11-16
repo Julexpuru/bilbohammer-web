@@ -157,8 +157,15 @@ function selectHighlights(candidates: HighlightCandidate[], maxItems: number) {
 }
 
 function GalleryHero({ images, albumCount, photoCount }: GalleryHeroProps) {
-  const [activeIndex, setActiveIndex] = useState(() => (images.length > 0 ? Math.floor(Math.random() * images.length) : 0));
-  const [visibleIndex, setVisibleIndex] = useState(activeIndex);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [visibleIndex, setVisibleIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const initial = Math.floor(Math.random() * images.length);
+    setActiveIndex(initial);
+    setVisibleIndex(initial);
+  }, [images.length]);
 
   useEffect(() => {
     if (images.length <= 1) return;
@@ -311,6 +318,8 @@ export function GalleryPageContent({
   const [viewerEntries, setViewerEntries] = useState<GalleryViewerEntry[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [uploaderOpen, setUploaderOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const closeFilters = useCallback(() => setFiltersOpen(false), []);
 
   const heroImageStore = useMemo(() => {
     const seen = new Set<string>();
@@ -447,6 +456,15 @@ export function GalleryPageContent({
   const viewerLastIndex = viewerEntries.length > 0 ? viewerEntries.length - 1 : 0;
   const viewerOpen = viewerEntries.length > 0;
 
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [filtersOpen]);
+
   const closeViewer = useCallback(() => {
     setViewerEntries([]);
     setViewerIndex(0);
@@ -516,6 +534,8 @@ export function GalleryPageContent({
     setActiveFilters(new Set());
     setTagQuery("");
   };
+
+  const handleFilterButtonClick = () => setFiltersOpen(true);
 
   const handleUploaderComplete = (payload: GalleryUploaderCompletePayload) => {
     setUploaderOpen(false);
@@ -617,14 +637,16 @@ export function GalleryPageContent({
       />
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
-        <GalleryFilters
-          groups={filterGroups}
-          activeFilters={activeFilters}
-          tagQuery={tagQuery}
-          onTagQueryChange={setTagQuery}
-          onToggle={handleToggleFilter}
-          onClear={handleClearFilters}
-        />
+        <aside className="hidden lg:block">
+          <GalleryFilters
+            groups={filterGroups}
+            activeFilters={activeFilters}
+            tagQuery={tagQuery}
+            onTagQueryChange={setTagQuery}
+            onToggle={handleToggleFilter}
+            onClear={handleClearFilters}
+          />
+        </aside>
 
         <div className="space-y-10">
           <section className="space-y-4">
@@ -633,7 +655,14 @@ export function GalleryPageContent({
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Listado principal</p>
                 <h2 className="text-2xl font-semibold text-[var(--text)]">Albums y fotos</h2>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
+              <div className="flex flex-col gap-2 text-sm text-[var(--muted)] sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+                <button
+                  type="button"
+                  className="rounded-full border border-[var(--hairline)] bg-[var(--card)] px-4 py-2 font-medium text-[var(--text)] shadow-sm transition hover:border-[var(--accent)] lg:hidden"
+                  onClick={handleFilterButtonClick}
+                >
+                  Mostrar filtros
+                </button>
                 <span>{listSummary}</span>
                 {canUpload && (
                   <button
@@ -695,6 +724,34 @@ export function GalleryPageContent({
           onClose={() => setUploaderOpen(false)}
           onComplete={handleUploaderComplete}
         />
+      )}
+
+      {filtersOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px]" onClick={closeFilters} aria-hidden="true" />
+          <div className="absolute inset-y-0 right-0 flex h-full w-full max-w-md flex-col overflow-hidden rounded-l-3xl border-l border-[var(--hairline)] bg-[var(--bg)] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--hairline)] px-6 py-4">
+              <p className="text-base font-semibold text-[var(--text)]">Filtros</p>
+              <button
+                type="button"
+                className="rounded-full border border-[var(--hairline)] px-4 py-1 text-sm text-[var(--text)]"
+                onClick={closeFilters}
+              >
+                Cerrar
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <GalleryFilters
+                groups={filterGroups}
+                activeFilters={activeFilters}
+                tagQuery={tagQuery}
+                onTagQueryChange={setTagQuery}
+                onToggle={handleToggleFilter}
+                onClear={handleClearFilters}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

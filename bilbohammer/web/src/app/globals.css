@@ -183,3 +183,15 @@ body {
   outline: 2px solid rgba(255, 255, 255, 0.42);
   outline-offset: 2px;
 }
+
+/* Embeds de Instagram: evitar desbordes en móvil */
+.instagram-media {
+  max-width: 100% !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+.instagram-media iframe {
+  width: 100% !important;
+}

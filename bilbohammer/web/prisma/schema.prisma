@@ -14,6 +14,7 @@ datasource db {
 enum Rol {
   ADMIN
   JUNTA
+  REDACTOR
   SOCIO
   AMIGO
 }
@@ -89,6 +90,7 @@ model User {
   etiquetas       String[]
   avatarUrl       String?
   oauthAvatarUrl  String?
+  facePhotoUrl    String?
   isActive        Boolean   @default(true)
   lastLoginAt     DateTime?
   membershipSince DateTime?

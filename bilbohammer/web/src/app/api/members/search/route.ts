@@ -7,15 +7,21 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = (searchParams.get("q") ?? "").trim();
+  const roleFilter = (searchParams.get("role") ?? "").trim().toLowerCase();
 
   if (query.length < 2) {
     return NextResponse.json({ results: [] });
   }
 
+  const roleCondition =
+    roleFilter === "junta"
+      ? { has: Rol.JUNTA }
+      : { hasSome: [Rol.SOCIO, Rol.JUNTA, Rol.ADMIN] };
+
   try {
     const members = await prisma.user.findMany({
       where: {
-        roles: { hasSome: [Rol.SOCIO, Rol.JUNTA, Rol.ADMIN] },
+        roles: roleCondition,
         isActive: true,
         OR: [
           { name: { contains: query, mode: "insensitive" } },

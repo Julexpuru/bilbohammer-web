@@ -13,10 +13,11 @@ type GameContactDisplay = {
   email: string | null;
 };
 
-const ROLE_PRIORITY: Rol[] = ["ADMIN", "JUNTA", "SOCIO", "AMIGO"];
+const ROLE_PRIORITY: Rol[] = ["ADMIN", "JUNTA", "REDACTOR", "SOCIO", "AMIGO"];
 const ROLE_LABEL: Record<Rol, string> = {
   ADMIN: "Admin",
   JUNTA: "Junta",
+  REDACTOR: "Redactor",
   SOCIO: "Socio",
   AMIGO: "Amigo",
 };

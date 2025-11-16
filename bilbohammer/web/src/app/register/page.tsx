@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { RegistrationForm } from "@/components/auth/RegistrationForm";
+import LoginModalTrigger from "@/components/auth/LoginModalTrigger";
 
 export const metadata = {
   title: "Registro abierto - Bilbohammer",
@@ -21,10 +21,7 @@ export default function RegisterPage() {
       </div>
 
       <p className="text-center text-sm text-[var(--muted)]">
-        Ya tienes cuenta?{" "}
-        <Link href="/login" className="font-semibold text-[var(--text)] underline-offset-4 hover:underline">
-          Inicia sesion
-        </Link>
+        Ya tienes cuenta? <LoginModalTrigger />
       </p>
     </section>
   );

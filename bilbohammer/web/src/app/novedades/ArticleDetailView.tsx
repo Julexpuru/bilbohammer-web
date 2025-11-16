@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { formatClubDateTime } from "@/lib/date-format";
 
@@ -25,6 +26,7 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
   const [newComment, setNewComment] = useState("");
   const [replyDrafts, setReplyDrafts] = useState<CommentDrafts>({});
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt?: string } | null>(null);
 
   const formattedDate = useMemo(() => formatReadableDate(article.date), [article.date]);
   const categoryLabel = CATEGORY_LABELS[article.category];
@@ -60,7 +62,28 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
     setStatusMessage("Acción de eliminar pendiente de implementación.");
   };
 
+  useEffect(() => {
+    if (!previewImage) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewImage(null);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [previewImage]);
+
+  useEffect(() => {
+    if (!previewImage) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPreviewImage(null);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [previewImage]);
+
   return (
+    <>
     <article className="space-y-10">
       <section className="overflow-hidden rounded-3xl border border-[var(--hairline)] bg-[var(--card)]">
         <header className="space-y-4 p-8">
@@ -111,7 +134,7 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
           />
         </div>
         <div className="border-t border-[var(--hairline)] p-8 text-[var(--text)]">
-          <ArticleBody blocks={article.body} />
+          <ArticleBody blocks={article.body} onPreview={setPreviewImage} />
           <div className="mt-8 flex flex-wrap gap-2 text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
             <span>Etiquetas</span>
             {article.tags.map((tag) => (
@@ -125,7 +148,7 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
 
       <section className="space-y-6 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-6 sm:p-8">
         <header className="flex flex-wrap items-center justify-between gap-3">
-          <nav className="flex gap-2" role="tablist" aria-label="Detalles adicionales de la noticia">
+          <nav className="flex flex-wrap gap-2" role="tablist" aria-label="Detalles adicionales de la noticia">
             <TabButton
               id="comments"
               label={`Comentarios (${commentCount})`}
@@ -158,10 +181,36 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
             onReply={handleReply}
           />
         ) : (
-          <PhotosSection photos={relatedPhotos} />
+          <PhotosSection photos={relatedPhotos} onPreview={setPreviewImage} />
         )}
       </section>
     </article>
+    {previewImage && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Vista ampliada de la imagen"
+        onClick={() => setPreviewImage(null)}
+      >
+        <div className="relative max-h-full max-w-5xl">
+          <button
+            type="button"
+            className="absolute right-4 top-4 rounded-full bg-black/70 px-3 py-1 text-sm font-semibold text-white"
+            onClick={() => setPreviewImage(null)}
+          >
+            Cerrar
+          </button>
+          <img
+            src={previewImage.src}
+            alt={previewImage.alt || "Imagen de la noticia"}
+            className="max-h-[80vh] rounded-3xl object-contain"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -359,9 +408,10 @@ function CommentItem({ comment, canComment, currentUserName, replyDrafts, onRepl
 
 type PhotosSectionProps = {
   photos: string[];
+  onPreview: (image: { src: string; alt?: string }) => void;
 };
 
-function PhotosSection({ photos }: PhotosSectionProps) {
+function PhotosSection({ photos, onPreview }: PhotosSectionProps) {
   if (photos.length === 0) {
     return (
       <p className="rounded-3xl border border-dashed border-[var(--hairline)] bg-[var(--card-muted)] p-6 text-center text-sm text-[var(--muted)]">
@@ -373,7 +423,11 @@ function PhotosSection({ photos }: PhotosSectionProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {photos.map((photo) => (
-        <figure key={photo} className="overflow-hidden rounded-3xl border border-[var(--hairline)] bg-[var(--card-muted)]">
+        <figure
+          key={photo}
+          className="cursor-zoom-in overflow-hidden rounded-3xl border border-transparent bg-[var(--card-muted)]"
+          onClick={() => onPreview({ src: photo, alt: "Foto relacionada con la noticia" })}
+        >
           <img src={photo} alt="Foto relacionada con la noticia" className="h-full w-full object-cover" />
         </figure>
       ))}
@@ -383,70 +437,177 @@ function PhotosSection({ photos }: PhotosSectionProps) {
 
 type ArticleBodyProps = {
   blocks: ArticleBlock[];
+  onPreview: (image: { src: string; alt?: string }) => void;
 };
 
-function ArticleBody({ blocks }: ArticleBodyProps) {
-  return (
-    <div className="space-y-6 text-base leading-relaxed text-[var(--text)] after:clear-both after:block after:content-['']">
-      {blocks.map((block, index) => {
-        switch (block.type) {
-          case "paragraph":
-            return (
-              <p key={index} className="whitespace-pre-line text-[var(--muted)]">
-                {block.text}
-              </p>
-            );
-          case "heading":
-            if (block.level === 2) {
-              return (
-                <h2 key={index} className="text-2xl font-semibold text-[var(--text)]">
-                  {block.text}
-                </h2>
-              );
-            }
-            return (
-              <h3 key={index} className="text-xl font-semibold text-[var(--text)]">
-                {block.text}
-              </h3>
-            );
-          case "image":
-            return (
-              <figure key={index} className={getImageClass(block.layout)}>
-                <img src={block.src} alt={block.alt} className="h-full w-full object-cover" />
-                {block.caption && (
-                  <figcaption className="px-4 py-3 text-center text-xs text-[var(--muted)]">{block.caption}</figcaption>
-                )}
-              </figure>
-            );
-          case "quote":
-            return (
-              <blockquote
-                key={index}
-                className="rounded-3xl border border-[var(--accent-200)] bg-[var(--accent-50)] px-6 py-5 text-base italic text-[var(--accent-700)]"
-              >
-                <p>&ldquo;{block.text}&rdquo;</p>
-                {block.attribution && (
-                  <footer className="mt-2 text-right text-xs uppercase tracking-[0.2em] text-[var(--accent-600)]">
-                    &mdash; {block.attribution}
-                  </footer>
-                )}
-              </blockquote>
-            );
-          default:
-            return null;
+function ArticleBody({ blocks, onPreview }: ArticleBodyProps) {
+  const content: ReactNode[] = [];
+  let pendingParagraph: Extract<ArticleBlock, { type: "paragraph" }> | null = null;
+
+  const flushParagraph = () => {
+    if (!pendingParagraph) return;
+    content.push(
+      <p key={`paragraph-${content.length}`} className="whitespace-pre-line text-[var(--muted)]">
+        {pendingParagraph.text}
+      </p>
+    );
+    pendingParagraph = null;
+  };
+
+  for (let index = 0; index < blocks.length; index += 1) {
+    const block = blocks[index];
+
+    if (block.type === "paragraph") {
+      flushParagraph();
+      pendingParagraph = block;
+      continue;
+    }
+
+    if (block.type === "image" && (block.layout === "float-left" || block.layout === "float-right")) {
+      let pairedParagraph: Extract<ArticleBlock, { type: "paragraph" }> | null = null;
+      if (pendingParagraph) {
+        pairedParagraph = pendingParagraph;
+        pendingParagraph = null;
+      } else if (blocks[index + 1]?.type === "paragraph") {
+        pairedParagraph = blocks[index + 1] as Extract<ArticleBlock, { type: "paragraph" }>;
+        index += 1;
+      }
+
+      if (pairedParagraph) {
+        content.push(
+          <FloatImageParagraph
+            key={`float-${content.length}`}
+            block={block}
+            paragraph={pairedParagraph}
+            direction={block.layout === "float-left" ? "left" : "right"}
+            onPreview={onPreview}
+          />
+        );
+        continue;
+      }
+    }
+
+    flushParagraph();
+
+    switch (block.type) {
+      case "heading":
+        if (block.level === 2) {
+          content.push(
+            <h2 key={`heading-${content.length}`} className="text-2xl font-semibold text-[var(--text)]">
+              {block.text}
+            </h2>
+          );
+        } else {
+          content.push(
+            <h3 key={`heading-${content.length}`} className="text-xl font-semibold text-[var(--text)]">
+              {block.text}
+            </h3>
+          );
         }
-      })}
+        break;
+      case "image":
+        content.push(
+          <figure
+            key={`image-${content.length}`}
+            className={`${getImageClass(block.layout)} cursor-zoom-in`}
+            onClick={() => onPreview({ src: block.src, alt: block.alt })}
+          >
+            <img src={block.src} alt={block.alt} className="w-full h-auto object-cover" />
+            {block.caption && (
+              <figcaption className="px-4 py-3 text-center text-xs text-[var(--muted)]">{block.caption}</figcaption>
+            )}
+          </figure>
+        );
+        break;
+      case "quote":
+        content.push(
+          <blockquote
+            key={`quote-${content.length}`}
+            className="rounded-3xl border border-[var(--accent-200)] bg-[var(--accent-50)] px-6 py-5 text-base italic text-[var(--accent-700)]"
+          >
+            <p>&ldquo;{block.text}&rdquo;</p>
+            {block.attribution && (
+              <footer className="mt-2 text-right text-xs uppercase tracking-[0.2em] text-[var(--accent-600)]">
+                &mdash; {block.attribution}
+              </footer>
+            )}
+          </blockquote>
+        );
+        break;
+      default:
+        break;
+    }
+  }
+
+  flushParagraph();
+
+  return <div className="space-y-6 text-base leading-relaxed text-[var(--text)]">{content}</div>;
+}
+
+type FloatImageParagraphProps = {
+  block: ArticleImageBlock;
+  paragraph: Extract<ArticleBlock, { type: "paragraph" }>;
+  direction: "left" | "right";
+  onPreview: (image: { src: string; alt?: string }) => void;
+};
+
+function FloatImageParagraph({ block, paragraph, direction, onPreview }: FloatImageParagraphProps) {
+  const paragraphRef = useRef<HTMLParagraphElement | null>(null);
+  const [maxFloatHeight, setMaxFloatHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const element = paragraphRef.current;
+    if (!element) return;
+
+    const update = () => {
+      const height = element.clientHeight;
+      if (height > 0) {
+        setMaxFloatHeight(Math.max(220, height * 1.5));
+      }
+    };
+
+    update();
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(() => update());
+      observer.observe(element);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [paragraph.text]);
+
+  const figureStyle = maxFloatHeight ? { maxHeight: maxFloatHeight } : undefined;
+
+  return (
+    <div className={`space-y-4 md:flex md:items-start md:gap-8 ${direction === "right" ? "md:flex-row-reverse" : ""}`}>
+      <figure
+        className="cursor-zoom-in overflow-hidden rounded-3xl border border-transparent bg-[var(--card-muted)] md:flex-none md:min-w-[220px] md:max-w-[360px]"
+        onClick={() => onPreview({ src: block.src, alt: block.alt })}
+        style={figureStyle}
+      >
+        <img src={block.src} alt={block.alt} className="h-auto w-full object-contain" style={figureStyle} />
+        {block.caption && (
+          <figcaption className="px-4 py-3 text-center text-xs text-[var(--muted)]">{block.caption}</figcaption>
+        )}
+      </figure>
+      <p ref={paragraphRef} className="whitespace-pre-line text-[var(--muted)] md:flex-1">
+        {paragraph.text}
+      </p>
     </div>
   );
 }
 
 function getImageClass(layout: ArticleImageBlock["layout"]): string {
-  const baseClass = "overflow-hidden rounded-3xl border border-[var(--hairline)] bg-[var(--card-muted)]";
+  const baseClass = "overflow-hidden rounded-3xl border border-transparent bg-[var(--card-muted)]";
+  const floatLimits =
+    "md:min-h-[220px] md:max-h-[360px] md:[&>img]:h-full md:[&>img]:object-cover md:[&>img]:max-h-[360px]";
   switch (layout) {
     case "float-left":
-      return `${baseClass} md:float-left md:mr-6 md:mb-4 md:w-1/2`;
+      return `${baseClass} md:float-left md:mr-6 md:mb-4 md:clear-both md:w-[45%] md:min-w-[260px] md:max-w-[400px] ${floatLimits}`;
     case "float-right":
-      return `${baseClass} md:float-right md:ml-6 md:mb-4 md:w-1/2`;
+      return `${baseClass} md:float-right md:ml-6 md:mb-4 md:clear-both md:w-[45%] md:min-w-[260px] md:max-w-[400px] ${floatLimits}`;
     case "full":
     default:
       return `${baseClass} w-full`;
@@ -508,3 +669,5 @@ function formatReadableDate(value: string, includeTime = false) {
     ...(includeTime ? { timeStyle: "short" as const } : {}),
   });
 }
+
+

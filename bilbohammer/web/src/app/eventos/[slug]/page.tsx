@@ -435,6 +435,8 @@ export default async function EventDetailPage({
               <Link
                 key={tab.id}
                 href={href}
+                scroll={false}
+                prefetch={false}
                 className={`rounded-full border px-4 py-2 text-xs uppercase tracking-[0.3em] transition ${
                   isActive
                     ? "border-white/80 bg-white/10 text-white"

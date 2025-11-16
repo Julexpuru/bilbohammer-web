@@ -20,9 +20,10 @@ const INSTAGRAM_STYLE: CSSProperties = {
   borderRadius: "24px",
   border: "1px solid rgba(0,0,0,0.08)",
   boxShadow: "0 12px 32px rgba(15, 23, 42, 0.12)",
-  margin: "0 auto",
-  maxWidth: "540px",
+  margin: "0",
+  maxWidth: "100%",
   width: "100%",
+  display: "block",
 };
 
 export default function InstagramFeed() {
@@ -88,7 +89,7 @@ export default function InstagramFeed() {
               Ver perfil
             </Link>
           </div>
-          <div className="mt-4 overflow-hidden rounded-[24px]">
+          <div className="mt-4 w-full overflow-hidden rounded-[24px]">
             <blockquote
               className="instagram-media"
               data-instgrm-permalink={INSTAGRAM_PROFILE}

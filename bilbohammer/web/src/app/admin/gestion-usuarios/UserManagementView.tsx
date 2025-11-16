@@ -21,7 +21,7 @@ type InviteResult = {
   message?: string | null;
 };
 
-const ROLE_OPTIONS = ["ADMIN", "JUNTA", "SOCIO", "AMIGO"] as const;
+const ROLE_OPTIONS = ["ADMIN", "JUNTA", "REDACTOR", "SOCIO", "AMIGO"] as const;
 const ID_CANDIDATES = ["id", "ID", "userId"];
 const HIGHLIGHT_COLOR = "rgba(255, 220, 120, 0.35)";
 const TOP_SCROLLBAR_HEIGHT = 14;
@@ -400,6 +400,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [stickyEnabled, setStickyEnabled] = useState(false);
   const [newUserOpen, setNewUserOpen] = useState(false);
   const [newUserForm, setNewUserForm] = useState<NewUserFormState>(createEmptyNewUserForm());
   const [newUserLoading, setNewUserLoading] = useState(false);
@@ -442,6 +443,16 @@ export function UserManagementView({ columns, initialRows }: Props) {
 
   useEffect(() => {
     setHasHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const updateSticky = () => {
+      setStickyEnabled(window.innerWidth >= 1024);
+    };
+    updateSticky();
+    window.addEventListener("resize", updateSticky);
+    return () => window.removeEventListener("resize", updateSticky);
   }, []);
 
   useEffect(() => {
@@ -1321,7 +1332,10 @@ export function UserManagementView({ columns, initialRows }: Props) {
           <div className="relative">
             <div ref={sentinelRef} aria-hidden="true" className="h-0" />
             <div
-              className="sticky z-50 grid gap-2 bg-[var(--card)] pb-2 shadow-[0_6px_12px_rgba(0,0,0,0.45)] relative"
+              className={clsx(
+                "sticky grid gap-2 bg-[var(--card)] pb-2 shadow-[0_6px_12px_rgba(0,0,0,0.45)] relative",
+                stickyEnabled ? "z-50" : "z-20"
+              )}
               style={{ top: headerRowTop }}
             >
               <div
@@ -1343,7 +1357,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
                   <thead>
                     <tr className="text-left uppercase text-xs tracking-[0.25em] text-[var(--muted)]">
                       {columns.map((column) => {
-                        const { key, label, stickyLeft, width } = column;
+                        const { key, label, width, stickyLeft } = column;
                         const sortable = column.type !== "button" || key === "roles" || key === "isActive";
                         const isSorted = sortState?.key === key;
                         const indicator = !sortable ? null : isSorted ? (sortState?.direction === "asc" ? "^" : "v") : null;
@@ -1352,7 +1366,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
                           style.minWidth = width;
                           style.maxWidth = width;
                         }
-                        if (stickyLeft !== undefined) {
+                        if (stickyEnabled && stickyLeft !== undefined) {
                           style.left = stickyLeft;
                           style.transform = `translateX(${scrollLeft}px)`;
                         }
@@ -1361,7 +1375,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
                             key={key}
                             className={clsx(
                               "border-b border-[var(--hairline)] px-3 py-2 font-medium bg-[var(--card)]",
-                              stickyLeft !== undefined && "sticky z-40 shadow-[2px_0_0_rgba(0,0,0,0.45)]",
+                              stickyEnabled && stickyLeft !== undefined && "sticky z-40 shadow-[2px_0_0_rgba(0,0,0,0.45)]",
                               sortable && "cursor-pointer select-none"
                             )}
                             style={style}
@@ -1414,14 +1428,14 @@ export function UserManagementView({ columns, initialRows }: Props) {
                           const dirty = isDirty(rowKey, column.key);
                           const cellClasses = clsx(
                             "border-b border-[var(--hairline)] px-3 py-2 align-top",
-                            stickyLeft !== undefined && "sticky z-40 shadow-[2px_0_0_rgba(0,0,0,0.45)]"
+                            stickyEnabled && stickyLeft !== undefined && "sticky z-40 shadow-[2px_0_0_rgba(0,0,0,0.45)]"
                           );
                           const style: CSSProperties = {};
                           if (column.width) {
                             style.minWidth = column.width;
                             style.maxWidth = column.width;
                           }
-                          if (stickyLeft !== undefined) {
+                          if (stickyEnabled && stickyLeft !== undefined) {
                             style.left = stickyLeft;
                             style.backgroundColor = dirty ? HIGHLIGHT_COLOR : "var(--card)";
                           } else if (dirty) {

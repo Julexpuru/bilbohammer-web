@@ -15,6 +15,7 @@ type PatchBody = {
   juegos?: string[]; // UI ids (slugs) or legacy enum keys
   factions?: Record<string, string[]>; // { w40k: [...uiIds] }
   avatarUrl?: string | null;
+  facePhotoUrl?: string | null;
 };
 
 function normalize(s: string) {
@@ -113,6 +114,7 @@ export async function PATCH(req: Request) {
     ...(aos !== undefined ? { faccionesAoS: aos as any } : {}),
     ...(tow !== undefined ? { faccionesTOW: tow as any } : {}),
     ...(Object.prototype.hasOwnProperty.call(body, "avatarUrl") ? { avatarUrl: body.avatarUrl } : {}),
+    ...(Object.prototype.hasOwnProperty.call(body, "facePhotoUrl") ? { facePhotoUrl: body.facePhotoUrl } : {}),
   };
 
   await prisma.$transaction(async (tx) => {
