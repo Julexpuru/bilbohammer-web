@@ -1,82 +1,144 @@
-# Bilbohammer — Web del club
+# Bilbohammer - Web del club
 
-Stack elegido por sencillez y mantenibilidad:
-- **Next.js 14 (App Router, TypeScript)** para frontend **y** API.
-- **Tailwind CSS** para estilos.
-- **Prisma + Postgres** para datos (con enum de **roles**).
-- **NextAuth** (JWT) con **Credentials** y Google opcional.
-- **Docker Compose** para desarrollo local.
+Portal del club Bilbohammer desarrollado con Next.js 14 (App Router) y una API integrada que cubre novedades, eventos, la galeria, el directorio de socios y los flujos de administracion (usuarios, roles, juegos, contenidos estaticos y contacto). Este README resume el stack, los pasos de despliegue y las tareas de operacion diaria.
 
-## Puesta en marcha (dev)
+## Caracteristicas destacadas
+- Frontend + API en Next.js 14 con TypeScript, Tailwind y componentes reutilizables.
+- Autenticacion NextAuth v5 (JWT) con credenciales locales y Google OAuth opcional.
+- Roles basados en Prisma (`ADMIN`, `JUNTA`, `REDACTOR`, `SOCIO`, `AMIGO`) usados por middleware y componentes para abrir o cerrar vistas.
+- Modulos funcionales del club: novedades segmentadas por tipo, calendario de eventos con filtros, galeria con filtros y subidas, juegos con fichas editables, contacto dinamico, tablon de socios y panel de administracion (gestion de usuarios, roles y cargos).
+- Uploads locales servidos desde `storage/uploads` con API propia (`/api/upload/avatar`) y helpers para moverlos a un CDN si hace falta.
+- Politica de cookies en `/politica-de-cookies` con banner GDPR ready (solo cargamos Google Tag Manager al aceptar analiticas).
 
-1) Requisitos: Docker y Docker Compose.
-2) Clona el repo y entra en la carpeta `bilbohammer`.
-3) Levanta todo:
+## Stack tecnico
+- **Next.js 14** (App Router, server components, streaming).
+- **Prisma ORM + PostgreSQL 16** para todos los datos.
+- **NextAuth v5 (JWT)** con adaptador Prisma (`PrismaIntAdapter`) y Google OAuth.
+- **Tailwind CSS** y componentes propios para UI.
+- **Docker Compose** para desarrollo local completo (web + Postgres + SFTP opcional).
+- **Zod**, `tsx` y scripts utilitarios para seeds y migraciones de contenido.
+
+## Requisitos
+- Node.js 18+ y npm 10+ (si trabajas sin Docker).
+- Docker + Docker Compose (recomendado para tener Postgres listo).
+- Acceso a una base de datos Postgres y variables de entorno descritas mas abajo.
+
+## Puesta en marcha rapida
+### Opcion 1: Docker Compose (recomendada)
 ```bash
+git clone <repo>
+cd bilbohammer
+cp web/.env.example web/.env   # completa DATABASE_URL y secretos
 docker compose up --build
-```
-La primera vez puede tardar porque instalará dependencias.
-
-4) Abre otra terminal (o usa `docker compose exec`):
-```bash
-# Generar cliente Prisma y aplicar migraciones
 docker compose exec web npx prisma generate
 docker compose exec web npx prisma migrate dev --name init
-
-# Sembrar usuario admin (admin@bilbohammer.eus / admin123)
 docker compose exec web npm run seed
 ```
+La aplicacion queda disponible en http://localhost:3000 con un admin inicial `admin@bilbohammer.eus / admin123`. Cambia estas credenciales tras la primera entrada.
 
-5) Visita: http://localhost:3000
+### Opcion 2: solo Node (sin Docker)
+```bash
+cd bilbohammer/web
+cp .env.example .env           # rellena DATABASE_URL y claves
+npm install
+npx prisma generate
+npx prisma migrate dev --name init
+npm run seed                   # crea datos demo y usuarios
+npm run dev
+```
+Necesitas que `DATABASE_URL` apunte a una instancia Postgres accesible desde tu maquina (puede ser la misma del Docker `db`).
 
-## Acceso administrador
-- Email: `admin@bilbohammer.eus`
-- Contraseña: `admin123`
-> Cambia estas credenciales en producción.
+## Base de datos y seeding
+- `npm run seed` genera usuarios de ejemplo (admin, junta, redactores, socios) + juegos, articulos demo, eventos, galerias basicas y contenido de contacto.
+- `npm run seed:prod` esta pensado para un entorno ya migrado y solo crea el usuario admin si no existe.
+- Credenciales por defecto: `admin@bilbohammer.eus / admin123`. Cambialas en cuanto despliegues.
+- Para aplicar migraciones en entorno productivo: `npx prisma migrate deploy`. Si aun no hay migraciones, usa `npx prisma db push` una unica vez.
 
-## Estructura
+## Variables de entorno
+Define las variables en `web/.env` (para Docker) o en el proveedor de hosting:
+
+**Core / infraestructura**
+- `DATABASE_URL`: cadena completa de Postgres.
+- `APP_BASE_URL`: URL publica del frontend (ej. https://bilbohammer.es).
+- `AUTH_URL` y `NEXTAUTH_URL`: URL que NextAuth usara para callbacks (generalmente igual que `APP_BASE_URL`).
+- `CORS_ALLOWED_ORIGINS`: lista separada por comas para las apps que consumen la API.
+- `UPLOADS_ROOT` (opcional): ruta absoluta para guardar ficheros. Por defecto `storage/uploads`.
+- `UPLOADS_PUBLIC_PREFIX` (opcional): prefijo publico desde el que se sirven (`/uploads` por defecto).
+
+**Autenticacion**
+- `AUTH_SECRET` / `NEXTAUTH_SECRET`: clave usada para firmar JWT.
+- `AUTH_GOOGLE_ID` y `AUTH_GOOGLE_SECRET`: credenciales de Google OAuth (si no las pones, el boton sigue oculto).
+
+**Correo saliente (opcional)**
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`.
+
+**Variables publicas (expuestas al navegador)**
+- `NEXT_PUBLIC_INSTAGRAM_PROFILE`
+- `NEXT_PUBLIC_YOUTUBE_PLAYLIST_ID`
+- `NEXT_PUBLIC_YOUTUBE_VIDEO_ID`
+- `NEXT_PUBLIC_GTM_ID` (GTM-WBXCJ8QS en produccion ahora mismo).
+
+## Scripts disponibles
+- `npm run dev`: Next.js en modo desarrollo.
+- `npm run build`: genera el cliente Prisma y compila el proyecto (usa en CI).
+- `npm run start`: arranca la build en modo produccion.
+- `npm run lint`: reglas ESLint/Next.
+- `npm run seed` / `npm run seed:prod`: semillas descritas arriba.
+- `npm run migrate:legacy-media`: script auxiliar para mover iconos y assets de juegos antiguos.
+- `npx prisma migrate dev --name <nombre>`: crea una migracion nueva.
+
+## Estructura del repo
 ```
 bilbohammer/
-  docker-compose.yml
-  web/
-    Dockerfile
-    .env(.example)
-    prisma/
-      schema.prisma
-      seed.ts
-    src/
-      app/ (App Router)
-        api/auth/[...nextauth]/route.ts
-        (páginas: /, /novedades, /galeria, /sobre-nosotros, /admin)
-      components/ (Nav, Footer)
-      lib/ (auth, prisma, roles)
-    tailwind.config.ts, postcss.config.mjs, tsconfig.json
+|-- docker-compose.yml
+|-- README.md
+`-- web/
+    |-- package.json / tsconfig / tailwind / Dockerfile
+    |-- .env, .env.example, .env.production
+    |-- prisma/
+    |   |-- schema.prisma
+    |   |-- seed.ts, seed.production.ts
+    |   `-- migrations/
+    |-- public/ (assets estaticos, favicon, uploads legacy)
+    |-- storage/uploads (destino por defecto de `/api/upload/*`)
+    `-- src/
+        |-- app/ (App Router + API routes)
+        |-- components/ (UI compartida, cookies, perfil, eventos, galeria...)
+        |-- lib/ (auth, roles, gallery, uploads, juegos, contact-content)
+        `-- providers/, constants/, scripts/...
 ```
 
-## Roles previstos
-- `ADMIN`, `BOARD` (Junta), `MEMBER` (Socio), `FRIEND` (Amigo).
-La protección de `/admin` se hace vía **middleware** + sesión NextAuth.
+## Roles y permisos a alto nivel
+| Rol      | Capacidades clave |
+|----------|-------------------|
+| `ADMIN`  | Acceso total. Gestiona usuarios, roles, invitaciones, juegos, contacto, eventos, galeria, tablon y contenidos de novedades. |
+| `JUNTA`  | Puede gestionar practicamente lo mismo que `ADMIN`: crear/editar eventos y galeria, actualizar contacto y juegos, asignar cargos del tablon y usar las herramientas del panel. |
+| `REDACTOR` | Crear y editar articulos de novedades (publicos o privados) y vincularlos con eventos. |
+| `SOCIO`  | Accede a la pestana privada de novedades, al tablon de socios, al contacto con Discord y a las fichas con datos internos. |
+| `AMIGO`  | Cuenta registrada sin permisos especiales. Ve contenido publico y puede completar su perfil mientras espera promocion. |
 
-## Despliegue futuro
-- Puede desplegarse en Vercel + una base de datos Postgres gestionada (Railway, Supabase, Neon).
-- O en un VPS con Docker (Render, Fly.io, Hetzner).
+La logica de comprobacion esta centralizada en `src/lib/roles.ts` y los middlewares/guardas de cada pagina. Consulta `MANUAL_FUNCIONAL.md` para la descripcion funcional completa.
 
-## HTTPS y CORS
-- El middleware fuerza HTTPS en producción (redirección 308) y añade cabeceras de seguridad (HSTS, CSP con `upgrade-insecure-requests`, `Referrer-Policy`, etc.). Si usas un proxy (Nginx, Traefik, Cloudflare), asegúrate de reenviar `x-forwarded-proto`.
-- Configura en `.env` o variables del despliegue:
-  - `APP_BASE_URL=https://tu-dominio.com`
-  - `CORS_ALLOWED_ORIGINS=https://tu-dominio.com,https://panel.tu-dominio.com`
-- Añade los orígenes externos que vayan a consumir la API para evitar futuros errores de CORS. En desarrollo, ya se permiten `http://localhost:3000` y `http://127.0.0.1:3000`.
+## Uploads y ficheros estaticos
+- Las rutas `/api/upload/avatar` aceptan formularios `multipart/form-data` (max 10 MB) y guardan los ficheros en `storage/uploads/avatars`. Se sirven desde `/uploads/*` o el prefijo configurado.
+- Cambia `UPLOADS_ROOT` para montar un volumen distinto (por ejemplo un bucket montado via FUSE o un disco externo).
+- `storage/uploads` esta versionado para desarrollo pero puedes anadirlo al `.gitignore` si sincronizas contra S3/Cloudflare R2.
 
-## Edición de archivos por SFTP (opcional)
-En `docker-compose.yml` tienes un servicio `sftp` **comentado**. Si lo quieres usar en local:
-- Descomenta el bloque y ejecuta `docker compose up -d sftp`.
-- Conéctate por SFTP a `localhost:2222` con usuario `editor` / pass `editor`.
-- La carpeta `/home/editor/web` apunta a `./web`.
+## Despliegue
+1. Prepara una base de datos Postgres gestionada (Neon, Supabase, Railway, RDS...) y copia la URL en `DATABASE_URL`.
+2. Ejecuta `npm run build` (o deja que Vercel lo haga). Antes de arrancar, corre `npx prisma migrate deploy` o `npx prisma db push`.
+3. Configura las variables en la plataforma (APP_BASE_URL, NEXTAUTH_URL, AUTH_SECRET, SMTP si aplica, etc.).
+4. Publica la carpeta `web` en Vercel, Render, Fly.io o un VPS con Docker. Si usas Vercel, anade `NEXT_PUBLIC_GTM_ID` para que el banner pueda cargar GTM en produccion.
+5. Si necesitas servir los uploads desde un CDN, coloca un reverse proxy que apunte al prefijo configurado o sincroniza `storage/uploads` con el proveedor.
 
-> Para producción, **recomendado Git** y CI/CD, no FTP/SFTP.
+## Seguridad y cumplimiento
+- El `middleware.ts` fuerza HTTPS en produccion, anade HSTS, Content-Security-Policy (upgrade-insecure-requests) y cabeceras de seguridad comunes.
+- Las APIs controlan CORS con `APP_BASE_URL` y `CORS_ALLOWED_ORIGINS` (en dev ya se permiten localhost/127.0.0.1).
+- Banner de cookies y pagina detallada en `/politica-de-cookies` con consentimiento granular para GTM/Analytics. Sin consentimiento no se ejecuta ningun script de terceros.
+- Las subidas solo aceptan formatos `multipart/form-data`, limitadas a 10 MB y se nombran con timestamp para evitar colisiones.
 
-## Notas
-- `.env` ya apunta al contenedor `db`. Copia `.env.example` si la pierdes.
-- Si usas Google OAuth, rellena `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`.
-- Para producción, cambia `NEXTAUTH_SECRET` y usa HTTPS.
+## Documentacion extra
+- `MANUAL_FUNCIONAL.md`: explica cada seccion funcional y como operan los distintos roles.
+- El directorio `docs/` (si lo creas) puede albergar diagramas o notas adicionales.
+
+Si detectas un bug o necesitas ampliar el flujo de permisos, revisa `MANUAL_FUNCIONAL.md` y los hooks en `src/lib/roles.ts` antes de modificar componentes.
