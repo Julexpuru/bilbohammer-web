@@ -1,4 +1,8 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/sobre-nosotros/tablon-de-socios/page": "app/sobre-nosotros/tablon-de-socios/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
+  "/mi-perfil/page": "app/mi-perfil/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/me/providers/route": "app/api/me/providers/route.js",
+  "/api/games/route": "app/api/games/route.js"
 }
