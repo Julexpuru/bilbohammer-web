@@ -37,11 +37,6 @@ function getDelegate<T = any>(prisma: PrismaClient, model: string): T {
 export function enumArrayPruneGuard(options: EnumArrayPruneOptions): MigrationGuard {
   const removalSet = new Set(options.values);
   const primaryKey = options.primaryKey ?? "id";
-  const whereClause = {
-    [options.field]: {
-      hasSome: options.values,
-    },
-  };
 
   function buildSelect() {
     const select: Record<string, true> = {
@@ -51,31 +46,37 @@ export function enumArrayPruneGuard(options: EnumArrayPruneOptions): MigrationGu
     return select;
   }
 
+  function filterBlocking(records: Record<string, any>[]) {
+    return records.filter((record) => {
+      const values: unknown[] = record[options.field] ?? [];
+      return Array.isArray(values) && values.some((value) => removalSet.has(String(value)));
+    });
+  }
+
   return {
     id: options.id,
     description: options.description,
     async check(prisma) {
       const delegate = getDelegate(prisma, options.model as string);
-      const blockingCount = await delegate.count({
-        where: whereClause,
+      const candidates = await delegate.findMany({
+        where: {
+          NOT: {
+            [options.field]: {
+              isEmpty: true,
+            },
+          },
+        } as any,
+        select: buildSelect(),
       });
+      const blocking = filterBlocking(candidates);
 
-      if (!blockingCount) {
-        return { blockingCount };
+      if (!blocking.length) {
+        return { blockingCount: 0 };
       }
 
-      const sample = await delegate.findMany({
-        where: whereClause,
-        select: buildSelect(),
-        take: 5,
-        orderBy: {
-          [primaryKey]: "asc",
-        },
-      });
-
       return {
-        blockingCount,
-        sample: sample.map((row: any) => ({
+        blockingCount: blocking.length,
+        sample: blocking.slice(0, 5).map((row: any) => ({
           id: row[primaryKey],
           values: row[options.field],
         })),
@@ -83,10 +84,18 @@ export function enumArrayPruneGuard(options: EnumArrayPruneOptions): MigrationGu
     },
     async fix(prisma) {
       const delegate = getDelegate(prisma, options.model as string);
-      const affected = await delegate.findMany({
-        where: whereClause,
+      const candidates = await delegate.findMany({
+        where: {
+          NOT: {
+            [options.field]: {
+              isEmpty: true,
+            },
+          },
+        } as any,
         select: buildSelect(),
       });
+
+      const affected = filterBlocking(candidates);
 
       if (!affected.length) {
         return { updated: 0 };
