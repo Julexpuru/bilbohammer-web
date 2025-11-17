@@ -18,6 +18,7 @@ export type RawMember = {
 export type MemberCard = {
   id: number;
   displayName: string;
+  nick: string | null;
   initials: string;
   avatarUrl: string | null;
   facePhotoUrl: string | null;
@@ -30,9 +31,12 @@ export type MemberCard = {
 const MEMBER_PROFILE_BASE_PATH = "/sobre-nosotros/tablon-de-socios";
 
 export function toMemberCard(member: RawMember, profileBasePath = MEMBER_PROFILE_BASE_PATH): MemberCard {
-  const displayName = member.nick || member.name || `Socio ${member.id}`;
+  const name = member.name?.trim() || null;
+  const nick = member.nick?.trim() || null;
+  const fallbackLabel = `Socio ${member.id}`;
+  const displayName = name || nick || fallbackLabel;
   const avatarUrl = member.avatarUrl || member.oauthAvatarUrl || member.image;
-  const initials = toInitials(displayName);
+  const initials = toInitials(name || displayName || fallbackLabel);
   const memberSince = member.membershipSince
     ? formatClubDateTime(member.membershipSince, { month: "short", year: "numeric" })
     : null;
@@ -40,6 +44,7 @@ export function toMemberCard(member: RawMember, profileBasePath = MEMBER_PROFILE
   return {
     id: member.id,
     displayName,
+    nick,
     initials,
     avatarUrl,
     facePhotoUrl: member.facePhotoUrl ?? null,

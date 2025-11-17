@@ -1,0 +1,133 @@
+{\rtf1\ansi\deff0
+{\fonttbl
+{\f0 Arial;}
+{\f1 Courier New;}
+}
+\widowctrl\hyphauto
+\pard\qc\b\f0\fs36 Manual funcional de Bilbohammer\par
+\pard\sb240\fs24 Este documento resume que muestra cada seccion de la web, los flujos disponibles y como se relacionan con los roles (`PUBLICO`, `AMIGO`, `SOCIO`, `REDACTOR`, `JUNTA`, `ADMIN`).\par
+
+\pard\sb360\b\fs28 1. Roles y niveles de acceso\par
+\pard\sb180\qc
+\trowd\trgaph120\trleft0
+\cellx3000\cellx9000
+\intbl\b Rol\cell Acceso destacado\cell\row
+\trowd\trgaph120\trleft0
+\cellx3000\cellx9000
+\intbl\b0 Publico\cell Navega por inicio, novedades abiertas, eventos, galeria, sobre nosotros, login y registro.\cell\row
+\trowd\trgaph120\trleft0
+\cellx3000\cellx9000
+\intbl Amigo\cell Usuario registrado sin rol de socio. Puede iniciar sesion y editar su perfil, pero no accede a contenido privado.\cell\row
+\trowd\trgaph120\trleft0
+\cellx3000\cellx9000
+\intbl Socio\cell Ve la pestana privada de novedades, el tablon de socios, la invitacion a Discord y aparece en los listados internos.\cell\row
+\trowd\trgaph120\trleft0
+\cellx3000\cellx9000
+\intbl Redactor\cell Capacidades de socio y puede crear/editar articulos en /novedades.\cell\row
+\trowd\trgaph120\trleft0
+\cellx3000\cellx9000
+\intbl Junta\cell Administra eventos, galeria, juegos, contacto, tablon, asignaciones de junta y el panel de usuarios.\cell\row
+\trowd\trgaph120\trleft0
+\cellx3000\cellx9000
+\intbl Admin\cell Todo lo anterior mas operaciones criticas (eliminar usuarios, resetear contrasenas, etc.).\cell\row
+\pard\par
+
+\pard\sb360\b\fs28 2. Paginas publicas e informacion del club\par
+
+\pard\sb240\b\fs24 2.1 Inicio (/)\par
+\pard\fi-360\li360
+\bullet\tab Componentes HeroCarousel, FeedTabs, EventsCalendar e InstagramFeed.\par
+\bullet\tab Muestra anuncios y eventos SSR; activa pestaNAa privada cuando hay sesion.\par
+\bullet\tab Socios/gestores ven NOTICIA\_PRIVADA en FeedTabs.\par
+
+\pard\sb240\b\fs24 2.2 Novedades (/novedades)\par
+\pard\fi-360\li360
+\bullet\tab Listado filtrable por texto y fechas con tabs Noticias, Cronicas y Solo Socios.\par
+\bullet\tab Articulos privados solo visibles para socios o roles gestores.\par
+\bullet\tab Boton Crear noticia para ADMIN/JUNTA/REDACTOR (ruta /novedades/nueva).\par
+\bullet\tab Editor admite bloques (parrafo, titular, imagen, cita), banner y enlace a eventos.\par
+\bullet\tab Comentarios disponibles cuando hay sesion.\par
+
+\pard\sb240\b\fs24 2.3 Eventos\par
+\pard\sb120\b0\i Listado (/eventos)\par
+\pard\fi-360\li360
+\bullet\tab Filters por organizador, tipo, juego, precio, pasado y orden; carga paginada.\par
+\bullet\tab Boton Crear evento solo para Junta/Admin.\par
+
+\pard\sb120\b0\i Ficha (/eventos/[slug])\par
+\pard\fi-360\li360
+\bullet\tab Tabs: descripcion, recursos, clasificacion, cronica, galeria y ubicacion.\par
+\bullet\tab Datos: banners, estado, organizadores, precios, ubicacion, plazas.\par
+\bullet\tab Boton Editar evento visible si userCanEditEvent retorna true.\par
+
+\pard\sb120\b0\i Formularios (/eventos/nuevo, /eventos/[slug]/editar)\par
+\pard\fi-360\li360
+\bullet\tab Configuran fechas, timezone, ubicacion (texto + mapa), precios, aforo y flags internos.\par
+\bullet\tab Gestionan tags, organizadores internos, organizaciones externas y adjuntos.\par
+\bullet\tab Permiten vincular cronica (articulo) y album de galeria.\par
+
+\pard\sb240\b\fs24 2.4 Galeria\par
+\pard\fi-360\li360
+\bullet\tab /galeria combina hero dinamico, filtros (juego/formato/ano/etiquetas) y tarjetas de album/fotos.\par
+\bullet\tab Boton Subir contenido abre GalleryContentUploader para Junta/Admin.\par
+\bullet\tab Subidas permiten modo album o standalone, metadatos completos y colaboradores.\par
+\bullet\tab /galeria/[albumId] muestra AlbumDetailView; colaboradores pueden editar, junta/admin puede eliminar.\par
+
+\pard\sb240\b\fs24 2.5 Sobre nosotros\par
+\pard\fi-360\li360
+\bullet\tab Quienes somos: historia y valores.\par
+\bullet\tab Juegos: GameCard con descripcion, inversion y contactos; Junta/Admin puede editar y crear juegos.\par
+\bullet\tab Contacto: contenido dinamico desde siteContent, contador de socios y bloque de Discord para socios.\par
+\bullet\tab Tablon de socios: acceso para SOCIO/JUNTA/ADMIN, piramide de junta y listado completo con boton Ponme cara.\par
+\bullet\tab Ponme cara sube foto via /api/upload/avatar y actualiza /api/me/profile.\par
+
+\pard\sb240\b\fs24 2.6 Politica de cookies\par
+\pard\fi-360\li360
+\bullet\tab Banner CookieConsentBanner controla Google Tag Manager.\par
+\bullet\tab Pagina /politica-de-cookies describe cookies tecnicas, almacenamiento local y opciones de revocacion.\par
+
+\pard\sb360\b\fs28 3. Espacio personal\par
+
+\pard\sb240\b\fs24 3.1 Mi perfil (/mi-perfil)\par
+\pard\fi-360\li360
+\bullet\tab Muestra avatar, roles, fechas, descripcion, juegos y eventos organizados/participados.\par
+\bullet\tab ClientEditWrapper permite editar nombre, nick, descripcion, fecha de membresia, avatar y juegos/facciones.\par
+
+\pard\sb240\b\fs24 3.2 Acceso y registro\par
+\pard\fi-360\li360
+\bullet\tab /login incluye credenciales y Google OAuth.\par
+\bullet\tab /register crea cuentas sin rol de socio por defecto.\par
+\bullet\tab /register/invite/[token] valida invitaciones y asigna rol inicial.\par
+\bullet\tab Cambios de contrasena locales se gestionan desde el panel de usuarios.\par
+
+\pard\sb360\b\fs28 4. Panel de administracion\par
+
+\pard\sb240\b\fs24 4.1 /admin\par
+\pard Vista general que verifica acceso y actua como punto de partida.\par
+
+\pard\sb240\b\fs24 4.2 Gestion de usuarios (/admin/gestion-usuarios)\par
+\pard\fi-360\li360
+\bullet\tab Tabla interactiva con columnas configurables.\par
+\bullet\tab Edicion en linea con guardado masivo hacia /api/admin/users/bulk-update.\par
+\bullet\tab Exportar CSV, historial de cambios, editar usuario, resetear contrasena y eliminar cuentas.\par
+\bullet\tab Modal de invitaciones via /api/admin/user-invitations.\par
+\bullet\tab Acceso restringido a Junta/Admin.\par
+
+\pard\sb240\b\fs24 4.3 Gestion documental (/admin/gestion-documental)\par
+\pard Placeholder informativo reservado a Junta/Admin.\par
+
+\pard\sb240\b\fs24 4.4 APIs administrativas relacionadas\par
+\pard\fi-360\li360
+\bullet\tab /api/admin/games y /api/admin/game-info/[slug] gestionan fichas de juegos.\par
+\bullet\tab /api/admin/contact-content guarda datos de contacto.\par
+\bullet\tab /api/admin/board-assignments maneja cargos del tablon.\par
+\bullet\tab /api/members/search asiste a tablon y galeria.\par
+\bullet\tab /api/upload/* controla almacenamiento en storage/uploads.\par
+
+\pard\sb360\b\fs28 5. Consideraciones finales\par
+\pard\fi-360\li360
+\bullet\tab Los ficheros se sirven via /uploads/[...path]; ajustar UPLOADS\_ROOT o UPLOADS\_PUBLIC\_PREFIX si hace falta.\par
+\bullet\tab middleware.ts fuerza HTTPS, aplica cabeceras y CORS.\par
+\bullet\tab Antes de anadir servicios externos, actualiza el banner y la pagina de cookies.\par
+
+}

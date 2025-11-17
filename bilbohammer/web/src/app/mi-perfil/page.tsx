@@ -51,7 +51,9 @@ export default async function Page() {
   const memberSinceText = _memberSinceRaw
     ? new Date(_memberSinceRaw).toLocaleDateString("es-ES", { month: "long", year: "numeric" })
     : "—";
-  const displayNick = user.nick || user.nombre || user.name || user.email;
+  const preferredName = user.nombre?.trim() || user.name?.trim() || null;
+  const nickLabel = user.nick?.trim() || null;
+  const displayName = preferredName || nickLabel || user.email;
   const memberSinceISO = user.membershipSince ? new Date(user.membershipSince).toISOString() : null;
   const description = user.descripcion ?? null;
   const oauthAvatarUrl = (user as any).oauthAvatarUrl ?? user.image ?? null;
@@ -146,12 +148,15 @@ export default async function Page() {
         <Avatar
           avatarUrl={user.avatarUrl ?? null}
           oauthAvatarUrl={oauthAvatarUrl}
-          displayName={displayNick}
+          displayName={displayName}
           size={112}
         />
         <div className="space-y-1">
           <div className="text-sm opacity-70">{user.email}</div>
-          <div className="text-xl font-semibold">{displayNick}</div>
+          <div className="text-xl font-semibold">{displayName}</div>
+          {nickLabel && nickLabel !== displayName && (
+            <div className="text-sm italic opacity-80">"{nickLabel}"</div>
+          )}
           <div className="flex flex-wrap gap-2">
             {roleBadges.length ? (
               roleBadges.map((role) => (

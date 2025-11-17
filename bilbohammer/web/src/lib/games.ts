@@ -145,9 +145,7 @@ export const FACTIONS: Record<
     { id: "world_eaters", name: "World Eaters" },
   ],
   aos: [
-    { id: "beastmen", name: "Beastmen" },
     { id: "bladesofkhorne", name: "Blades of Khorne" },
-    { id: "bonnezplitterz", name: "Bonnezplitterz" },
     { id: "citiesofsigmar", name: "Cities of Sigmar" },
     { id: "daughtersofkhaine", name: "Daughters of Khaine" },
     { id: "disciplesoftzeench", name: "Disciples of Tzeentch" },
@@ -155,6 +153,11 @@ export const FACTIONS: Record<
     { id: "fyreslayers", name: "Fyreslayers" },
     { id: "gloomspite", name: "Gloomspite Gitz" },
     { id: "hedonitesofslaanesh", name: "Hedonites of Slaanesh" },
+    {
+      id: "helmsmithsofhashut",
+      name: "Helmsmiths of Hashut",
+      iconUrl: "/assets/icons/factions/tow/chaosdwarves.png",
+    },
     { id: "idoneth", name: "Idoneth Deepkin" },
     { id: "ironjawz", name: "Ironjawz" },
     { id: "kharadron", name: "Kharadron Overlords" },
@@ -208,9 +211,7 @@ export function toUiId(enumKey: string): string {
 }
 
 const AOS_UI_TO_ENUM: Record<string, string> = {
-  beastmen: "BEASTMEN",
   bladesofkhorne: "BLADESOFKHORNE",
-  bonnezplitterz: "BONNEZPLITTERZ",
   citiesofsigmar: "CITIESOFSIGMAR",
   daughtersofkhaine: "DAUGHTERSOFKHAINE",
   disciplesoftzeench: "DISCIPLESOFTZEENCH",
@@ -218,6 +219,7 @@ const AOS_UI_TO_ENUM: Record<string, string> = {
   fyreslayers: "FYRESLAYERS",
   gloomspite: "GLOOMSPITE",
   hedonitesofslaanesh: "HEDONITESOFSLAANESH",
+  helmsmithsofhashut: "HELMSMITHS_OF_HASHUT",
   idoneth: "IDONETH",
   ironjawz: "IRONJAWZ",
   kharadron: "KHARADRON",

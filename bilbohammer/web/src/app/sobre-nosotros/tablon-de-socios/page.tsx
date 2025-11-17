@@ -243,16 +243,19 @@ function LeadershipSlotCard({
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="flex items-center gap-4">
               <Avatar initials={member.initials} avatarUrl={member.avatarUrl} highlight={highlight} />
-              <div className="space-y-1">
-                <p className="text-lg font-semibold text-[var(--text)]">
-                  <Link href={member.profileHref} className="hover:text-[var(--accent)] focus-visible:underline">
-                    {member.displayName}
-                  </Link>
-                </p>
+              <div className="space-y-2">
+                <div className="space-y-0.5">
+                  <p className="text-lg font-semibold text-[var(--text)]">
+                    <Link href={member.profileHref} className="hover:text-[var(--accent)] focus-visible:underline">
+                      {member.displayName}
+                    </Link>
+                  </p>
+                  {member.nick && member.nick !== member.displayName && (
+                    <p className="text-sm italic text-[var(--muted)]">"{member.nick}"</p>
+                  )}
+                </div>
                 <RolePills roles={member.roles} />
-                {member.memberSince && (
-                  <p className="text-xs text-[var(--muted)]">En el club desde {member.memberSince}</p>
-                )}
+                <MemberSinceBadge value={member.memberSince} />
               </div>
             </div>
             <PonmeCaraButton
@@ -291,11 +294,16 @@ function VocalCard({
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Vocal #{index + 1}</p>
           {member ? (
-            <p className="text-lg font-semibold text-[var(--text)]">
-              <Link href={member.profileHref} className="hover:text-[var(--accent)] focus-visible:underline">
-                {member.displayName}
-              </Link>
-            </p>
+            <div className="space-y-0.5">
+              <p className="text-lg font-semibold text-[var(--text)]">
+                <Link href={member.profileHref} className="hover:text-[var(--accent)] focus-visible:underline">
+                  {member.displayName}
+                </Link>
+              </p>
+              {member.nick && member.nick !== member.displayName && (
+                <p className="text-sm italic text-[var(--muted)]">"{member.nick}"</p>
+              )}
+            </div>
           ) : (
             <p className="text-sm text-[var(--muted)]">Sin perfil asignado.</p>
           )}
@@ -307,9 +315,9 @@ function VocalCard({
       {member && (
         <>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-1">
+            <div className="space-y-2">
               <RolePills roles={member.roles} />
-              {member.memberSince && <p className="text-xs text-[var(--muted)]">En el club desde {member.memberSince}</p>}
+              <MemberSinceBadge value={member.memberSince} />
             </div>
             <PonmeCaraButton
               memberId={member.id}
@@ -355,23 +363,26 @@ function MemberGrid({
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="flex items-center gap-4">
               <Avatar initials={member.initials} avatarUrl={member.avatarUrl} highlight={false} />
-              <div className="space-y-1">
-                <p className="text-lg font-semibold text-[var(--text)]">
-                  {canViewProfiles ? (
-                    <Link
-                      href={member.profileHref}
-                      className="hover:text-[var(--accent)] focus-visible:underline focus-visible:outline-none"
-                    >
-                      {member.displayName}
-                    </Link>
-                  ) : (
-                    member.displayName
+              <div className="space-y-2">
+                <div className="space-y-0.5">
+                  <p className="text-lg font-semibold text-[var(--text)]">
+                    {canViewProfiles ? (
+                      <Link
+                        href={member.profileHref}
+                        className="hover:text-[var(--accent)] focus-visible:underline focus-visible:outline-none"
+                      >
+                        {member.displayName}
+                      </Link>
+                    ) : (
+                      member.displayName
+                    )}
+                  </p>
+                  {member.nick && member.nick !== member.displayName && (
+                    <p className="text-sm italic text-[var(--muted)]">"{member.nick}"</p>
                   )}
-                </p>
+                </div>
                 <RolePills roles={member.roles} />
-                {member.memberSince && (
-                  <p className="text-xs text-[var(--muted)]">En el club desde {member.memberSince}</p>
-                )}
+                <MemberSinceBadge value={member.memberSince} />
               </div>
             </div>
             <PonmeCaraButton
@@ -422,6 +433,17 @@ function Avatar({
   return (
     <div className={`${frame} ${ring}`}>
       <Image src={avatarUrl} alt={`Avatar de ${initials}`} fill sizes="64px" className="object-cover" />
+    </div>
+  );
+}
+
+function MemberSinceBadge({ value }: { value: string | null }) {
+  if (!value) return null;
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-[var(--hairline)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--muted)]">
+      <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" aria-hidden="true" />
+      <span>En el club desde</span>
+      <span className="font-semibold text-[var(--text)]">{value}</span>
     </div>
   );
 }
