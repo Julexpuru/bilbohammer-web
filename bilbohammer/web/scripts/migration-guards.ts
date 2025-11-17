@@ -27,7 +27,7 @@ type EnumArrayPruneOptions = {
 };
 
 function getDelegate<T = any>(prisma: PrismaClient, model: string): T {
-  const delegate = (prisma as Record<string, unknown>)[model];
+  const delegate = (prisma as unknown as Record<string, unknown>)[model];
   if (!delegate) {
     throw new Error(`No Prisma delegate found for model "${model}"`);
   }

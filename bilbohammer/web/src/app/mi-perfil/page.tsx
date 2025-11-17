@@ -155,7 +155,7 @@ export default async function Page() {
           <div className="text-sm opacity-70">{user.email}</div>
           <div className="text-xl font-semibold">{displayName}</div>
           {nickLabel && nickLabel !== displayName && (
-            <div className="text-sm italic opacity-80">"{nickLabel}"</div>
+            <div className="text-sm italic opacity-80">&ldquo;{nickLabel}&rdquo;</div>
           )}
           <div className="flex flex-wrap gap-2">
             {roleBadges.length ? (

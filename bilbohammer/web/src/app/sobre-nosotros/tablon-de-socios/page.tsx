@@ -250,9 +250,9 @@ function LeadershipSlotCard({
                       {member.displayName}
                     </Link>
                   </p>
-                  {member.nick && member.nick !== member.displayName && (
-                    <p className="text-sm italic text-[var(--muted)]">"{member.nick}"</p>
-                  )}
+              {member.nick && member.nick !== member.displayName && (
+                <p className="text-sm italic text-[var(--muted)]">&ldquo;{member.nick}&rdquo;</p>
+              )}
                 </div>
                 <RolePills roles={member.roles} />
                 <MemberSinceBadge value={member.memberSince} />
@@ -301,7 +301,7 @@ function VocalCard({
                 </Link>
               </p>
               {member.nick && member.nick !== member.displayName && (
-                <p className="text-sm italic text-[var(--muted)]">"{member.nick}"</p>
+                <p className="text-sm italic text-[var(--muted)]">&ldquo;{member.nick}&rdquo;</p>
               )}
             </div>
           ) : (
@@ -378,7 +378,7 @@ function MemberGrid({
                     )}
                   </p>
                   {member.nick && member.nick !== member.displayName && (
-                    <p className="text-sm italic text-[var(--muted)]">"{member.nick}"</p>
+                    <p className="text-sm italic text-[var(--muted)]">&ldquo;{member.nick}&rdquo;</p>
                   )}
                 </div>
                 <RolePills roles={member.roles} />
