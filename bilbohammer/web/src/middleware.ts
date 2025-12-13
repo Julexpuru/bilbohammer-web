@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import type { NextRequestWithAuth } from "next-auth/middleware";
 import { auth } from "@/lib/auth-edge";
+type AuthedRequest = NextRequest & { auth?: unknown };
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const ENFORCE_HTTPS = IS_PRODUCTION;
@@ -28,7 +28,7 @@ const devOnlyPaths = buildDevOnlyPaths();
 const DEV_ONLY_DISABLE = (process.env.DEV_ONLY_DISABLE ?? "").trim() === "1";
 const AUTH_PROTECTED_PREFIXES = ["/mi-perfil", "/profile", "/api/members"];
 
-export const middleware = auth((request: NextRequestWithAuth) => {
+export const middleware = auth((request: AuthedRequest) => {
   const pathname = normalizePathname(request.nextUrl.pathname);
   const protocol = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")).toLowerCase();
   const isHttps = protocol === "https";
