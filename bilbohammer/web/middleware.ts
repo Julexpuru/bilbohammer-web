@@ -23,6 +23,7 @@ const DEV_ONLY_COOKIE_NAME = "beta_access";
 const DEV_ONLY_QUERY_PARAM = "beta";
 const DEV_ONLY_BYPASS_TOKEN = (process.env.DEV_ONLY_BYPASS_TOKEN ?? "").trim();
 const devOnlyPaths = buildDevOnlyPaths();
+const DEV_ONLY_DISABLE = (process.env.DEV_ONLY_DISABLE ?? "").trim() === "1";
 
 export function middleware(request: NextRequest) {
   const protocol = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")).toLowerCase();
@@ -171,7 +172,7 @@ function inferVercelUrl() {
 }
 
 function evaluateDevOnlyAccess(request: NextRequest, isApiRoute: boolean) {
-  if (!IS_PRODUCTION) return null;
+  if (DEV_ONLY_DISABLE) return null;
   if (devOnlyPaths.length === 0) return null;
   if (isApiRoute) return null;
 
