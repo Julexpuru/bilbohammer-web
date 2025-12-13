@@ -15,6 +15,7 @@ import { extractRoles } from "@/lib/roles";
 const primaryLinks = [
   { href: "/", label: "Inicio" },
   { href: "/novedades", label: "Novedades" },
+  { href: "/juego-organizado", label: "Juego Organizado" },
   { href: "/eventos", label: "Eventos" },
   { href: "/galeria", label: "Galería" },
 ];
@@ -203,24 +204,26 @@ export default function TopBar() {
 
   const activeMap = useMemo(() => {
     const map = new Map<string, boolean>();
-    for (const link of primaryLinks) {
-      if (link.href === "/") {
-        map.set(link.href, pathname === "/");
-      } else {
-        map.set(link.href, pathname === link.href || pathname.startsWith(`${link.href}/`));
+    if (pathname) {
+      for (const link of primaryLinks) {
+        if (link.href === "/") {
+          map.set(link.href, pathname === "/");
+        } else {
+          map.set(link.href, pathname === link.href || pathname.startsWith(`${link.href}/`));
+        }
       }
+      map.set("/sobre-nosotros", pathname === "/sobre-nosotros" || pathname.startsWith("/sobre-nosotros/"));
     }
-    map.set("/sobre-nosotros", pathname === "/sobre-nosotros" || pathname.startsWith("/sobre-nosotros/"));
     return map;
   }, [pathname]);
 
-  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isAdminRoute = pathname ? pathname === "/admin" || pathname.startsWith("/admin/") : false;
   const isPathActive = useCallback(
     (target: string) => {
       if (target === "/") {
         return pathname === "/";
       }
-      return pathname === target || pathname.startsWith(`${target}/`);
+      return pathname ? pathname === target || pathname.startsWith(`${target}/`) : false;
     },
     [pathname]
   );
@@ -241,7 +244,7 @@ export default function TopBar() {
           </Link>
         </div>
 
-        <nav className="center-nav hidden md:flex gap-8 justify-center font-medium">
+        <nav className="center-nav hidden md:flex gap-6 justify-center font-medium">
           {primaryLinks.map(({ href, label }) => (
             <Link
               key={href}

@@ -19,6 +19,8 @@ type Props = {
 
 type CommentDrafts = Record<string, string>;
 type ArticleImageBlock = Extract<ArticleBlock, { type: "image" }>;
+const RICH_TEXT_CLASS =
+  "space-y-2 leading-relaxed text-[var(--muted)] [&_p]:text-[var(--muted)] [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_strong]:text-[var(--text)] [&_b]:text-[var(--text)] [&_em]:text-[var(--text)] [&_u]:text-[var(--text)] [&_a]:text-[var(--accent-600)] [&_a]:underline [&_a]:hover:no-underline";
 
 export function ArticleDetailView({ article, relatedPhotos, canManage, canComment, currentUserName }: Props) {
   const [activeTab, setActiveTab] = useState<"comments" | "photos">("comments");
@@ -26,36 +28,71 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
   const [newComment, setNewComment] = useState("");
   const [replyDrafts, setReplyDrafts] = useState<CommentDrafts>({});
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt?: string } | null>(null);
 
   const formattedDate = useMemo(() => formatReadableDate(article.date), [article.date]);
+  const isDraft = article.status === "draft";
+  const showShareButtons = !isDraft;
   const categoryLabel = CATEGORY_LABELS[article.category];
   const commentCount = useMemo(() => countComments(comments), [comments]);
 
-  const handlePublishComment = () => {
-    if (!canComment) return;
+  const handlePublishComment = async () => {
+    if (!canComment || submittingId) return;
     const trimmed = newComment.trim();
     if (!trimmed) {
       setStatusMessage("El comentario no puede estar vacío.");
       return;
     }
-    const comment = buildComment(trimmed, currentUserName);
-    setComments((prev) => [...prev, comment]);
-    setNewComment("");
-    setStatusMessage("Comentario publicado localmente. Falta conectar con la API.");
+    setSubmittingId("new");
+    try {
+      const response = await fetch(`/api/novedades/${article.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: trimmed }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "No se pudo guardar el comentario.");
+      }
+      setComments(data.comments ?? []);
+      setNewComment("");
+      setStatusMessage("Comentario publicado.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo guardar el comentario.";
+      setStatusMessage(message);
+    } finally {
+      setSubmittingId(null);
+    }
   };
 
-  const handleReply = (parentId: string) => {
-    if (!canComment) return;
+  const handleReply = async (parentId: string) => {
+    if (!canComment || submittingId) return;
     const trimmed = replyDrafts[parentId]?.trim() ?? "";
     if (!trimmed) {
       setStatusMessage("La respuesta no puede estar vacía.");
       return;
     }
-    const reply = buildComment(trimmed, currentUserName);
-    setComments((prev) => addReplyToTree(prev, parentId, reply));
-    setReplyDrafts((drafts) => ({ ...drafts, [parentId]: "" }));
-    setStatusMessage("Respuesta publicada localmente. Falta conectar con la API.");
+    setSubmittingId(parentId);
+    try {
+      const response = await fetch(`/api/novedades/${article.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: trimmed, parentId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "No se pudo guardar la respuesta.");
+      }
+      setComments(data.comments ?? []);
+      setReplyDrafts((drafts) => ({ ...drafts, [parentId]: "" }));
+      setStatusMessage("Respuesta publicada.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo guardar la respuesta.";
+      setStatusMessage(message);
+    } finally {
+      setSubmittingId(null);
+    }
   };
 
   const handleDelete = () => {
@@ -94,17 +131,24 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
               <span>{formattedDate}</span>
               <span>|</span>
               <span>{article.author}</span>
+              {isDraft && (
+                <span className="rounded-full bg-yellow-500/10 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.3em] text-yellow-300">
+                  Borrador
+                </span>
+              )}
             </div>
-            <ArticleShareButtons
-              category={article.category}
-              slug={article.slug}
-              title={article.title}
-              summary={article.summary}
-              appearance="light"
-            />
+            {showShareButtons && (
+              <ArticleShareButtons
+                category={article.category}
+                slug={article.slug}
+                title={article.title}
+                summary={article.summary}
+                appearance="light"
+              />
+            )}
           </div>
           <h1 className="text-3xl font-bold text-[var(--text)] sm:text-5xl">{article.title}</h1>
-          <p className="text-base text-[var(--muted)] sm:text-lg">{article.summary}</p>
+          <p className="whitespace-pre-line text-base text-[var(--muted)] sm:text-lg">{article.summary}</p>
           {canManage && (
             <div className="flex flex-wrap gap-3 pt-2">
               <Link
@@ -179,6 +223,7 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
               }))
             }
             onReply={handleReply}
+            submittingId={submittingId}
           />
         ) : (
           <PhotosSection photos={relatedPhotos} onPreview={setPreviewImage} />
@@ -249,6 +294,7 @@ type CommentsSectionProps = {
   replyDrafts: CommentDrafts;
   onReplyDraftChange: (commentId: string, value: string) => void;
   onReply: (commentId: string) => void;
+  submittingId: string | null;
 };
 
 function CommentsSection({
@@ -261,6 +307,7 @@ function CommentsSection({
   replyDrafts,
   onReplyDraftChange,
   onReply,
+  submittingId,
 }: CommentsSectionProps) {
   return (
     <div className="space-y-6">
@@ -278,9 +325,10 @@ function CommentsSection({
             <button
               type="button"
               onClick={onPublish}
-              className="rounded-full bg-[var(--accent-600)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-[var(--accent-500)]"
+              disabled={submittingId === "new"}
+              className="rounded-full bg-[var(--accent-600)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-[var(--accent-500)] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Publicar
+              {submittingId === "new" ? "Publicando..." : "Publicar"}
             </button>
           </div>
         </div>
@@ -305,6 +353,7 @@ function CommentsSection({
               replyDrafts={replyDrafts}
               onReplyDraftChange={onReplyDraftChange}
               onReply={onReply}
+              submittingId={submittingId}
             />
           ))
         )}
@@ -320,12 +369,14 @@ type CommentItemProps = {
   replyDrafts: CommentDrafts;
   onReplyDraftChange: (commentId: string, value: string) => void;
   onReply: (commentId: string) => void;
+  submittingId: string | null;
 };
 
-function CommentItem({ comment, canComment, currentUserName, replyDrafts, onReplyDraftChange, onReply }: CommentItemProps) {
+function CommentItem({ comment, canComment, currentUserName, replyDrafts, onReplyDraftChange, onReply, submittingId }: CommentItemProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const formattedDate = useMemo(() => formatReadableDate(comment.postedAt, true), [comment.postedAt]);
   const replyDraft = replyDrafts[comment.id] ?? "";
+  const isReplying = submittingId === comment.id;
 
   return (
     <div className="rounded-3xl border border-[var(--hairline)] bg-[var(--card-muted)] p-6">
@@ -344,7 +395,8 @@ function CommentItem({ comment, canComment, currentUserName, replyDrafts, onRepl
             <button
               type="button"
               onClick={() => setShowReplyForm((value) => !value)}
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-600)]"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-600)] disabled:opacity-60"
+              disabled={Boolean(submittingId)}
             >
               {showReplyForm ? "Cancelar" : "Responder"}
             </button>
@@ -380,9 +432,10 @@ function CommentItem({ comment, canComment, currentUserName, replyDrafts, onRepl
                 onReply(comment.id);
                 setShowReplyForm(false);
               }}
-              className="rounded-full bg-[var(--accent-600)] px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white"
+              className="rounded-full bg-[var(--accent-600)] px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={Boolean(submittingId)}
             >
-              Publicar
+              {isReplying ? "Publicando..." : "Publicar"}
             </button>
           </div>
         </div>
@@ -398,6 +451,7 @@ function CommentItem({ comment, canComment, currentUserName, replyDrafts, onRepl
               replyDrafts={replyDrafts}
               onReplyDraftChange={onReplyDraftChange}
               onReply={onReply}
+              submittingId={submittingId}
             />
           ))}
         </div>
@@ -447,9 +501,11 @@ function ArticleBody({ blocks, onPreview }: ArticleBodyProps) {
   const flushParagraph = () => {
     if (!pendingParagraph) return;
     content.push(
-      <p key={`paragraph-${content.length}`} className="whitespace-pre-line text-[var(--muted)]">
-        {pendingParagraph.text}
-      </p>
+      <div
+        key={`paragraph-${content.length}`}
+        className={RICH_TEXT_CLASS}
+        dangerouslySetInnerHTML={{ __html: normalizeParagraphHtml(pendingParagraph.text) }}
+      />
     );
     pendingParagraph = null;
   };
@@ -552,7 +608,7 @@ type FloatImageParagraphProps = {
 };
 
 function FloatImageParagraph({ block, paragraph, direction, onPreview }: FloatImageParagraphProps) {
-  const paragraphRef = useRef<HTMLParagraphElement | null>(null);
+  const paragraphRef = useRef<HTMLDivElement | null>(null);
   const [maxFloatHeight, setMaxFloatHeight] = useState<number | null>(null);
 
   useEffect(() => {
@@ -592,9 +648,11 @@ function FloatImageParagraph({ block, paragraph, direction, onPreview }: FloatIm
           <figcaption className="px-4 py-3 text-center text-xs text-[var(--muted)]">{block.caption}</figcaption>
         )}
       </figure>
-      <p ref={paragraphRef} className="whitespace-pre-line text-[var(--muted)] md:flex-1">
-        {paragraph.text}
-      </p>
+      <div
+        ref={paragraphRef}
+        className={`${RICH_TEXT_CLASS} md:flex-1`}
+        dangerouslySetInnerHTML={{ __html: normalizeParagraphHtml(paragraph.text) }}
+      />
     </div>
   );
 }
@@ -614,16 +672,11 @@ function getImageClass(layout: ArticleImageBlock["layout"]): string {
   }
 }
 
-function buildComment(message: string, authorName: string | null): ArticleComment {
-  const author = authorName?.trim() ? authorName.trim() : "Usuario de Bilbohammer";
-  return {
-    id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2),
-    author,
-    avatarInitials: toInitials(author),
-    postedAt: new Date().toISOString(),
-    message,
-    replies: [],
-  };
+function normalizeParagraphHtml(value: string): string {
+  if (!value) return "";
+  const hasHtml = /<\/?[a-z][\s\S]*>/i.test(value);
+  if (hasHtml) return value;
+  return value.replace(/\n/g, "<br />");
 }
 
 function cloneComments(comments: ArticleComment[]): ArticleComment[] {
@@ -635,19 +688,6 @@ function cloneComments(comments: ArticleComment[]): ArticleComment[] {
 
 function countComments(comments: ArticleComment[]): number {
   return comments.reduce((acc, comment) => acc + 1 + countComments(comment.replies ?? []), 0);
-}
-
-function addReplyToTree(comments: ArticleComment[], parentId: string, reply: ArticleComment): ArticleComment[] {
-  return comments.map((comment) => {
-    if (comment.id === parentId) {
-      const replies = comment.replies ? [...comment.replies, reply] : [reply];
-      return { ...comment, replies };
-    }
-    if (comment.replies && comment.replies.length > 0) {
-      return { ...comment, replies: addReplyToTree(comment.replies, parentId, reply) };
-    }
-    return comment;
-  });
 }
 
 function toInitials(value: string) {

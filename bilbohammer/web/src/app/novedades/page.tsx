@@ -24,7 +24,7 @@ export default async function NovedadesPage({ searchParams }: PageProps) {
   const roles = extractRoles(session);
   const isSocio = roles.includes("SOCIO");
   const canManage = roles.some((role) => role === "ADMIN" || role === "JUNTA" || role === "REDACTOR");
-  const articlesByCategory = await getArticlesGrouped();
+  const articlesByCategory = await getArticlesGrouped(canManage);
 
   const requestedTab = parseTabParam(searchParams?.tab);
   const initialTab: ArticleCategory | undefined =

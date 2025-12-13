@@ -21,13 +21,13 @@ export function CookieConsentBanner() {
       <div className="pointer-events-auto w-full max-w-3xl rounded-2xl border border-slate-700 bg-slate-900/95 p-5 text-sm text-white shadow-2xl backdrop-blur">
         <p className="text-base font-semibold text-white">Controla tus cookies</p>
         <p className="mt-2 text-slate-200">
-          Utilizamos cookies necesarias para que puedas navegar, iniciar sesion y mantener tu cuenta
-          segura. Tambien nos gustaria usar cookies de analitica (Google Tag Manager/Analytics) para
-          mejorar el servicio. Si continuas sin aceptarlas, se mantendran desactivadas. Consulta la{" "}
+          Utilizamos cookies necesarias para que puedas navegar, iniciar sesión y mantener tu cuenta
+          segura. También nos gustaría usar cookies de analítica (Google Tag Manager/Analytics) para
+          mejorar el servicio. Si continúas sin aceptarlas, se mantendrán desactivadas. Consulta la{" "}
           <Link href="/politica-de-cookies" className="underline">
-            politica de cookies
+            política de cookies
           </Link>{" "}
-          para saber mas.
+          para saber más.
         </p>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <button
@@ -35,7 +35,7 @@ export function CookieConsentBanner() {
             onClick={handleChoice(false)}
             className="rounded-lg border border-white/30 px-4 py-2 font-medium text-white transition hover:border-white/60"
           >
-            Rechazar analiticas
+            Rechazar analíticas
           </button>
           <button
             type="button"

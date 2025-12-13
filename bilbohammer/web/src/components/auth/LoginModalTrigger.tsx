@@ -9,7 +9,7 @@ type Props = {
   className?: string;
 };
 
-export default function LoginModalTrigger({ children = "Inicia sesion", className }: Props) {
+export default function LoginModalTrigger({ children = "Inicia sesión", className }: Props) {
   const [open, setOpen] = useState(false);
 
   return (

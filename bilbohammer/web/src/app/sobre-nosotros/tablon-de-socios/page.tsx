@@ -119,13 +119,13 @@ export default async function TablonSociosPage() {
           cara a quienes comparten el local contigo.
         </p>
         <p className="text-sm text-[var(--muted)]">
-          Actualiza tu avatar y tu biografia desde el perfil personal para que aparezcan aqui.
+          Actualiza tu avatar y tu biografía desde el perfil personal para que aparezcan aquí.
         </p>
       </section>
 
       <section className="card space-y-6">
         <header>
-          <h2 className="text-2xl font-semibold">Junta y coordinacion</h2>
+          <h2 className="text-2xl font-semibold">Junta y coordinación</h2>
         </header>
 
         <div className="flex flex-col gap-6">
@@ -245,7 +245,7 @@ function LeadershipSlotCard({
               <Avatar initials={member.initials} avatarUrl={member.avatarUrl} highlight={highlight} />
               <div className="space-y-2">
                 <div className="space-y-0.5">
-                  <p className="text-lg font-semibold text-[var(--text)]">
+                  <p className="text-lg font-semibold text-[var(--text)] break-words">
                     <Link href={member.profileHref} className="hover:text-[var(--accent)] focus-visible:underline">
                       {member.displayName}
                     </Link>
@@ -295,7 +295,7 @@ function VocalCard({
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Vocal #{index + 1}</p>
           {member ? (
             <div className="space-y-0.5">
-              <p className="text-lg font-semibold text-[var(--text)]">
+              <p className="text-lg font-semibold text-[var(--text)] break-words">
                 <Link href={member.profileHref} className="hover:text-[var(--accent)] focus-visible:underline">
                   {member.displayName}
                 </Link>
@@ -358,18 +358,18 @@ function MemberGrid({
       {members.map((member) => (
         <li
           key={member.id}
-          className="flex flex-col gap-4 rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)] p-5 shadow-sm transition"
+          className="flex flex-col gap-4 rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)] p-5 shadow-sm transition break-words"
         >
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="flex items-center gap-4">
               <Avatar initials={member.initials} avatarUrl={member.avatarUrl} highlight={false} />
               <div className="space-y-2">
                 <div className="space-y-0.5">
-                  <p className="text-lg font-semibold text-[var(--text)]">
+                  <p className="text-lg font-semibold text-[var(--text)] break-words">
                     {canViewProfiles ? (
                       <Link
                         href={member.profileHref}
-                        className="hover:text-[var(--accent)] focus-visible:underline focus-visible:outline-none"
+                        className="hover:text-[var(--accent)] focus-visible:underline focus-visible:outline-none break-words"
                       >
                         {member.displayName}
                       </Link>

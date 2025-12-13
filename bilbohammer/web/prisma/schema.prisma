@@ -48,6 +48,47 @@ enum EventHighlightType {
   AWARD
 }
 
+enum TableStatus {
+  AVAILABLE
+  RESERVED
+  IN_PLAY
+  BLOCKED
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  IN_PLAY
+  ENDED
+  CANCELLED
+}
+
+enum MatchStatus {
+  PENDING
+  CONFIRMED
+  IN_PLAY
+  DONE
+  CANCELLED
+}
+
+enum SlotStatus {
+  OPEN
+  MATCHED
+  CANCELLED
+}
+
+enum ParticipantRole {
+  HOST
+  GUEST
+  STAFF
+}
+
+enum ParticipantStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+}
+
 model NewsArticle {
   id              String   @id @default(cuid())
   slug            String   @unique
@@ -59,12 +100,13 @@ model NewsArticle {
   tags            String[] @default([])
   primaryCategory String
   categories      String[] @default([])
+  status          String   @default("published")
   body            Json
   comments        Json
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  chronicleEvents Event[]  @relation("EventChronicle")
+  chronicleEvents Event[] @relation("EventChronicle")
 
   @@index([primaryCategory])
   @@index([date])
@@ -98,23 +140,29 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  accounts            Account[]
-  sessions            Session[]
-  posts               Post[]
-  games               UserGame[]
-  faccionesW40K       FaccionesW40K[]
-  faccionesAoS        FaccionesAoS[]
-  faccionesTOW        FaccionesTOW[]
-  galleryImages       GalleryImage[]
-  albumCollaborations GalleryAlbumCollaborator[]
-  eventOrganizers     EventOrganizer[]
-  eventHighlights     EventHighlight[]           @relation("EventHighlightPlayer")
-  eventRankings       EventRankingEntry[]        @relation("EventRankingPlayer")
-  coordinatedGames    GameInfo[]                 @relation("GameInfoContact")
-  managedChangeLogs   UserChangeLog[]            @relation("UserChangeLogAdmin")
-  receivedChangeLogs  UserChangeLog[]            @relation("UserChangeLogTarget")
-  createdInvites      UserInvite[]               @relation("UserInviteCreator")
-  claimedInvites      UserInvite[]               @relation("UserInviteTarget")
+  accounts                 Account[]
+  sessions                 Session[]
+  posts                    Post[]
+  games                    UserGame[]
+  faccionesW40K            FaccionesW40K[]
+  faccionesAoS             FaccionesAoS[]
+  faccionesTOW             FaccionesTOW[]
+  galleryImages            GalleryImage[]
+  albumCollaborations      GalleryAlbumCollaborator[]
+  eventOrganizers          EventOrganizer[]
+  eventHighlights          EventHighlight[]           @relation("EventHighlightPlayer")
+  eventRankings            EventRankingEntry[]        @relation("EventRankingPlayer")
+  coordinatedGames         GameInfo[]                 @relation("GameInfoContact")
+  managedChangeLogs        UserChangeLog[]            @relation("UserChangeLogAdmin")
+  receivedChangeLogs       UserChangeLog[]            @relation("UserChangeLogTarget")
+  createdInvites           UserInvite[]               @relation("UserInviteCreator")
+  claimedInvites           UserInvite[]               @relation("UserInviteTarget")
+  availabilitySlots        AvailabilitySlot[]         @relation("AvailabilitySlotCreator")
+  recurringAvailability    RecurringAvailability[]
+  matchParticipations      MatchParticipant[]
+  createdMatches           Match[]                    @relation("MatchCreator")
+  createdTableReservations TableReservation[]         @relation("TableReservationCreator")
+  createdTableBlocks       TableBlock[]               @relation("TableBlockCreator")
 }
 
 model Account {
@@ -150,9 +198,12 @@ model Game {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  users  UserGame[]
-  events Event[]
-  info   GameInfo?
+  users             UserGame[]
+  events            Event[]
+  info              GameInfo?
+  tableLayouts      TableLayout[]
+  availabilitySlots AvailabilitySlot[]
+  matches           Match[]
 }
 
 model UserGame {
@@ -216,13 +267,13 @@ model UserChangeLog {
 }
 
 model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  type      PostType
-  published Boolean  @default(true)
-  reactionScore Int   @default(0)
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  title         String
+  content       String?
+  type          PostType
+  published     Boolean  @default(true)
+  reactionScore Int      @default(0)
+  createdAt     DateTime @default(now())
 
   authorId Int?
   author   User? @relation(fields: [authorId], references: [id])
@@ -279,9 +330,11 @@ model Event {
   highlights       EventHighlight[]
   rankings         EventRankingEntry[]
   galleryImages    GalleryImage[]
-  album            GalleryAlbum?    @relation("EventAlbum", fields: [albumId], references: [id], onDelete: SetNull)
-  game             Game?            @relation(fields: [gameId], references: [id], onDelete: SetNull)
-  chronicleArticle NewsArticle?     @relation("EventChronicle", fields: [chronicleArticleId], references: [id], onDelete: SetNull)
+  album            GalleryAlbum?       @relation("EventAlbum", fields: [albumId], references: [id], onDelete: SetNull)
+  game             Game?               @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  chronicleArticle NewsArticle?        @relation("EventChronicle", fields: [chronicleArticleId], references: [id], onDelete: SetNull)
+  matches          Match[]
+  tableBlocks      TableBlock[]
 }
 
 model Notification {
@@ -290,6 +343,165 @@ model Notification {
   content   String
   visible   Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+model ClubTable {
+  id        String      @id @default(cuid())
+  name      String
+  posX      Int         @default(0)
+  posY      Int         @default(0)
+  width     Int         @default(180)
+  height    Int         @default(120)
+  rotation  Int         @default(0)
+  sizeTag   String?
+  status    TableStatus @default(AVAILABLE)
+  isActive  Boolean     @default(true)
+  notes     String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  layouts      TableLayout[]
+  reservations TableReservation[]
+  blocks       TableBlock[]
+
+  @@unique([name])
+}
+
+model TableLayout {
+  id           String   @id @default(cuid())
+  tableId      String
+  title        String
+  description  String?
+  gameId       String?
+  sceneryNotes String?
+  isDefault    Boolean  @default(false)
+  weekday      Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  table ClubTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  game  Game?     @relation(fields: [gameId], references: [id], onDelete: SetNull)
+
+  @@unique([tableId, title])
+  @@index([tableId])
+  @@index([gameId])
+}
+
+model TableBlock {
+  id          String   @id @default(cuid())
+  tableId     String
+  start       DateTime
+  end         DateTime
+  reason      String?
+  eventId     String?
+  createdById Int?
+  createdAt   DateTime @default(now())
+
+  table     ClubTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  event     Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  createdBy User?     @relation("TableBlockCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([tableId, start, end])
+  @@index([eventId])
+}
+
+model TableReservation {
+  id          String            @id @default(cuid())
+  tableId     String
+  start       DateTime
+  end         DateTime
+  status      ReservationStatus @default(PENDING)
+  matchId     String?
+  createdById Int?
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  table     ClubTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  match     Match?    @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  createdBy User?     @relation("TableReservationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([tableId, start, end])
+  @@index([matchId])
+}
+
+model Match {
+  id          String      @id @default(cuid())
+  gameId      String?
+  eventId     String?
+  slotId      String?     @unique
+  startsAt    DateTime
+  endsAt      DateTime
+  status      MatchStatus @default(PENDING)
+  format      String?
+  notes       String?
+  roundNumber Int?
+  createdById Int?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  game         Game?              @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  event        Event?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  slot         AvailabilitySlot?  @relation("SlotMatch", fields: [slotId], references: [id], onDelete: SetNull)
+  createdBy    User?              @relation("MatchCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  participants MatchParticipant[]
+  reservations TableReservation[]
+
+  @@index([startsAt, endsAt])
+  @@index([eventId])
+}
+
+model MatchParticipant {
+  matchId   String
+  userId    Int
+  role      ParticipantRole   @default(HOST)
+  status    ParticipantStatus @default(PENDING)
+  note      String?
+  createdAt DateTime          @default(now())
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([matchId, userId])
+  @@index([userId])
+}
+
+model AvailabilitySlot {
+  id        String     @id @default(cuid())
+  creatorId Int
+  gameId    String?
+  start     DateTime
+  end       DateTime
+  status    SlotStatus @default(OPEN)
+  level     String?
+  format    String?
+  note      String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  creator User   @relation("AvailabilitySlotCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  game    Game?  @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  match   Match? @relation("SlotMatch")
+
+  @@index([creatorId])
+  @@index([start, end])
+  @@index([gameId])
+}
+
+model RecurringAvailability {
+  id              String   @id @default(cuid())
+  userId          Int
+  weekday         Int
+  startMinutes    Int
+  endMinutes      Int
+  preferredGames  String[] @default([])
+  preferencesNote String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, weekday])
 }
 
 // @@map("facciones_w40k") // opcional: nombre del tipo enum en la BD
@@ -558,17 +770,17 @@ model SiteContent {
 }
 
 model UserInvite {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   email       String
-  token       String   @unique
-  role        Rol      @default(SOCIO)
+  token       String    @unique
+  role        Rol       @default(SOCIO)
   createdById Int?
-  createdBy   User?    @relation("UserInviteCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User?     @relation("UserInviteCreator", fields: [createdById], references: [id], onDelete: SetNull)
   usedById    Int?
-  usedBy      User?    @relation("UserInviteTarget", fields: [usedById], references: [id], onDelete: SetNull)
+  usedBy      User?     @relation("UserInviteTarget", fields: [usedById], references: [id], onDelete: SetNull)
   expiresAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   usedAt      DateTime?
 
   @@index([email])

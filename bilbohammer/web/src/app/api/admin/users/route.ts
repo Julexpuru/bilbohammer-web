@@ -164,7 +164,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       row,
-      message: `Usuario creado con la contrasena temporal ${DEFAULT_PASSWORD}.`,
+      message: `Usuario creado con la contraseña temporal ${DEFAULT_PASSWORD}.`,
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

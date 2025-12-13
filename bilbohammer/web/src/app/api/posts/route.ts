@@ -10,6 +10,7 @@ import { auth } from "@/auth";
 import type { ArticleCategory } from "@/app/novedades/data";
 import type { PostType } from "@prisma/client";
 import { buildEventSlug } from "@/lib/events/slug";
+import { htmlToPlainText } from "@/lib/text";
 
 type FeedItem = {
   id: string;
@@ -62,8 +63,8 @@ async function fetchArticleFeed(type: Exclude<PostType, "EVENTO">, cursor: strin
     title: article.title,
     content:
       article.summary ||
-      article.body?.find((block) => block.type === "paragraph")?.text ||
-      "Consulta la ficha completa en la sección de novedades.",
+      htmlToPlainText(article.body?.find((block) => block.type === "paragraph")?.text) ||
+      "Consulta la ficha completa en la secci?n de novedades.",
     createdAt: article.date ?? new Date().toISOString(),
     imageUrl: article.banner ?? null,
     href: `/novedades/${article.category || category}/${article.slug}`,
@@ -90,7 +91,7 @@ async function fetchEventFeed(cursor: string | undefined, take: number) {
     id: `event-${event.id}`,
     type: "EVENTO",
     title: event.title,
-    content: event.details ?? event.location ?? "Consulta la ficha del evento para más información.",
+    content: htmlToPlainText(event.details) || event.location || "Consulta la ficha del evento para mas informacion.",
     createdAt: event.startsAt.toISOString(),
     imageUrl: event.bannerUrl ?? null,
     href: `/eventos/${buildEventSlug(event.id, event.title)}`,

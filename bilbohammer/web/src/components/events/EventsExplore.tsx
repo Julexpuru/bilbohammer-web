@@ -486,17 +486,6 @@ export default function EventsExplore({ canCreate }: Props) {
                       <div className="text-xs opacity-60">Sin imagen</div>
                     )}
                   </div>
-                  {ev.status !== "DRAFT" && ev.status !== "CANCELLED" && (
-                    <div className="hidden md:block">
-                      <EventShareButtons
-                        eventSlug={ev.slug}
-                        title={ev.title}
-                        startsAt={ev.startsAt}
-                        endsAt={ev.endsAt}
-                        location={where || undefined}
-                      />
-                    </div>
-                  )}
                 </div>
               </article>
             );

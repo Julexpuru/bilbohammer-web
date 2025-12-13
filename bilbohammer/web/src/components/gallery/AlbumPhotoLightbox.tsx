@@ -46,6 +46,7 @@ export function AlbumPhotoLightbox({
   const kind = currentEntry?.kind ?? null;
 
   const [liked, setLiked] = useState<Set<string>>(new Set());
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [pendingAction, setPendingAction] = useState<null | "edit" | "delete">(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -88,27 +89,70 @@ export function AlbumPhotoLightbox({
     });
   }, [image?.comments]);
 
-  if (!image) {
-    return null;
-  }
-
   const photoTitle = image.title ?? "Sin titulo";
   const photoAlt = image.alt || photoTitle;
   const fallbackSrc = album?.coverImage ?? image.src;
   const photoSrc = image.src || fallbackSrc;
   const mediaMaxHeight = "calc(100vh - 220px)";
-  const likeKey = `${image.src}-${boundedIndex}`;
+  const likeKey = image.id || `${image.src}-${boundedIndex}`;
 
-  const toggleLike = () => {
+  useEffect(() => {
+    if (!image) return;
+    const key = image.id || `${image.src}-${boundedIndex}`;
+    const initial = image.likesCount ?? image.likes ?? 0;
+    setLikeCounts((prev) => (prev[key] === undefined ? { ...prev, [key]: initial } : prev));
+  }, [image?.id, image?.likes, image?.likesCount, image?.src, boundedIndex, image]);
+
+  if (!image) {
+    return null;
+  }
+
+  const currentLikes = likeCounts[likeKey] ?? image.likesCount ?? image.likes ?? 0;
+
+  const toggleLike = async () => {
+    const wasLiked = liked.has(likeKey);
+    const delta = wasLiked ? -1 : 1;
+    const optimistic = Math.max(0, currentLikes + delta);
+
     setLiked((prev) => {
       const next = new Set(prev);
-      if (next.has(likeKey)) {
+      if (wasLiked) {
         next.delete(likeKey);
       } else {
         next.add(likeKey);
       }
       return next;
     });
+    setLikeCounts((prev) => ({ ...prev, [likeKey]: optimistic }));
+
+    try {
+      const response = await fetch(`/api/gallery/photos/${encodeURIComponent(image.id || likeKey)}/like`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: wasLiked ? "unlike" : "like" }),
+      });
+      if (!response.ok) {
+        throw new Error("No se pudo guardar la reacci�n.");
+      }
+      const data = await response.json();
+      if (typeof data.likesCount === "number") {
+        setLikeCounts((prev) => ({ ...prev, [likeKey]: data.likesCount }));
+      }
+      setActionError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo guardar la reacci�n.";
+      setActionError(message);
+      setLiked((prev) => {
+        const next = new Set(prev);
+        if (wasLiked) {
+          next.add(likeKey);
+        } else {
+          next.delete(likeKey);
+        }
+        return next;
+      });
+      setLikeCounts((prev) => ({ ...prev, [likeKey]: currentLikes }));
+    }
   };
 
   const isCurrentLiked = liked.has(likeKey);
@@ -199,6 +243,7 @@ export function AlbumPhotoLightbox({
               {kind === "album" && album && (
                 <Link
                   href={`/galeria/${album.slug}`}
+                  onClick={onClose}
                   className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:border-white/60 hover:text-white"
                 >
                   Ir al album
@@ -320,7 +365,7 @@ export function AlbumPhotoLightbox({
                   <span className="text-slate-400">Lugar:</span> {image.location ?? "Ubicacion no indicada"}
                 </div>
                 <div>
-                  <span className="text-slate-400">Favoritos:</span> {image.likesCount ?? image.likes ?? 0}
+                  <span className="text-slate-400">Favoritos:</span> {currentLikes}
                 </div>
               </div>
 

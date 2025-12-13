@@ -27,7 +27,7 @@ export default async function MemberProfilePage({ params }: { params: { memberId
       <section className="card space-y-4">
         <h1 className="text-3xl font-semibold">Perfil no disponible</h1>
         <p>
-          Este perfil solo es accesible para personas socias. Si crees que deberias verlo, contacta con la junta para
+          Este perfil solo es accesible para personas socias. Si crees que deberías verlo, contacta con la junta para
           revisar tu cuenta.
         </p>
       </section>
@@ -65,12 +65,12 @@ export default async function MemberProfilePage({ params }: { params: { memberId
   const memberSince = member.membershipSince
     ? formatClubDateTime(member.membershipSince, { month: "long", year: "numeric" })
     : null;
-  const bio = member.descripcion || "Esta persona aun no ha compartido su biografia.";
+  const bio = member.descripcion || "Esta persona aún no ha compartido su biografía.";
 
   return (
     <div className="space-y-6">
       <Link href="/sobre-nosotros/tablon-de-socios" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
-        &larr; Volver al tablon
+        &larr; Volver al tablón
       </Link>
 
       <section className="card space-y-6">
@@ -90,7 +90,7 @@ export default async function MemberProfilePage({ params }: { params: { memberId
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Biografia</h2>
+          <h2 className="text-lg font-semibold">Biografía</h2>
           <p className="text-sm text-[var(--text)]">{bio}</p>
         </div>
       </section>

@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   }
 
   const query = url.searchParams.get("q") ?? "";
-  const matches = await searchChronicles(query);
+  const matches = await searchChronicles(query, 25, true);
   return NextResponse.json({
     results: matches.map((article) => ({
       id: article.id,

@@ -460,7 +460,10 @@ export default async function EventDetailPage({
           <div className="space-y-6">
             <div className="space-y-3">
               {event.details ? (
-                <p className="whitespace-pre-line text-sm leading-relaxed opacity-90">{event.details}</p>
+                <div
+                  className="text-sm leading-relaxed opacity-90 [&_p]:my-2 [&_div]:my-2 [&_ul]:my-3 [&_ol]:my-3 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_a]:text-[var(--accent)] [&_a]:underline"
+                  dangerouslySetInnerHTML={{ __html: event.details }}
+                />
               ) : (
                 <p className="text-sm text-[var(--muted)]">La descripcion estara disponible en breve.</p>
               )}
@@ -645,7 +648,7 @@ export default async function EventDetailPage({
         {activeTab === "ubicacion" && (
           <div className="space-y-4">
             {event.location && (
-              <p className="text-sm text-[var(--muted)]">Direccion: {event.location}</p>
+              <p className="text-sm text-[var(--muted)]">Dirección: {event.location}</p>
             )}
             {mapEmbedSrc ? (
               <div className="overflow-hidden rounded-2xl border border-white/10">
@@ -659,7 +662,7 @@ export default async function EventDetailPage({
               </div>
             ) : (
               <p className="text-sm text-[var(--muted)]">
-                El mapa se publicara cuando tengamos la ubicacion definitiva.
+                El mapa se publicará cuando tengamos la ubicación definitiva.
               </p>
             )}
             {event.mapsUrl && (

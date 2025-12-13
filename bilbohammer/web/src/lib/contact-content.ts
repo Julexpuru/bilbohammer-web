@@ -33,11 +33,12 @@ export function mergeWithDefaults(partial: Partial<ContactPageContent> | null | 
     intro: partial.intro ?? base.intro,
     whatsapp: {
       description: partial.whatsapp?.description ?? base.whatsapp.description,
-      entries:
-        Array.isArray(partial.whatsapp?.entries) && partial.whatsapp?.entries.length
-          ? partial.whatsapp.entries.map(normalizeWhatsappEntry)
-          : base.whatsapp.entries,
-      community: normalizeCommunity(partial.whatsapp?.community ?? base.whatsapp.community),
+      entries: Array.isArray(partial.whatsapp?.entries)
+        ? partial.whatsapp.entries.map(normalizeWhatsappEntry)
+        : base.whatsapp.entries,
+      community: partial.whatsapp && "community" in partial.whatsapp
+        ? normalizeCommunity(partial.whatsapp.community)
+        : normalizeCommunity(base.whatsapp.community),
     },
     instagram: {
       description: partial.instagram?.description ?? base.instagram.description,
@@ -56,17 +57,15 @@ export function mergeWithDefaults(partial: Partial<ContactPageContent> | null | 
       description: partial.visit?.description ?? base.visit.description,
       schedule: {
         title: base.visit.schedule.title,
-        lines:
-          Array.isArray(partial.visit?.schedule?.lines) && partial.visit?.schedule?.lines.length
-            ? partial.visit.schedule.lines
-            : base.visit.schedule.lines,
+        lines: Array.isArray(partial.visit?.schedule?.lines)
+          ? partial.visit.schedule.lines
+          : base.visit.schedule.lines,
       },
       access: {
         title: base.visit.access.title,
-        lines:
-          Array.isArray(partial.visit?.access?.lines) && partial.visit?.access?.lines.length
-            ? partial.visit.access.lines
-            : base.visit.access.lines,
+        lines: Array.isArray(partial.visit?.access?.lines)
+          ? partial.visit.access.lines
+          : base.visit.access.lines,
       },
     },
     membership: {

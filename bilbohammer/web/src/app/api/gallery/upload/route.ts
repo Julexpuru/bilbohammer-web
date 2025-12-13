@@ -574,9 +574,9 @@ export async function POST(request: Request) {
     const album = await handleAlbumUpload(body.album, body.photos, numericUploaderId, body.albumId);
     return NextResponse.json({ kind: "album", album }, { status: 201 });
   } catch (error) {
-    console.error("Fallo al procesar la subida de la galeria", error);
+    console.error("Fallo al procesar la subida de la galería", error);
     const message =
-      error instanceof Error ? error.message : "No se pudo procesar la subida. Intentalo de nuevo mas tarde.";
+      error instanceof Error ? error.message : "No se pudo procesar la subida. Inténtalo de nuevo más tarde.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

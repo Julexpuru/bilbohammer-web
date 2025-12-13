@@ -17,7 +17,7 @@ export default async function NewEventPage() {
         <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Eventos</p>
         <h1 className="text-3xl font-semibold">Crear nuevo evento</h1>
         <p className="text-sm text-[var(--muted)]">
-          Completa la informacion basica. Podras editarlo en cualquier momento.
+          Completa la información básica. Podrás editarlo en cualquier momento.
         </p>
       </header>
       <EventForm mode="create" />

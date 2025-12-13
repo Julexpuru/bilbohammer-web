@@ -892,7 +892,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
       const timestamp = new Date();
       setSaveInfo(
         updated.length > 0
-          ? `Ultimo guardado: ${formatClubDateTime(timestamp, {
+          ? `Último guardado: ${formatClubDateTime(timestamp, {
               dateStyle: "short",
               timeStyle: "medium",
             })}`
@@ -1260,16 +1260,16 @@ export function UserManagementView({ columns, initialRows }: Props) {
   const bannerText =
     pendingCount > 0
       ? `${pendingCount} cambios pendientes de guardar.`
-      : saveInfo ?? "Edicion en vivo sin guardar por ahora.";
+      : saveInfo ?? "Edición en vivo sin guardar por ahora.";
   const hasSearch = searchQuery.trim().length > 0;
 
   return (
     <>
     <section className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold">Gestion de Usuarios</h1>
+        <h1 className="text-3xl font-semibold">Gestión de Usuarios</h1>
         <p className="text-sm text-[var(--muted)]">
-          Revisa y edita la informacion de las personas registradas en el club. Este panel se conectara con las
+          Revisa y edita la información de las personas registradas en el club. Este panel se conectará con las
           operaciones de guardado en una fase posterior.
         </p>
       </header>
@@ -1326,7 +1326,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
       <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-4">
         {sortedEntries.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">
-            {hasSearch ? "No hay usuarios que coincidan con la busqueda." : "Todavia no hay usuarios registrados."}
+            {hasSearch ? "No hay usuarios que coincidan con la búsqueda." : "Todavía no hay usuarios registrados."}
           </p>
         ) : (
           <div className="relative">
@@ -1882,9 +1882,9 @@ export function UserManagementView({ columns, initialRows }: Props) {
               </div>
 
               <div className="rounded-xl border border-dashed border-[var(--hairline)] bg-[var(--card-muted)] px-4 py-3 text-sm text-[var(--muted)]">
-                La cuenta se creara con la contrasena temporal{" "}
+                La cuenta se creará con la contraseña temporal{" "}
                 <span className="font-semibold text-[var(--text)]">{NEW_USER_TEMP_PASSWORD}</span>. El sistema la
-                hasheara automaticamente y podras solicitar al socio que la cambie tras el primer acceso.
+                hasheará automáticamente y podrás solicitar al socio que la cambie tras el primer acceso.
               </div>
 
               {newUserError && <p className="text-sm text-red-400">{newUserError}</p>}
@@ -2015,7 +2015,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
               <div>
                 <h2 className="text-lg font-semibold text-[var(--text)]">Historial de cambios</h2>
                 <p className="text-xs text-[var(--muted)]">
-                  Ultimas 100 modificaciones realizadas desde este panel.
+                  Últimas 100 modificaciones realizadas desde este panel.
                 </p>
               </div>
               <button

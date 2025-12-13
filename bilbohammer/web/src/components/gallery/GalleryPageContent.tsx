@@ -196,16 +196,16 @@ function GalleryHero({ images, albumCount, photoCount }: GalleryHeroProps) {
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/60 to-black/80" aria-hidden />
       <div className="relative z-10 flex flex-col gap-8 px-8 py-12 sm:px-12 lg:flex-row lg:items-center lg:justify-between">
         <div className="max-w-2xl space-y-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/60">Galeria Bilbohammer</p>
-          <h1 className="text-4xl font-semibold text-white sm:text-5xl">Explora la galeria</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/60">Galería Bilbohammer</p>
+          <h1 className="text-4xl font-semibold text-white sm:text-5xl">Explora la galería</h1>
           <p className="text-sm text-white/80">
-            Un primer vistazo a como lucieron los albums, torneos y eventos especiales del club. Esta vista de prueba
-            mezcla imagenes existentes mientras definimos la gestion y rotacion.
+            Un primer vistazo a cómo lucieron los álbumes, torneos y eventos especiales del club. Esta vista de prueba
+            mezcla imágenes existentes mientras definimos la gestión y rotación.
           </p>
         </div>
         <dl className="grid grid-cols-2 gap-4 text-white/80 sm:max-w-xs">
           <div className="rounded-2xl border border-white/15 bg-white/5 p-4 text-center">
-            <dt className="text-xs uppercase tracking-[0.25em] text-white/60">Albums</dt>
+            <dt className="text-xs uppercase tracking-[0.25em] text-white/60">Álbumes</dt>
             <dd className="text-2xl font-semibold">{albumCount}</dd>
           </div>
           <div className="rounded-2xl border border-white/15 bg-white/5 p-4 text-center">
@@ -653,7 +653,7 @@ export function GalleryPageContent({
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Listado principal</p>
-                <h2 className="text-2xl font-semibold text-[var(--text)]">Albums y fotos</h2>
+                <h2 className="text-2xl font-semibold text-[var(--text)]">Álbumes y fotos</h2>
               </div>
               <div className="flex flex-col gap-2 text-sm text-[var(--muted)] sm:flex-row sm:items-center sm:justify-end sm:gap-3">
                 <button

@@ -40,15 +40,15 @@ async function loadInvite(token: string): Promise<InviteState> {
   });
 
   if (!invite) {
-    return { kind: "invalid", reason: "Este enlace de invitacion no existe o ya fue cancelado." };
+    return { kind: "invalid", reason: "Este enlace de invitación no existe o ya fue cancelado." };
   }
 
   if (invite.usedAt) {
-    return { kind: "invalid", reason: "Este enlace de invitacion ya fue utilizado." };
+    return { kind: "invalid", reason: "Este enlace de invitación ya fue utilizado." };
   }
 
   if (invite.expiresAt && invite.expiresAt < new Date()) {
-    return { kind: "invalid", reason: "Este enlace de invitacion ha caducado." };
+    return { kind: "invalid", reason: "Este enlace de invitación ha caducado." };
   }
 
   const existing = await prisma.user.findUnique({
@@ -108,7 +108,7 @@ export default async function InviteRegisterPage({ params }: Props) {
       </div>
 
       <p className="text-center text-xs text-[var(--muted)]">
-        Si tienes problemas con el enlace, responde al correo de invitacion o escribe a la junta del club.
+        Si tienes problemas con el enlace, responde al correo de invitación o escribe a la junta del club.
       </p>
     </section>
   );

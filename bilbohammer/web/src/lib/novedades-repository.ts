@@ -7,6 +7,7 @@ import {
   CATEGORY_LABELS,
   type Article,
   type ArticleCategory,
+  type ArticleStatus,
   type ArticlesByCategory,
 } from "@/app/novedades/data";
 import { prisma } from "@/lib/prisma";
@@ -45,11 +46,16 @@ function normalizeArticle(article: Article): Article {
     title: article.title.trim(),
     author: article.author?.trim() ?? "",
     summary: article.summary.trim(),
+    status: normalizeStatus(article.status),
     tags: article.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0),
     comments: article.comments ?? [],
     date: normalizeDateString(article.date),
   });
   return normalized;
+}
+
+function normalizeStatus(status?: string | null): ArticleStatus {
+  return status === "draft" ? "draft" : "published";
 }
 
 function sortArticles(articles: Article[]): Article[] {
@@ -60,6 +66,11 @@ function sortArticles(articles: Article[]): Article[] {
   return [...articles].sort((a, b) => toTimestamp(b.date) - toTimestamp(a.date));
 }
 
+function filterDrafts(articles: Article[], includeDrafts: boolean): Article[] {
+  if (includeDrafts) return articles;
+  return articles.filter((article) => article.status !== "draft");
+}
+
 function mapRecordToArticle(record: NewsArticle): Article {
   return ensureCategories({
     id: record.id,
@@ -67,6 +78,7 @@ function mapRecordToArticle(record: NewsArticle): Article {
     categories: (record.categories?.length
       ? record.categories
       : [record.primaryCategory]) as ArticleCategory[],
+    status: normalizeStatus((record as NewsArticle & { status?: string }).status),
     slug: record.slug,
     title: record.title,
     author: record.author ?? "",
@@ -91,6 +103,7 @@ function mapArticleToPersistence(article: Article) {
     tags: article.tags,
     primaryCategory: article.category,
     categories: article.categories,
+    status: article.status,
     body: article.body,
     comments: article.comments,
   };
@@ -129,36 +142,43 @@ export async function saveArticle(article: Article): Promise<Article> {
   return mapRecordToArticle(record);
 }
 
-export async function getAllArticles(): Promise<Article[]> {
+export async function getAllArticles(includeDrafts = false): Promise<Article[]> {
   const records = await prisma.newsArticle.findMany({
+    where: includeDrafts ? {} : { status: "published" },
     orderBy: { date: "desc" },
   });
-  return records.map(mapRecordToArticle);
+  return filterDrafts(records.map(mapRecordToArticle), includeDrafts);
 }
 
-export async function getArticlesByCategory(category: ArticleCategory): Promise<Article[]> {
+export async function getArticlesByCategory(
+  category: ArticleCategory,
+  includeDrafts = false,
+): Promise<Article[]> {
   const records = await prisma.newsArticle.findMany({
     where: {
       categories: {
         has: category,
       },
+      ...(includeDrafts ? {} : { status: "published" }),
     },
     orderBy: { date: "desc" },
   });
-  return records.map(mapRecordToArticle);
+  return filterDrafts(records.map(mapRecordToArticle), includeDrafts);
 }
 
-export async function getArticlesGrouped(): Promise<ArticlesByCategory> {
+export async function getArticlesGrouped(includeDrafts = false): Promise<ArticlesByCategory> {
   const grouped: ArticlesByCategory = {
     news: [],
     chronicles: [],
     members: [],
   };
   const records = await prisma.newsArticle.findMany({
+    where: includeDrafts ? {} : { status: "published" },
     orderBy: { date: "desc" },
   });
   for (const record of records) {
     const article = mapRecordToArticle(record);
+    if (!includeDrafts && article.status === "draft") continue;
     const uniqueCategories = Array.from(
       new Set(article.categories.length > 0 ? article.categories : [article.category]),
     );
@@ -177,14 +197,19 @@ export async function getArticlesGrouped(): Promise<ArticlesByCategory> {
 export async function findArticleByCategoryAndSlug(
   category: ArticleCategory,
   slug: string,
+  includeDrafts = false,
 ): Promise<Article | null> {
   const record = await prisma.newsArticle.findFirst({
     where: {
       slug,
       categories: { has: category },
+      ...(includeDrafts ? {} : { status: "published" }),
     },
   });
-  return record ? mapRecordToArticle(record) : null;
+  if (!record) return null;
+  const article = mapRecordToArticle(record);
+  if (!includeDrafts && article.status === "draft") return null;
+  return article;
 }
 
 export async function findArticleById(articleId: string): Promise<Article | null> {
@@ -195,11 +220,16 @@ export async function findArticleById(articleId: string): Promise<Article | null
   return record ? mapRecordToArticle(record) : null;
 }
 
-export async function searchChronicles(query: string, limit = 25): Promise<Article[]> {
+export async function searchChronicles(
+  query: string,
+  limit = 25,
+  includeDrafts = false,
+): Promise<Article[]> {
   const normalized = query.trim();
   const records = await prisma.newsArticle.findMany({
     where: {
       categories: { has: "chronicles" },
+      ...(includeDrafts ? {} : { status: "published" }),
       ...(normalized
         ? {
             OR: [

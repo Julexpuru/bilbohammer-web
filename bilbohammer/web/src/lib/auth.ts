@@ -26,10 +26,10 @@ export const authConfig = {
   providers: [
     Google({}),
     Credentials({
-      name: "Email y contrasena",
+      name: "Email y contraseña",
       credentials: {
         email: { label: "Email", type: "email" },
-        contrasena: { label: "Contrasena", type: "password" },
+        contrasena: { label: "Contraseña", type: "password" },
       },
       async authorize(creds): Promise<User | null> {
         const email = (creds as AnyObject)?.email as string | undefined;

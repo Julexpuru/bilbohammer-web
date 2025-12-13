@@ -40,15 +40,15 @@ export default async function ArticlePage({ params }: { params: PageParams }) {
     notFound();
   }
 
-  const article = await findArticleByCategoryAndSlug(params.category, params.slug);
-  if (!article) {
-    notFound();
-  }
-
   const session = await auth();
   const roles = extractRoles(session);
   const canManage = roles.some((role) => MANAGER_ROLES.has(role));
   const isSocio = roles.includes("SOCIO");
+
+  const article = await findArticleByCategoryAndSlug(params.category, params.slug, canManage);
+  if (!article || (article.status === "draft" && !canManage)) {
+    notFound();
+  }
 
   if (article.categories.includes("members") && !(isSocio || canManage)) {
     notFound();

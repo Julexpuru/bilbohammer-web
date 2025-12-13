@@ -34,7 +34,7 @@ const TAB_LABEL: Record<PostType, string> = {
 };
 
 const ARCHIVE_LINK: Record<PostType, { href: string; label: string }> = {
-  ANUNCIO: { href: "/novedades?tab=news", label: "Novedades publicas" },
+  ANUNCIO: { href: "/novedades?tab=news", label: "Novedades públicas" },
   EVENTO: { href: "/eventos", label: "Agenda completa" },
   NOTICIA_PRIVADA: { href: "/novedades?tab=members", label: "Novedades para socios" },
 };

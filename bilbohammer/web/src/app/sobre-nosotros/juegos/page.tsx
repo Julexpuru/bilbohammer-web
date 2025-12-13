@@ -12,7 +12,7 @@ import { NewGameForm } from "./NewGameForm";
 export const metadata = {
   title: "Juegos en el club | Bilbohammer",
   description:
-    "Explora los sistemas que jugamos en Bilbohammer y descubre con quien contactar para sumarte a la proxima partida.",
+    "Explora los sistemas que jugamos en Bilbohammer y descubre con quién contactar para sumarte a la próxima partida.",
 };
 
 const HERO_IMAGES: Partial<Record<string, string>> = {
@@ -69,11 +69,11 @@ export default async function JuegosPage({ searchParams }: { searchParams?: { op
       <section className="card space-y-4">
         <h1 className="text-3xl font-semibold">Juegos en Bilbohammer</h1>
         <p>
-          Organizamos ligas, campanas y quedadas libres en torno a distintos sistemas. Esta panoramica te ayuda a saber
-          con quien hablar, que material compartimos y cuando solemos quedar para cada juego.
+          Organizamos ligas, campañas y quedadas libres en torno a distintos sistemas. Esta panorámica te ayuda a saber
+          con quién hablar, qué material compartimos y cuándo solemos quedar para cada juego.
         </p>
         <p className="text-sm text-[var(--muted)]">
-          Pulsa en cada tarjeta para desplegar detalles. Ajustaremos el diseno y la informacion a medida que cerremos
+          Pulsa en cada tarjeta para desplegar detalles. Ajustaremos el diseño y la información a medida que cerremos
           calendario y responsables definitivos.
         </p>
       </section>
@@ -290,12 +290,12 @@ function resolveDefaults(slug: string, name: string): GameDefaultContent {
   const defaults = GAME_DEFAULT_CONTENT[slug];
   if (defaults) return defaults;
   return {
-    summary: `Informacion de ${name} pendiente de configuracion.`,
+    summary: `Información de ${name} pendiente de configuración.`,
     contentHtml: `<p>Estamos recopilando detalles sobre ${name}. Si quieres impulsar este sistema, escribe a hola@bilbohammer.eus.</p>`,
     investment: "Pendiente",
     playtime: "Pendiente",
     learning: "Media",
-    contactDisplay: "Junta · Coordinacion",
+    contactDisplay: "Junta · Coordinación",
     contactNote: "Escribe a hola@bilbohammer.eus para proponer actividades.",
   };
 }

@@ -38,14 +38,14 @@ export default async function EditArticlePage({
     notFound();
   }
 
-  const article = await findArticleByCategoryAndSlug(params.category, params.slug);
-  if (!article) {
-    notFound();
-  }
-
   const session = await auth();
   const roles = extractRoles(session);
   const canManage = roles.some((role) => MANAGER_ROLES.has(role));
+
+  const article = await findArticleByCategoryAndSlug(params.category, params.slug, canManage);
+  if (!article) {
+    notFound();
+  }
 
   if (!canManage) {
     redirect(`/novedades/${article.category}/${article.slug}`);

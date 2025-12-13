@@ -30,14 +30,14 @@ export const COLUMN_LABELS: Record<string, string> = {
   descripcion: "Descripción",
   roles: "Roles",
   etiquetas: "Etiquetas",
-  passwordHash: "Cambiar contrasena",
+  passwordHash: "Cambiar contraseña",
   isActive: "Activo",
-  lastLoginAt: "Ultima conexion",
+  lastLoginAt: "Última conexión",
   membershipSince: "Miembro desde",
   membershipUntil: "Miembro hasta",
   createdAt: "Creado",
   updatedAt: "Modificado",
-  __edit: "Editar informacion",
+  __edit: "Editar información",
   __delete: "Acciones",
 };
 
@@ -85,7 +85,7 @@ export const PRIORITY_ORDER = [
 ];
 
 const BUTTON_LABELS: Record<string, string> = {
-  passwordHash: "Cambiar contrasena",
+  passwordHash: "Cambiar contraseña",
   __edit: "Editar usuario",
   __delete: "Eliminar",
 };

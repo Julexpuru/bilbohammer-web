@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { GalleryContentUploader, GalleryUploaderCompletePayload } from "@/components/gallery/GalleryContentUploader";
 import { GalleryViewer } from "@/components/gallery/GalleryViewer";
+import { GalleryShareButtons } from "@/components/gallery/GalleryShareButtons";
 import type { GalleryAlbum, GalleryImage, GalleryViewerEntry } from "@/components/gallery/types";
 
 type AlbumDetailViewProps = {
@@ -121,20 +122,20 @@ export function AlbumDetailView({ album, editAccess = "none" }: AlbumDetailViewP
 
   const handleDelete = async () => {
     if (!canEdit) return;
-    if (!window.confirm("Seguro que quieres eliminar este album?")) {
+    if (!window.confirm("¿Seguro que quieres eliminar este álbum?")) {
       return;
     }
     setIsDeleting(true);
     try {
       const response = await fetch(`/api/gallery/${albumData.slug}`, { method: "DELETE" });
       if (!response.ok) {
-        throw new Error("No se pudo eliminar el album");
+        throw new Error("No se pudo eliminar el álbum");
       }
       router.push("/galeria");
       router.refresh();
     } catch (error) {
       console.error(error);
-      alert("No se pudo eliminar el album. Intentalo de nuevo.");
+      alert("No se pudo eliminar el álbum. Inténtalo de nuevo.");
       setIsDeleting(false);
     }
   };
@@ -167,8 +168,8 @@ export function AlbumDetailView({ album, editAccess = "none" }: AlbumDetailViewP
   const commentSection = albumData.albumComments.length > 0 && (
     <section className="space-y-4 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-8 shadow-sm">
       <div>
-        <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Comentarios del album</p>
-        <h2 className="text-2xl font-semibold text-[var(--text)]">Reaccion de la comunidad</h2>
+        <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Comentarios del álbum</p>
+        <h2 className="text-2xl font-semibold text-[var(--text)]">Reacción de la comunidad</h2>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {albumData.albumComments.map((comment) => {
@@ -211,30 +212,38 @@ export function AlbumDetailView({ album, editAccess = "none" }: AlbumDetailViewP
               </p>
               <h1 className="text-3xl font-semibold text-[var(--text)]">{albumData.title}</h1>
               <p className="text-sm text-[var(--muted)]">
-                {albumData.date ?? "Fecha por confirmar"} - {albumData.location ?? "Ubicacion por confirmar"}
+                {albumData.date ?? "Fecha por confirmar"} - {albumData.location ?? "Ubicación por confirmar"}
               </p>
             </div>
-            {canEdit && (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditorOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)] bg-[var(--accent-50)] px-4 py-2 text-sm font-medium text-[var(--accent-600)] transition hover:border-[var(--accent-600)] hover:bg-[var(--accent-100)]"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-500 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isDeleting ? "Eliminando..." : "Eliminar"}
-                </button>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              <GalleryShareButtons
+                slug={albumData.slug}
+                title={albumData.title}
+                summary={albumData.description ?? undefined}
+                appearance="light"
+              />
+              {canEdit && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setEditorOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)] bg-[var(--accent-50)] px-4 py-2 text-sm font-medium text-[var(--accent-600)] transition hover:border-[var(--accent-600)] hover:bg-[var(--accent-100)]"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-500 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isDeleting ? "Eliminando..." : "Eliminar"}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-          <p className="text-sm leading-relaxed text-[var(--muted)]">{albumData.description ?? "Sin descripcion disponible."}</p>
+          <p className="text-sm leading-relaxed text-[var(--muted)]">{albumData.description ?? "Sin descripción disponible."}</p>
           <dl className="flex flex-wrap gap-4 text-xs text-[var(--muted)]">
             <div className="flex flex-col rounded-2xl border border-[var(--hairline)] bg-[var(--bg)] px-4 py-3">
               <dt className="uppercase tracking-[0.2em]">Total fotos</dt>
@@ -261,10 +270,10 @@ export function AlbumDetailView({ album, editAccess = "none" }: AlbumDetailViewP
 
       <section className="space-y-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Galeria del album</p>
-          <h2 className="text-2xl font-semibold text-[var(--text)]">{albumData.totalPhotos} fotografias individuales</h2>
+        <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Galería del álbum</p>
+        <h2 className="text-2xl font-semibold text-[var(--text)]">{albumData.totalPhotos} fotografías individuales</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Haz clic en cualquier foto para verla en detalle, revisar los comentarios asociados y navegar por la galeria.
+            Haz clic en cualquier foto para verla en detalle, revisar los comentarios asociados y navegar por la galería.
           </p>
         </div>
 

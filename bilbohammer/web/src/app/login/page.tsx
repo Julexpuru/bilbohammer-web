@@ -10,7 +10,7 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto max-w-sm space-y-4 p-6">
-      <h1 className="text-xl font-semibold text-[var(--text)]">Inicia sesion</h1>
+      <h1 className="text-xl font-semibold text-[var(--text)]">Inicia sesión</h1>
 
       <button
         onClick={() => signIn("google", { callbackUrl: "/" })}
@@ -35,7 +35,7 @@ export default function LoginPage() {
         />
         <input
           className="w-full rounded border border-[var(--hairline)] p-2 text-sm"
-          placeholder="Contrasena"
+          placeholder="Contraseña"
           type="password"
           value={contrasena}
           onChange={(event) => setContrasena(event.target.value)}
@@ -46,9 +46,9 @@ export default function LoginPage() {
       </form>
 
       <p className="text-center text-sm text-[var(--muted)]">
-        Todavia no tienes cuenta?{" "}
+        ¿Todavía no tienes cuenta?{" "}
         <Link href="/register" className="font-semibold text-[var(--text)] underline-offset-4 hover:underline">
-          Registrate
+          Regístrate
         </Link>
       </p>
     </div>

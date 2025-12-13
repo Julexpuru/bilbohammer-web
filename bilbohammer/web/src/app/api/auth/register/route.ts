@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   const normalizedEmail = normalizeEmail(rawEmail);
   const plainPassword = payload.contrasena ?? payload.password ?? "";
   if (!plainPassword) {
-    return NextResponse.json({ error: "La contrasena es obligatoria" }, { status: 400 });
+    return NextResponse.json({ error: "La contraseña es obligatoria" }, { status: 400 });
   }
 
   const inviteToken = normalizeOptional(payload.inviteToken);
@@ -184,7 +184,7 @@ export async function POST(req: Request) {
       role: assignedRole,
       inviteClaimed: Boolean(inviteToken),
       message: inviteToken
-        ? "Cuenta creada como SOCIO. Ya puedes iniciar sesion."
+        ? "Cuenta creada como SOCIO. Ya puedes iniciar sesión."
         : "Cuenta creada como AMIGO. Espera a que un administrador te promocione.",
     });
   } catch (error) {

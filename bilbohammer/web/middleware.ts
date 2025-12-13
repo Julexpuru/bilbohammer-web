@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const ENFORCE_HTTPS = process.env.NODE_ENV === "production";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const ENFORCE_HTTPS = IS_PRODUCTION;
 const HSTS_VALUE = "max-age=63072000; includeSubDomains; preload";
 const SECURITY_HEADERS: Array<[string, string]> = [
   ["Referrer-Policy", "strict-origin-when-cross-origin"],
@@ -17,7 +18,11 @@ const CORS_HEADERS = "Origin, X-Requested-With, Content-Type, Accept, Authorizat
 const allowedOrigins = buildAllowedOrigins();
 const canonicalOrigin = normalizeOrigin(process.env.APP_BASE_URL ?? inferVercelUrl());
 const canonicalHost = canonicalOrigin ? new URL(canonicalOrigin).host.toLowerCase() : null;
-const ENFORCE_CANONICAL_HOST = process.env.NODE_ENV === "production";
+const ENFORCE_CANONICAL_HOST = IS_PRODUCTION;
+const DEV_ONLY_COOKIE_NAME = "beta_access";
+const DEV_ONLY_QUERY_PARAM = "beta";
+const DEV_ONLY_BYPASS_TOKEN = (process.env.DEV_ONLY_BYPASS_TOKEN ?? "").trim();
+const devOnlyPaths = buildDevOnlyPaths();
 
 export function middleware(request: NextRequest) {
   const protocol = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")).toLowerCase();
@@ -39,6 +44,14 @@ export function middleware(request: NextRequest) {
   }
 
   const isApiRoute = request.nextUrl.pathname.startsWith("/api");
+  const devOnlyDecision = evaluateDevOnlyAccess(request, isApiRoute);
+
+  if (devOnlyDecision?.action === "redirect") {
+    const redirect = NextResponse.redirect(devOnlyDecision.destination, 307);
+    applySecurityHeaders(redirect, isHttps);
+    return redirect;
+  }
+
   if (isApiRoute && request.method === "OPTIONS") {
     const preflight = new NextResponse(null, { status: 204 });
     applySecurityHeaders(preflight, isHttps);
@@ -47,6 +60,19 @@ export function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
+
+  if (devOnlyDecision?.action === "set-cookie") {
+    response.cookies.set({
+      name: DEV_ONLY_COOKIE_NAME,
+      value: DEV_ONLY_BYPASS_TOKEN,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isHttps,
+      path: "/",
+      maxAge: 60 * 60 * 12,
+    });
+  }
+
   applySecurityHeaders(response, isHttps);
 
   if (isApiRoute) {
@@ -104,12 +130,25 @@ function buildAllowedOrigins() {
     origins.add(origin);
   }
 
-  if (process.env.NODE_ENV !== "production") {
+  if (!IS_PRODUCTION) {
     origins.add("http://localhost:3000");
     origins.add("http://127.0.0.1:3000");
   }
 
   return origins;
+}
+
+function buildDevOnlyPaths() {
+  const raw = process.env.DEV_ONLY_PATHS ?? "";
+  const prefixes = raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => (value.startsWith("/") ? value : `/${value}`))
+    .map((value) => (value.length > 1 && value.endsWith("/") ? value.slice(0, -1) : value));
+
+  const unique = Array.from(new Set(prefixes));
+  return unique.filter((value) => value !== "/en-construccion");
 }
 
 function normalizeOrigin(value?: string | null) {
@@ -129,6 +168,50 @@ function inferVercelUrl() {
   const vercelUrl = process.env.VERCEL_URL;
   if (!vercelUrl) return null;
   return `https://${vercelUrl}`;
+}
+
+function evaluateDevOnlyAccess(request: NextRequest, isApiRoute: boolean) {
+  if (!IS_PRODUCTION) return null;
+  if (devOnlyPaths.length === 0) return null;
+  if (isApiRoute) return null;
+
+  const pathname = normalizePathname(request.nextUrl.pathname);
+  if (pathname === "/en-construccion") return null;
+  if (!isDevOnlyPath(pathname)) return null;
+
+  if (DEV_ONLY_BYPASS_TOKEN) {
+    const cookieValue = request.cookies.get(DEV_ONLY_COOKIE_NAME)?.value;
+    if (tokensMatch(cookieValue, DEV_ONLY_BYPASS_TOKEN)) {
+      return { action: "skip" } as const;
+    }
+
+    const queryToken = request.nextUrl.searchParams.get(DEV_ONLY_QUERY_PARAM);
+    if (tokensMatch(queryToken, DEV_ONLY_BYPASS_TOKEN)) {
+      return { action: "set-cookie" } as const;
+    }
+  }
+
+  const destination = request.nextUrl.clone();
+  destination.pathname = "/en-construccion";
+  destination.search = "";
+  destination.searchParams.set("from", pathname);
+
+  return { action: "redirect", destination } as const;
+}
+
+function isDevOnlyPath(pathname: string) {
+  return devOnlyPaths.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+function normalizePathname(pathname: string) {
+  if (!pathname.startsWith("/")) return `/${pathname}`;
+  if (pathname.length > 1 && pathname.endsWith("/")) return pathname.slice(0, -1);
+  return pathname;
+}
+
+function tokensMatch(value: string | undefined | null, target: string) {
+  if (!value) return false;
+  return value.trim() === target;
 }
 
 export const config = {

@@ -8,7 +8,7 @@ import { ContactContentView } from "./ContactContentView";
 export const metadata = {
   title: "Contacto | Bilbohammer",
   description:
-    "Encuentra todas las formas de hablar con Bilbohammer: redes sociales, correo electronico y ubicacion del local.",
+    "Encuentra todas las formas de hablar con Bilbohammer: redes sociales, correo electrónico y ubicación del local.",
 };
 
 const MAP_SOURCE_URL = "https://maps.app.goo.gl/wAzzzPmTJeoihVof8";

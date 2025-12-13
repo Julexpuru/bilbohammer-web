@@ -18,6 +18,9 @@ export const metadata = {
   },
 };
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning>
@@ -28,8 +31,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `
 (function(){try{
   var s=localStorage.getItem('bh-theme');
-  var d=window.matchMedia('(prefers-color-scheme: dark)').matches;
-  document.documentElement.setAttribute('data-theme', s || (d ? 'dark' : 'light'));
+  var t=s||'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  if(!s){localStorage.setItem('bh-theme', t);}
 }catch(e){}})();
 `,
           }}

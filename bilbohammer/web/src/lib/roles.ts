@@ -28,6 +28,22 @@ export function userCanManageEvents(session: Session | null | undefined): boolea
   return hasClubPrivileges(session);
 }
 
+export function userCanManageTables(session: Session | null | undefined): boolean {
+  return hasClubPrivileges(session);
+}
+
+export function userCanManageBlocks(session: Session | null | undefined): boolean {
+  return hasClubPrivileges(session);
+}
+
+export function userCanManageReservations(session: Session | null | undefined): boolean {
+  return hasClubPrivileges(session);
+}
+
+export function userCanManageMatches(session: Session | null | undefined): boolean {
+  return hasClubPrivileges(session);
+}
+
 function resolveSessionUserId(session: Session | null | undefined): number | null {
   const rawId = (session?.user as any)?.id;
   if (typeof rawId === "number" && Number.isFinite(rawId)) {

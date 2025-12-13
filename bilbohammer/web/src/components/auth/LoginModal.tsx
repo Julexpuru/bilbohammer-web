@@ -55,7 +55,7 @@ export default function LoginModal({ open, onClose }: Props) {
       callbackUrl: callbackUrl || "/",
     });
     if (result?.error) {
-      setErrorMessage("No se pudo iniciar sesion. Revisa el email o la contrasena.");
+      setErrorMessage("No se pudo iniciar sesión. Revisa el email o la contraseña.");
       setSubmitting(false);
       return;
     }
@@ -85,7 +85,7 @@ export default function LoginModal({ open, onClose }: Props) {
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-semibold text-[var(--text)]">Accede al club</h2>
             <p className="text-sm text-[var(--muted)]">
-              Usa tu cuenta existente o crea una nueva si todavia no formas parte del club.
+              Usa tu cuenta existente o crea una nueva si todavía no formas parte del club.
             </p>
           </div>
 
@@ -128,7 +128,7 @@ export default function LoginModal({ open, onClose }: Props) {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-[var(--text)]" htmlFor="login-password">
-                Contrasena
+                Contraseña
               </label>
               <input
                 id="login-password"
@@ -145,7 +145,7 @@ export default function LoginModal({ open, onClose }: Props) {
               className="w-full rounded-2xl bg-[#0f62ff] px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[#0d54d4] hover:shadow-xl disabled:opacity-60"
               disabled={submitting}
             >
-              {submitting ? "Iniciando sesion..." : "Entrar con email"}
+              {submitting ? "Iniciando sesión..." : "Entrar con email"}
             </button>
             {errorMessage && <p className="text-sm text-center text-red-400">{errorMessage}</p>}
           </form>

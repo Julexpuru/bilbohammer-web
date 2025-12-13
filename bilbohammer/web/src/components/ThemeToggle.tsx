@@ -7,7 +7,7 @@ type ThemeToggleProps = {
 };
 
 export default function ThemeToggle({ variant = "nav" }: ThemeToggleProps) {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
 
   useEffect(() => {
     const doc = document.documentElement;
@@ -16,10 +16,9 @@ export default function ThemeToggle({ variant = "nav" }: ThemeToggleProps) {
       setTheme(stored);
       doc.setAttribute("data-theme", stored);
     } else {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initial = prefersDark ? "dark" : "light";
-      setTheme(initial);
-      doc.setAttribute("data-theme", initial);
+      setTheme("dark");
+      doc.setAttribute("data-theme", "dark");
+      localStorage.setItem("bh-theme", "dark");
     }
   }, []);
 

@@ -56,7 +56,7 @@ export function AssignBoardMemberButton({
       })
       .catch((err) => {
         if (err.name !== "AbortError") {
-          setError("No se pudo completar la busqueda. Intentalo de nuevo.");
+          setError("No se pudo completar la búsqueda. Inténtalo de nuevo.");
         }
       })
       .finally(() => setLoading(false));
@@ -139,7 +139,7 @@ export function AssignBoardMemberButton({
             <div className="mt-4 max-h-64 overflow-y-auto rounded-2xl border border-dashed border-[var(--hairline)] bg-[var(--card-muted)] p-2">
               {query.trim().length < 2 ? (
                 <p className="text-sm text-[var(--muted)] px-2 py-4">
-                  Escribe al menos 2 caracteres para iniciar la busqueda.
+                  Escribe al menos 2 caracteres para iniciar la búsqueda.
                 </p>
               ) : loading ? (
                 <p className="text-sm text-[var(--muted)] px-2 py-4">Buscando...</p>
@@ -207,7 +207,7 @@ export function RemoveBoardMemberButton({
       if (!response.ok) throw new Error("REMOVE_ERROR");
       router.refresh();
     } catch (err) {
-      setError("No se pudo eliminar este cargo. Intentalo de nuevo.");
+      setError("No se pudo eliminar este cargo. Inténtalo de nuevo.");
     } finally {
       setRemoving(false);
     }

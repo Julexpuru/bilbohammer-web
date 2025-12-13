@@ -63,7 +63,7 @@ export default function UserAvatarMenu({ size = 34, profileHref = "/mi-perfil", 
   if (!user) {
     return (
       <button className={`${styles.loginBtn} ${className ?? ""}`} onClick={() => signIn()}>
-        Iniciar sesion
+        Iniciar sesión
       </button>
     );
   }
@@ -122,7 +122,7 @@ export default function UserAvatarMenu({ size = 34, profileHref = "/mi-perfil", 
                 signOut({ callbackUrl: "/" });
               }}
             >
-              Cerrar sesion
+              Cerrar sesión
             </button>
           </div>
         </div>

@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/sobre-nosotros/tablon-de-socios/page": [
+    "/juego-organizado/mesas/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/sobre-nosotros/tablon-de-socios/page.js"
+      "static/chunks/app/juego-organizado/mesas/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -11,15 +11,30 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/mi-perfil/page": [
+    "/error": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/mi-perfil/page.js"
+      "static/chunks/app/error.js"
     ],
-    "/_not-found/page": [
+    "/not-found": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/not-found.js"
+    ],
+    "/sobre-nosotros/quienes-somos/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/sobre-nosotros/quienes-somos/page.js"
+    ],
+    "/novedades/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/novedades/page.js"
+    ],
+    "/novedades/nueva/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/novedades/nueva/page.js"
     ]
   }
 }

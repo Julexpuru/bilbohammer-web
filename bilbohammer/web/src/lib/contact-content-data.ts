@@ -70,7 +70,7 @@ export const CONTACT_CONTENT_DEFAULT: ContactPageContent = {
         role: "Eventos",
         name: "Iker",
         phone: "+34 611 111 111",
-        note: "Reservas de mesa y coordinacion de torneos.",
+        note: "Reservas de mesa y coordinación de torneos.",
         whatsappUrl: "https://wa.me/34611111111",
       },
     ],
@@ -81,12 +81,12 @@ export const CONTACT_CONTENT_DEFAULT: ContactPageContent = {
     },
   },
   instagram: {
-    description: "Noticias, fotos de partidas y previa de nuestros proximos eventos.",
+    description: "Noticias, fotos de partidas y previa de nuestros próximos eventos.",
     handle: "@bilbohammerclub",
     url: "https://www.instagram.com/bilbohammerclub/",
   },
   email: {
-    description: "Para gestiones formales, altas de socios y propuestas de colaboracion.",
+    description: "Para gestiones formales, altas de socios y propuestas de colaboración.",
     address: "hola@bilbohammer.eus",
   },
   discord: {

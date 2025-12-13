@@ -46,7 +46,7 @@ export async function PUT(request: Request) {
   } catch (error) {
     console.error("[admin/contact-content] Error guardando contenido", error);
     return NextResponse.json(
-      { error: "No se pudo guardar el contenido. Intenta de nuevo mas tarde." },
+      { error: "No se pudo guardar el contenido. Intenta de nuevo más tarde." },
       { status: 500 },
     );
   }

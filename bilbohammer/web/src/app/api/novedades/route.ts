@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       article.categories = categories.includes(fallback) ? categories : [fallback, ...categories];
     }
 
+    article.status = article.status === "draft" ? "draft" : "published";
     article.comments = article.comments ?? [];
     article.tags = article.tags ?? [];
     article.body = article.body ?? [];

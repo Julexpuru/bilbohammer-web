@@ -38,7 +38,7 @@ export function GalleryFilters({
           <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Filtros</p>
           <h2 className="text-2xl font-semibold leading-tight">Filtra por juego o formato</h2>
           <p className="text-sm text-[var(--muted)]">
-            Selecciona varias etiquetas para refinar los resultados. La galeria se actualiza al instante.
+            Selecciona varias etiquetas para refinar los resultados. La galería se actualiza al instante.
           </p>
         </div>
 

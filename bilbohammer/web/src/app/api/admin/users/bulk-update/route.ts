@@ -146,7 +146,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No hay cambios para guardar" }, { status: 400 });
   }
   if (updates.length > 100) {
-    return NextResponse.json({ error: "Demasiados cambios simultaneos" }, { status: 400 });
+    return NextResponse.json({ error: "Demasiados cambios simultáneos" }, { status: 400 });
   }
 
   const adminId = Number.parseInt(String(session.user.id ?? ""), 10);

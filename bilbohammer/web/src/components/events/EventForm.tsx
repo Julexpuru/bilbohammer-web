@@ -263,7 +263,7 @@ const GAME_OPTIONS: { value: Juego; label: string }[] = [
   { value: "W40K", label: "Warhammer 40K" },
   { value: "AOS", label: "Age of Sigmar" },
   { value: "TOW", label: "The Old World" },
-  { value: "ESDLA", label: "El Senor de los Anillos" },
+  { value: "ESDLA", label: "El Señor de los Anillos" },
   { value: "BB", label: "Blood Bowl" },
   { value: "MARVEL", label: "Marvel Crisis Protocol" },
   { value: "ROL", label: "Rol" },
@@ -362,7 +362,7 @@ const HIGHLIGHT_TYPE_OPTIONS: { value: EventHighlightType; label: string }[] = [
 const EVENT_CONTENT_TABS = [
   { id: "description", label: "Descripcion" },
   { id: "resources", label: "Archivos y enlaces" },
-  { id: "stories", label: "Clasificacion, destacados y cronica" },
+  { id: "stories", label: "Clasificación, destacados y crónica" },
   { id: "gallery", label: "Galeria" },
   { id: "location", label: "Ubicacion" },
 ] as const;
@@ -694,7 +694,7 @@ function useMemberSearch(query: string) {
           cache: "no-store",
         });
         if (!response.ok) {
-          throw new Error(`Fallo en la busqueda (${response.status})`);
+          throw new Error(`Fallo en la búsqueda (${response.status})`);
         }
         const data = (await response.json()) as { results?: MemberSearchResult[] };
         if (!cancelled) {
@@ -839,7 +839,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       .then(async (response) => {
         if (!response.ok) {
           const data = await response.json().catch(() => null);
-          throw new Error(data?.error ?? "No se pudo cargar la cronica enlazada.");
+          throw new Error(data?.error ?? "No se pudo cargar la crónica enlazada.");
         }
         const data = (await response.json()) as { results: ChronicleSearchResult[] };
         if (!cancelled) {
@@ -852,7 +852,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       })
       .catch((error) => {
         if (!cancelled) {
-          setChronicleError(error instanceof Error ? error.message : "No se pudo cargar la cronica enlazada.");
+          setChronicleError(error instanceof Error ? error.message : "No se pudo cargar la crónica enlazada.");
           setSelectedChronicle(null);
         }
       })
@@ -905,13 +905,13 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
         });
         if (!response.ok) {
           const data = await response.json().catch(() => null);
-          throw new Error(data?.error ?? "No se pudo buscar cronicas.");
+          throw new Error(data?.error ?? "No se pudo buscar crónicas.");
         }
         const data = (await response.json()) as { results: ChronicleSearchResult[] };
         setChronicleResults(data.results);
       } catch (error) {
         if (controller.signal.aborted) return;
-        setChronicleError(error instanceof Error ? error.message : "No se pudo buscar cronicas.");
+        setChronicleError(error instanceof Error ? error.message : "No se pudo buscar crónicas.");
         setChronicleResults([]);
       } finally {
         if (!controller.signal.aborted) {
@@ -1350,7 +1350,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       );
     } catch (error) {
       setChronicleError(
-        error instanceof Error ? error.message : "No se pudo preparar la creacion de la cronica.",
+        error instanceof Error ? error.message : "No se pudo preparar la creación de la crónica.",
       );
     } finally {
       setChronicleActionBusy(false);
@@ -1378,7 +1378,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       );
     } catch (error) {
       setChronicleError(
-        error instanceof Error ? error.message : "No se pudo preparar la edicion de la cronica.",
+        error instanceof Error ? error.message : "No se pudo preparar la edición de la crónica.",
       );
     } finally {
       setChronicleActionBusy(false);
@@ -2234,7 +2234,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
         <header>
           <h2 className="text-lg font-semibold">Etiquetas</h2>
           <p className="text-sm text-[var(--muted)]">
-            Anade etiquetas para ayudar en la busqueda y filtrado.
+            Añade etiquetas para ayudar en la búsqueda y filtrado.
           </p>
         </header>
         <div className="flex flex-wrap items-center gap-3">
@@ -2257,7 +2257,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
               onClick={handleAddTag}
               disabled={!tagInput.trim() || duplicateTag}
             >
-              Anadir
+              Añadir
             </button>
           </div>
           {duplicateTag && (
@@ -2361,7 +2361,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
               searchInputRef.current?.focus();
             }}
           >
-            Anadir organizador manualmente
+            Añadir organizador manualmente
           </button>
           <button
             type="button"
@@ -2387,7 +2387,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
               })
             }
           >
-            Anadir organizacion
+            Añadir organizacion
           </button>
         </div>
         {state.organizers.length > 0 ? (
@@ -2431,7 +2431,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                     className="rounded-2xl border border-white/15 bg-black/40 px-3 py-2 text-sm focus:border-white/40 focus:outline-none"
                     value={organizer.role}
                     onChange={(event) => updateOrganizer(organizer.key, { role: event.target.value })}
-                    placeholder="Ej. Coordinacion"
+                    placeholder="Ej. Coordinación"
                   />
                 </label>
                 <button
@@ -2527,7 +2527,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
          </ul>
        ) : (
          <p className="text-sm text-[var(--muted)]">
-           Anade las organizaciones colaboradoras que deban aparecer en la ficha.
+           Añade las organizaciones colaboradoras que deban aparecer en la ficha.
          </p>
         )}
         {validationErrors.organizations && (
@@ -2539,7 +2539,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
         <header>
           <h2 className="text-lg font-semibold">Bloques de contenido</h2>
           <p className="text-sm text-[var(--muted)]">
-            Organiza la informacion del evento en pestanas y controla su visibilidad.
+            Organiza la información del evento en pestañas y controla su visibilidad.
           </p>
         </header>
         <div className="flex flex-wrap gap-2">
@@ -2647,7 +2647,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                     }))
                   }
                 >
-                      Anadir adjunto
+                      Añadir adjunto
                     </button>
                   </div>
                   {state.attachments.length > 0 ? (
@@ -2800,7 +2800,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                         }))
                       }
                     >
-                      Anadir enlace
+                      Añadir enlace
                     </button>
                   </div>
                   {state.links.length > 0 ? (
@@ -2881,7 +2881,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                     syncTabVisibility("showTabClassification", event.target.checked, ["showStandings"])
                   }
                 />
-                Mostrar pestaña Clasificacion
+                Mostrar pestaña Clasificación
               </label>
               <label className="flex items-center gap-3 text-sm text-[var(--muted)]">
                 <input
@@ -2892,7 +2892,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                     syncTabVisibility("showTabChronicle", event.target.checked, ["showRecap"])
                   }
                 />
-                Mostrar pestaña Cronica
+                Mostrar pestaña Crónica
               </label>
             </div>
             <div className="space-y-6">
@@ -2900,10 +2900,10 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white">
-                      Cronica en Novedades
+                      Crónica en Novedades
                     </h3>
                     <p className="text-xs text-[var(--muted)]">
-                      Vincula la cronica del evento publicada en la seccion de novedades o crea una nueva sin salir del editor.
+                      Vincula la crónica del evento publicada en la sección de novedades o crea una nueva sin salir del editor.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -2913,7 +2913,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                       onClick={handleChronicleCreate}
                       disabled={chronicleActionBusy || submitBusy || deleteBusy}
                     >
-                      Nueva cronica
+                      Nueva crónica
                     </button>
                     {selectedChronicle && selectedChronicle.slug && (
                       <button
@@ -2922,7 +2922,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                         onClick={handleChronicleEdit}
                         disabled={chronicleActionBusy || submitBusy || deleteBusy}
                       >
-                        Editar cronica
+                        Editar crónica
                       </button>
                     )}
                     {selectedChronicle && selectedChronicle.slug && (
@@ -2932,7 +2932,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                         rel="noreferrer"
                         className="rounded-2xl border border-white/20 px-3 py-2 text-xs font-semibold text-white transition hover:border-white/40"
                       >
-                        Ver cronica
+                        Ver crónica
                       </Link>
                     )}
                     {selectedChronicle && (
@@ -2951,7 +2951,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                   <div className="space-y-1 rounded-2xl border border-white/10 bg-black/30 p-4">
                     <p className="text-sm font-semibold text-white">{selectedChronicle.title}</p>
                     <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-                      {selectedChronicle.category === "chronicles" ? "Cronicas" : selectedChronicle.category}
+                      {selectedChronicle.category === "chronicles" ? "Crónicas" : selectedChronicle.category}
                     </p>
                     {selectedChronicle.summary && (
                       <p className="text-sm text-[var(--muted)]">{selectedChronicle.summary}</p>
@@ -2962,13 +2962,13 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                   </div>
                 ) : (
                   <p className="text-sm text-[var(--muted)]">
-                    No hay ninguna cronica enlazada todavia. Puedes crear una nueva o buscarla entre las publicadas.
+                    No hay ninguna crónica enlazada todavía. Puedes crear una nueva o buscarla entre las publicadas.
                   </p>
                 )}
                 <div className="space-y-2">
                   <label className="grid gap-1">
                     <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-                      Buscar cronica existente
+                      Buscar crónica existente
                     </span>
                     <input
                       className="rounded-2xl border border-white/15 bg-black/30 px-3 py-2 text-sm focus:border-white/40 focus:outline-none"
@@ -2982,10 +2982,10 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                     />
                   </label>
                   {chronicleLoading && (
-                    <p className="text-xs text-[var(--muted)]">Cargando datos de la cronica vinculada...</p>
+                    <p className="text-xs text-[var(--muted)]">Cargando datos de la crónica vinculada...</p>
                   )}
                   {chronicleBusy && !chronicleLoading && (
-                    <p className="text-xs text-[var(--muted)]">Buscando cronicas coincidentes...</p>
+                    <p className="text-xs text-[var(--muted)]">Buscando crónicas coincidentes...</p>
                   )}
                   {chronicleError && <p className="text-xs text-red-300">{chronicleError}</p>}
                   {chronicleResults.length > 0 && (
@@ -3010,7 +3010,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                   )}
                   {!chronicleBusy && chronicleResults.length === 0 && chronicleQueryTrimmed.length >= 2 && (
                     <p className="text-xs text-[var(--muted)]">
-                      No se encontraron cronicas que coincidan con la busqueda.
+                      No se encontraron crónicas que coincidan con la búsqueda.
                     </p>
                   )}
                 </div>
@@ -3040,7 +3040,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                         }))
                       }
                     >
-                      Anadir jugador destacado
+                      Añadir jugador destacado
                     </button>
                   </div>
                   {state.highlights.length > 0 ? (
@@ -3129,7 +3129,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white">
-                      Clasificacion
+                      Clasificación
                     </h3>
                     <button
                       type="button"
@@ -3151,7 +3151,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                         }))
                       }
                     >
-                      Anadir entrada de clasificacion
+                      Añadir entrada de clasificación
                     </button>
                   </div>
                   {state.rankings.length > 0 ? (
@@ -3227,7 +3227,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                     </ul>
                   ) : (
                     <p className="text-sm text-[var(--muted)]">
-                      Agrega posiciones para mostrar una tabla de clasificacion.
+                      Agrega posiciones para mostrar una tabla de clasificación.
                     </p>
                   )}
                 </div>
@@ -3495,7 +3495,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm text-white underline decoration-dotted underline-offset-4 hover:text-white/80"
                 >
-                  Abrir enlace en nueva pestana
+                  Abrir enlace en nueva pestaña
                 </a>
               )}
               <p className="text-xs text-[var(--muted)]">
@@ -3510,7 +3510,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
 
       <footer className="flex flex-col gap-3 border-t border-white/10 pt-4 md:flex-row md:items-center md:justify-between">
         <div className="text-xs text-[var(--muted)]">
-          Revisa la informacion antes de guardar. Podras editarla mas adelante.
+          Revisa la información antes de guardar. Podrás editarla más adelante.
         </div>
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           {mode === "edit" && (

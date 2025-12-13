@@ -13,7 +13,7 @@ export default async function GestionUsuariosPage() {
     return (
       <section className="card space-y-2">
         <h1 className="text-2xl font-semibold text-[var(--text)]">Acceso restringido</h1>
-        <p className="text-sm text-[var(--muted)]">Necesitas permisos de administracion del club para ver este panel.</p>
+        <p className="text-sm text-[var(--muted)]">Necesitas permisos de administración del club para ver este panel.</p>
       </section>
     );
   }

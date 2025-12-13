@@ -371,7 +371,7 @@ export function ContactContentView({
           <div className="rounded-3xl border border-dashed border-[var(--hairline)] bg-[var(--card-muted)] p-6 text-sm text-[var(--muted)]">
             No se pudo cargar el mapa.{" "}
             <a href={mapSourceUrl} target="_blank" rel="noreferrer" className="underline">
-              Abre la ubicacion en Google Maps
+              Abre la ubicación en Google Maps
             </a>
             .
           </div>
@@ -716,7 +716,7 @@ function renderWhatsappCard(props: WhatsappEditorProps) {
             className="rounded-full border border-dashed border-[var(--accent-400)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--accent-600)] hover:bg-[var(--accent-50)] disabled:opacity-60"
             disabled={saving}
           >
-            Anadir contacto
+            Añadir contacto
           </button>
         </div>
 
@@ -964,7 +964,7 @@ function renderEmailCard(props: EmailEditorProps) {
     return (
       <div className="space-y-3 rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-lg font-semibold text-[var(--text)]">Correo electronico</h3>
+          <h3 className="text-lg font-semibold text-[var(--text)]">Correo electrónico</h3>
         </div>
         <textarea
           value={draft.description}
@@ -1007,7 +1007,7 @@ function renderEmailCard(props: EmailEditorProps) {
   return (
     <div className="space-y-3 rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)] p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold text-[var(--text)]">Correo electronico</h3>
+        <h3 className="text-lg font-semibold text-[var(--text)]">Correo electrónico</h3>
         {canEdit && (
           <button
             type="button"

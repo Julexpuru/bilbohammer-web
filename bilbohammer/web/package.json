@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "prisma generate && next build",
+    "build": "NODE_ENV=production prisma generate && NODE_ENV=production next build",
     "start": "next start -p 3000",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",

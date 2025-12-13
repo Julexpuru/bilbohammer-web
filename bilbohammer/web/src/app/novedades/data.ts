@@ -8,6 +8,8 @@ export const CATEGORY_LABELS: Record<ArticleCategory, string> = {
   members: "Solo Socios",
 };
 
+export type ArticleStatus = "draft" | "published";
+
 export type ArticleBlock =
   | { type: "paragraph"; text: string }
   | { type: "heading"; level: 2 | 3; text: string }
@@ -33,6 +35,7 @@ export type Article = {
   id: string;
   category: ArticleCategory;
   categories: ArticleCategory[];
+  status: ArticleStatus;
   slug: string;
   title: string;
   author: string;

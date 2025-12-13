@@ -241,7 +241,7 @@ export function GalleryContentUploader({
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error("No se pudo buscar colaboradores", error);
-          setSearchError("No se pudo buscar los colaboradores. Intentalo de nuevo mas tarde.");
+          setSearchError("No se pudo buscar los colaboradores. Inténtalo de nuevo más tarde.");
           setSearchResults([]);
         }
       } finally {
@@ -465,9 +465,9 @@ export function GalleryContentUploader({
 
       onClose();
     } catch (error) {
-      console.error("No se pudo guardar el contenido de la galeria", error);
+      console.error("No se pudo guardar el contenido de la galería", error);
       const message =
-        error instanceof Error ? error.message : "No se pudo guardar el contenido. Intentalo de nuevo.";
+        error instanceof Error ? error.message : "No se pudo guardar el contenido. Inténtalo de nuevo.";
       setSubmitError(message);
     } finally {
       setIsSubmitting(false);
@@ -552,7 +552,7 @@ export function GalleryContentUploader({
       <div className="grid w-full max-w-5xl gap-6 rounded-3xl border border-[var(--hairline)] bg-[var(--card)] p-8 shadow-xl max-h-[calc(100vh-5rem)] overflow-y-auto">
         <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold">Gestor de la galeria</h2>
+            <h2 className="text-2xl font-semibold">Gestor de la galería</h2>
             <p className="text-sm text-[var(--muted)]">
                 Sube fotos o prepara un nuevo album. El contenido se guardara en el servidor cuando confirmes.
             </p>
@@ -703,14 +703,14 @@ export function GalleryContentUploader({
                 className="rounded-full border border-[var(--accent)] bg-[var(--accent-50)] px-4 py-2 text-sm font-medium text-[var(--accent-600)]"
                 onClick={() => fileInputRef.current?.click()}
               >
-                Anadir imagenes
+                Añadir imágenes
               </button>
             </div>
           </div>
 
           {photos.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-[var(--hairline)] bg-[var(--card)] p-6 text-center text-sm text-[var(--muted)]">
-              Todavia no hay fotos seleccionadas. Sube algunas imagenes para definir el orden y la informacion asociada.
+              Todavía no hay fotos seleccionadas. Sube algunas imágenes para definir el orden y la información asociada.
             </p>
           ) : (
             <ul className="space-y-3">
@@ -836,8 +836,7 @@ export function GalleryContentUploader({
         <footer className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs text-[var(--muted)]">
             <p>
-              Los archivos se guardaran en el servidor y quedaran disponibles en la galeria nada mas confirmar este
-              paso.
+              Los archivos se guardarán en el servidor y quedarán disponibles en la galería nada más confirmar este paso.
             </p>
             {submitError && <p className="mt-1 text-red-400">{submitError}</p>}
           </div>

@@ -10,6 +10,7 @@ import { getArticlesByCategory } from "@/lib/novedades-repository";
 import type { Article } from "@/app/novedades/data";
 import type { PostType } from "@prisma/client";
 import { buildEventSlug } from "@/lib/events/slug";
+import { htmlToPlainText } from "@/lib/text";
 
 type UiPost = {
   id: string;
@@ -59,7 +60,7 @@ export default async function HomePage() {
     <>
       <section className="mx-auto mb-14 w-full max-w-5xl px-4 sm:px-6 lg:px-0">
         <div className="rounded-3xl border border-[var(--accent-200)] bg-gradient-to-r from-[#ffe08a] via-[#ffc163] to-[#ff9f45] p-4 text-center text-sm font-medium text-[#2d1f00] shadow-lg dark:border-[var(--accent-400)] dark:text-[#1a1200]">
-          Esta pagina actualmente esta ultimando su desarrollo y contenido y la información mostrada en ella puede no
+          Esta página actualmente está ultimando su desarrollo y contenido y la información mostrada en ella puede no
           corresponderse totalmente con la realidad.
         </div>
       </section>
@@ -72,10 +73,11 @@ export default async function HomePage() {
 }
 
 function mapArticleToPost(article: Article, type: PostType): UiPost {
+  const firstParagraph = article.body?.find((block) => block.type === "paragraph");
   const fallback =
     article.summary ||
-    article.body?.find((block) => block.type === "paragraph")?.text ||
-    "Consulta la ficha completa en la sección de novedades.";
+    htmlToPlainText(firstParagraph?.text) ||
+    "Consulta la ficha completa en la seccion de novedades.";
   const category = article.category || article.categories?.[0] || "news";
   return {
     id: `article-${article.id}`,
@@ -99,11 +101,12 @@ type MinimalEvent = {
 };
 
 function mapEventToPost(event: MinimalEvent): UiPost {
+  const plainDetails = htmlToPlainText(event.details);
   return {
     id: `event-${event.id}`,
     type: "EVENTO",
     title: event.title,
-    content: event.details ?? event.location ?? "Consulta la ficha completa para ver todos los detalles.",
+    content: plainDetails || event.location || "Consulta la ficha completa para ver todos los detalles.",
     createdAt: event.startsAt.toISOString(),
     imageUrl: event.bannerUrl ?? null,
     reactionScore: 0,

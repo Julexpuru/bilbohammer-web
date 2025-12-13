@@ -228,6 +228,7 @@ type HeroCardProps = {
 function HeroCard({ article }: HeroCardProps) {
   const excerpt = useMemo(() => toExcerpt(article.summary), [article.summary]);
   const formattedDate = useMemo(() => formatReadableDate(article.date), [article.date]);
+  const isDraft = article.status === "draft";
   const href = `/novedades/${article.category}/${article.slug}`;
 
   return (
@@ -240,6 +241,11 @@ function HeroCard({ article }: HeroCardProps) {
           <span>{formattedDate}</span>
           <span>|</span>
           <span>{article.author}</span>
+          {isDraft && (
+            <span className="rounded-full bg-yellow-500/10 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-yellow-300">
+              Borrador
+            </span>
+          )}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="flex-1 text-2xl font-semibold text-[var(--text)]">
@@ -247,14 +253,16 @@ function HeroCard({ article }: HeroCardProps) {
               {article.title}
             </Link>
           </h2>
-          <ArticleShareButtons
-            category={article.category}
-            slug={article.slug}
-            title={article.title}
-            summary={article.summary}
-            className="sm:ml-4"
-            appearance="light"
-          />
+          {!isDraft && (
+            <ArticleShareButtons
+              category={article.category}
+              slug={article.slug}
+              title={article.title}
+              summary={article.summary}
+              className="sm:ml-4"
+              appearance="light"
+            />
+          )}
         </div>
         <p className="text-sm text-[var(--muted)]">{excerpt}</p>
         <div className="flex flex-wrap gap-2">

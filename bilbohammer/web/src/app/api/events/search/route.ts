@@ -4,6 +4,7 @@ import { Prisma, EventStatus, EventType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { loadActiveGames, resolveGameIdsFromInput } from "@/lib/game-catalog";
 import { buildEventSlug } from "@/lib/events/slug";
+import { htmlToPlainText } from "@/lib/text";
 
 const TAKE_DEFAULT = 12;
 const TAKE_MAX = 48;
@@ -166,6 +167,7 @@ export async function GET(request: Request) {
     const slice = events.slice(0, take);
 
     const items = slice.map((event) => {
+      const plainDetails = htmlToPlainText(event.details);
       const { venueName, city } = normalizeLocation(event.location);
 
       const now = Date.now();
@@ -180,7 +182,7 @@ export async function GET(request: Request) {
         id: event.id,
         slug: buildEventSlug(event.id, event.title),
         title: event.title,
-        subtitle: event.details ? event.details.trim().split(/\r?\n/, 1)[0] ?? null : null,
+        subtitle: plainDetails ? plainDetails.split(/\r?\n/, 1)[0] ?? null : null,
         startsAt: event.startsAt.toISOString(),
         endsAt: event.endsAt.toISOString(),
         timezone: "Europe/Madrid",

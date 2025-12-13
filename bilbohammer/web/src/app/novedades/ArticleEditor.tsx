@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
-import type { Article, ArticleBlock, ArticleCategory } from "./data";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import type { Article, ArticleBlock, ArticleCategory, ArticleStatus } from "./data";
 import { CATEGORY_LABELS } from "./data";
 
 type ArticleEditorMode = "create" | "edit";
@@ -44,6 +45,7 @@ export function ArticleEditor({
         ? [initialValue.category]
         : [normalizedDefaultCategory];
   const [categories, setCategories] = useState<ArticleCategory[]>(initialCategories);
+  const [status, setStatus] = useState<ArticleStatus>(initialValue?.status ?? "draft");
   const [author, setAuthor] = useState(initialValue?.author ?? "");
   const [date, setDate] = useState(initialValue?.date ?? new Date().toISOString().slice(0, 10));
   const [banner, setBanner] = useState(initialValue?.banner ?? "");
@@ -126,6 +128,7 @@ export function ArticleEditor({
         id: initialValue?.id ?? generateId(),
         category: selectedCategories[0],
         categories: selectedCategories,
+        status,
         slug: slugValue,
         title: title.trim(),
         author: author.trim() || "Equipo Bilbohammer",
@@ -179,7 +182,7 @@ export function ArticleEditor({
       setStatusMessage(
         error instanceof Error
           ? error.message
-          : "Ocurrio un problema al guardar la noticia. Intentalo de nuevo.",
+          : "Ocurrió un problema al guardar la noticia. Inténtalo de nuevo.",
       );
     } finally {
       setSaving(false);
@@ -290,6 +293,19 @@ export function ArticleEditor({
               })}
             </div>
           </LabeledFieldset>
+          <LabeledFieldset
+            label="Estado de la publicaciИn"
+            helper="Los borradores no aparecen en el listado pЯblico; solo editores y administradores pueden verlos."
+          >
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as ArticleStatus)}
+              className="w-full rounded-2xl border border-[var(--hairline)] bg-[var(--card)] px-4 py-3 text-sm text-[var(--text)] focus:border-[var(--accent-400)] focus:outline-none [&>option]:bg-[var(--card)] [&>option]:text-[var(--text)] [&>option]:font-medium"
+            >
+              <option value="draft">Borrador</option>
+              <option value="published">Publicada</option>
+            </select>
+          </LabeledFieldset>
           <LabeledInput label="Autor">
             <input
               value={author}
@@ -389,6 +405,7 @@ export function ArticleEditor({
               ))}
             </div>
           )}
+          <AddSectionMenu onAdd={addBlock} />
         </div>
 
         <div className="flex justify-end">
@@ -462,6 +479,73 @@ function AddBlockButton({ label, onClick }: AddBlockButtonProps) {
   );
 }
 
+type AddSectionMenuProps = {
+  onAdd: (type: ArticleBlock["type"]) => void;
+};
+
+function AddSectionMenu({ onAdd }: AddSectionMenuProps) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [open]);
+
+  const handleSelect = (type: ArticleBlock["type"]) => {
+    onAdd(type);
+    setOpen(false);
+  };
+
+  return (
+    <div className="sticky bottom-4 flex justify-end" ref={menuRef}>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          className="flex items-center gap-2 rounded-full border border-[var(--hairline)] bg-[var(--card-muted)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--text)] shadow-sm transition hover:border-[var(--accent-400)]"
+        >
+          Añadir sección
+          <span className={`text-[0.7rem] transition ${open ? "rotate-180" : ""}`}>▼</span>
+        </button>
+        {open && (
+          <div className="absolute bottom-[calc(100%+0.5rem)] right-0 w-56 overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--card)] shadow-xl">
+            <AddSectionOption label="Párrafo" hint="Texto con formato" onClick={() => handleSelect("paragraph")} />
+            <AddSectionOption label="Encabezado" hint="Titulares H2 o H3" onClick={() => handleSelect("heading")} />
+            <AddSectionOption label="Imagen" hint="Con pie y flotante" onClick={() => handleSelect("image")} />
+            <AddSectionOption label="Cita" hint="Frases destacadas" onClick={() => handleSelect("quote")} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+type AddSectionOptionProps = {
+  label: string;
+  hint: string;
+  onClick: () => void;
+};
+
+function AddSectionOption({ label, hint, onClick }: AddSectionOptionProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full flex-col items-start gap-1 px-4 py-3 text-left text-sm text-[var(--text)] transition hover:bg-[var(--card-muted)]"
+    >
+      <span className="font-semibold">{label}</span>
+      <span className="text-xs text-[var(--muted)]">{hint}</span>
+    </button>
+  );
+}
+
 type BlockEditorProps = {
   block: EditableBlock;
   index: number;
@@ -509,12 +593,11 @@ function BlockEditor({ block, index, onChange, onRemove }: BlockEditorProps) {
       </header>
 
       {block.type === "paragraph" && (
-        <textarea
+        <RichTextEditor
           value={block.text}
-          onChange={(event) => onChange({ text: event.target.value })}
-          rows={4}
-          className="w-full rounded-2xl border border-[var(--hairline)] bg-[var(--card)] px-4 py-3 text-sm text-[var(--text)] focus:border-[var(--accent-400)] focus:outline-none"
-          placeholder="Escribe el párrafo..."
+          onChange={(html) => onChange({ text: html })}
+          placeholder="Texto con formato, listas, negritas..."
+          className="border-[var(--hairline)] bg-[var(--card)] text-[var(--text)]"
         />
       )}
 
