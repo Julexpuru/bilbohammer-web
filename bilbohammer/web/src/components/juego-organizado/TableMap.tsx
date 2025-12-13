@@ -84,7 +84,6 @@ const MAP_MIN_HEIGHT = 900;
 const MAP_PADDING = 28;
 const LOCAL_SPLIT_X = MAP_BASE_WIDTH / 2;
 type LocalKey = "LOCAL1" | "LOCAL2";
-type LocalKey = "LOCAL1" | "LOCAL2";
 
 type Draft = {
   posX: number;
@@ -304,7 +303,7 @@ export function TableMap({ canManage }: Props) {
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onUp);
     };
-  }, [draggingId, selectedId]);
+  }, [draggingId, scale, selectedId]);
 
   useEffect(() => {
     if (!editing) setDraggingId(null);
