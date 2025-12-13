@@ -26,6 +26,7 @@ const devOnlyPaths = buildDevOnlyPaths();
 const DEV_ONLY_DISABLE = (process.env.DEV_ONLY_DISABLE ?? "").trim() === "1";
 
 export function middleware(request: NextRequest) {
+  const pathname = normalizePathname(request.nextUrl.pathname);
   const protocol = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")).toLowerCase();
   const isHttps = protocol === "https";
 
@@ -45,22 +46,43 @@ export function middleware(request: NextRequest) {
   }
 
   const isApiRoute = request.nextUrl.pathname.startsWith("/api");
-  const devOnlyDecision = evaluateDevOnlyAccess(request, isApiRoute);
+  const devOnlyDecision = evaluateDevOnlyAccess(request, isApiRoute, pathname);
 
   if (devOnlyDecision?.action === "redirect") {
     const redirect = NextResponse.redirect(devOnlyDecision.destination, 307);
+    redirect.headers.set(
+      "x-dev-only",
+      buildDevOnlyDebugHeader({
+        pathname,
+        decision: devOnlyDecision.action,
+      })
+    );
     applySecurityHeaders(redirect, isHttps);
     return redirect;
   }
 
   if (isApiRoute && request.method === "OPTIONS") {
     const preflight = new NextResponse(null, { status: 204 });
+    preflight.headers.set(
+      "x-dev-only",
+      buildDevOnlyDebugHeader({
+        pathname,
+        decision: devOnlyDecision?.action,
+      })
+    );
     applySecurityHeaders(preflight, isHttps);
     applyCorsHeaders(request, preflight);
     return preflight;
   }
 
   const response = NextResponse.next();
+  response.headers.set(
+    "x-dev-only",
+    buildDevOnlyDebugHeader({
+      pathname,
+      decision: devOnlyDecision?.action,
+    })
+  );
 
   if (devOnlyDecision?.action === "set-cookie") {
     response.cookies.set({
@@ -171,12 +193,12 @@ function inferVercelUrl() {
   return `https://${vercelUrl}`;
 }
 
-function evaluateDevOnlyAccess(request: NextRequest, isApiRoute: boolean) {
+function evaluateDevOnlyAccess(request: NextRequest, isApiRoute: boolean, pathOverride?: string) {
   if (DEV_ONLY_DISABLE) return null;
   if (devOnlyPaths.length === 0) return null;
   if (isApiRoute) return null;
 
-  const pathname = normalizePathname(request.nextUrl.pathname);
+  const pathname = pathOverride ?? normalizePathname(request.nextUrl.pathname);
   if (pathname === "/en-construccion") return null;
   if (!isDevOnlyPath(pathname)) return null;
 
@@ -208,6 +230,12 @@ function normalizePathname(pathname: string) {
   if (!pathname.startsWith("/")) return `/${pathname}`;
   if (pathname.length > 1 && pathname.endsWith("/")) return pathname.slice(0, -1);
   return pathname;
+}
+
+function buildDevOnlyDebugHeader(opts: { pathname: string; decision?: string }) {
+  const decision = opts.decision ?? "none";
+  const token = DEV_ONLY_BYPASS_TOKEN ? "set" : "none";
+  return `disable=${DEV_ONLY_DISABLE};paths=${devOnlyPaths.length};token=${token};decision=${decision};path=${opts.pathname}`;
 }
 
 function tokensMatch(value: string | undefined | null, target: string) {
