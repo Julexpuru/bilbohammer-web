@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { formatClubDateTime } from "@/lib/date-format";
@@ -23,6 +24,7 @@ const RICH_TEXT_CLASS =
   "space-y-2 leading-relaxed text-[var(--muted)] [&_p]:text-[var(--muted)] [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_strong]:text-[var(--text)] [&_b]:text-[var(--text)] [&_em]:text-[var(--text)] [&_u]:text-[var(--text)] [&_a]:text-[var(--accent-600)] [&_a]:underline [&_a]:hover:no-underline";
 
 export function ArticleDetailView({ article, relatedPhotos, canManage, canComment, currentUserName }: Props) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"comments" | "photos">("comments");
   const [comments, setComments] = useState<ArticleComment[]>(() => cloneComments(article.comments));
   const [newComment, setNewComment] = useState("");
@@ -30,6 +32,7 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt?: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const formattedDate = useMemo(() => formatReadableDate(article.date), [article.date]);
   const isDraft = article.status === "draft";
@@ -95,8 +98,27 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
     }
   };
 
-  const handleDelete = () => {
-    setStatusMessage("Acción de eliminar pendiente de implementación.");
+  const handleDelete = async () => {
+    if (!canManage || deleting) return;
+    const confirmed = window.confirm("¿Seguro que quieres eliminar esta noticia/crónica? Esta acción no se puede deshacer.");
+    if (!confirmed) return;
+    setDeleting(true);
+    setStatusMessage("Eliminando publicación...");
+    try {
+      const response = await fetch(`/api/novedades/${article.id}`, { method: "DELETE" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || "No se pudo eliminar la publicación.");
+      }
+      setStatusMessage("Publicación eliminada. Redirigiendo...");
+      router.push("/novedades");
+      router.refresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo eliminar la publicación.";
+      setStatusMessage(message);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   useEffect(() => {
@@ -160,9 +182,10 @@ export function ArticleDetailView({ article, relatedPhotos, canManage, canCommen
               <button
                 type="button"
                 onClick={handleDelete}
-                className="rounded-full border border-[var(--hairline)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)] transition hover:text-[var(--text)]"
+                disabled={deleting}
+                className="rounded-full border border-[var(--hairline)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Eliminar
+                {deleting ? "Eliminando..." : "Eliminar"}
               </button>
             </div>
           )}

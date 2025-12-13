@@ -245,3 +245,14 @@ export async function searchChronicles(
   });
   return records.map(mapRecordToArticle);
 }
+
+export async function deleteArticleById(articleId: string): Promise<boolean> {
+  if (!articleId) return false;
+  try {
+    await prisma.newsArticle.delete({ where: { id: articleId } });
+    return true;
+  } catch (error) {
+    console.error("[novedades] delete failed", error);
+    return false;
+  }
+}
