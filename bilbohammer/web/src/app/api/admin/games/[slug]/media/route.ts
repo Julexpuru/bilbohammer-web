@@ -3,16 +3,11 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { extractRoles } from "@/lib/roles";
 import prisma from "@/lib/prisma";
-import {
-  deleteUploadFile,
-  joinUploadRelativePath,
-  saveUploadFile,
-  toPublicPath,
-} from "@/lib/uploads/storage";
+import { deleteUploadFile } from "@/lib/uploads/storage";
 
 type MediaPayload = {
   kind?: "icon" | "hero";
-  dataUrl?: string;
+  imageUrl?: string;
 };
 
 export async function POST(request: Request, { params }: { params: { slug: string } }) {
@@ -28,8 +23,13 @@ export async function POST(request: Request, { params }: { params: { slug: strin
   }
 
   const body = (await request.json()) as MediaPayload;
-  if (!body || (body.kind !== "icon" && body.kind !== "hero") || typeof body.dataUrl !== "string") {
-    return NextResponse.json({ error: "Petición inválida." }, { status: 400 });
+  if (!body || (body.kind !== "icon" && body.kind !== "hero")) {
+    return NextResponse.json({ error: "Peticion invalida." }, { status: 400 });
+  }
+
+  const parsedImageUrl = parseImageUrl(body.imageUrl);
+  if ("error" in parsedImageUrl) {
+    return NextResponse.json({ error: parsedImageUrl.error }, { status: 400 });
   }
 
   const game = await prisma.game.findFirst({
@@ -42,16 +42,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
   }
 
   try {
-    const { buffer, extension } = parseDataUrl(body.dataUrl);
-    const timestamp = Date.now();
-    const filename = `${game.slug}-${timestamp}.${extension}`;
-    const relativePath = joinUploadRelativePath(
-      "games",
-      body.kind === "icon" ? "icons" : "hero",
-      filename,
-    );
-    await saveUploadFile(relativePath, buffer);
-    const publicPath = toPublicPath(relativePath);
+    const publicPath = parsedImageUrl.url;
 
     if (body.kind === "icon" && game.iconImagePath) {
       void deleteUploadFile(game.iconImagePath);
@@ -60,10 +51,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
       void deleteUploadFile(game.heroImagePath);
     }
 
-    const update =
-      body.kind === "icon"
-        ? { iconImagePath: publicPath }
-        : { heroImagePath: publicPath };
+    const update = body.kind === "icon" ? { iconImagePath: publicPath } : { heroImagePath: publicPath };
 
     await prisma.game.update({
       where: { id: game.id },
@@ -82,30 +70,15 @@ export async function POST(request: Request, { params }: { params: { slug: strin
   }
 }
 
-function parseDataUrl(dataUrl: string) {
-  const match = /^data:(.+);base64,(.+)$/i.exec(dataUrl);
-  if (!match) {
-    throw new Error("Formato de imagen no válido.");
+function parseImageUrl(value: unknown) {
+  if (value === null || value === undefined) return { error: "URL de imagen requerida." };
+  if (typeof value !== "string") {
+    return { error: "URL de imagen invalida." };
   }
-  const mimeType = match[1];
-  const base64 = match[2];
-  const buffer = Buffer.from(base64, "base64");
-  const extension = mimeToExtension(mimeType);
-  return { buffer, extension };
-}
-
-function mimeToExtension(mime: string) {
-  switch (mime.toLowerCase()) {
-    case "image/jpeg":
-    case "image/jpg":
-      return "jpg";
-    case "image/png":
-      return "png";
-    case "image/webp":
-      return "webp";
-    case "image/gif":
-      return "gif";
-    default:
-      return "bin";
+  const trimmed = value.trim();
+  if (!trimmed) return { error: "URL de imagen requerida." };
+  if (trimmed.startsWith("data:")) {
+    return { error: "No se aceptan imagenes en base64." };
   }
+  return { url: trimmed };
 }

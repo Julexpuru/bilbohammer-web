@@ -12,6 +12,7 @@
     "seed:prod": "tsx prisma/seed.production.ts",
     "lint": "next lint",
     "migrate:legacy-media": "tsx scripts/migrate-legacy-game-media.ts",
+    "migrate:uploads-r2": "tsx scripts/migrate-uploads-to-r2.ts",
     "migration:guards": "tsx scripts/run-migration-guards.ts"
   },
   "prisma": {
@@ -20,6 +21,8 @@
   "dependencies": {
     "@auth/core": "0.34.2",
     "@auth/prisma-adapter": "^2.10.0",
+    "@aws-sdk/client-s3": "^3.971.0",
+    "@aws-sdk/s3-request-presigner": "^3.971.0",
     "@prisma/client": "^6.14.0",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",

@@ -11,24 +11,16 @@
       "page": "/",
       "matchers": [
         {
-          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/mi-perfil(.json)?[\\/#\\?]?$",
-          "originalSource": "/mi-perfil"
-        },
-        {
-          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/profile(.json)?[\\/#\\?]?$",
-          "originalSource": "/profile"
-        },
-        {
-          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/api\\/members(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(.json)?[\\/#\\?]?$",
-          "originalSource": "/api/members/:path*"
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?(?:\\/((?!_next\\/static|_next\\/image|favicon.ico).*))(.json)?[\\/#\\?]?$",
+          "originalSource": "/((?!_next/static|_next/image|favicon.ico).*)"
         }
       ],
       "wasm": [],
       "assets": [],
       "environments": {
-        "previewModeId": "b238ddfc0974a053cbea56469941cb62",
-        "previewModeSigningKey": "6687d7d8ac79d0ae6e2f652ceec5ae8ea809f80e093a67cd97770652eb899fe2",
-        "previewModeEncryptionKey": "f3531632ada74c419fb7b7de182bda881036717992254a262c4e34010ba2c478"
+        "previewModeId": "305bf4d14d169bfe817ef92bce67e227",
+        "previewModeSigningKey": "e2c86a29985d0d5dc5992b94d8fbd6f14559385162d384e925bbe1111b0d0eca",
+        "previewModeEncryptionKey": "e9510a0c7f6551a4162bafee47c3456ccc3320a0d093a35b4a05e678b8cfff9d"
       }
     }
   },

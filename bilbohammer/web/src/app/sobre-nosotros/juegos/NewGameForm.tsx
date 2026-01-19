@@ -3,15 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { slugify } from "@/lib/slugify";
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
+import { uploadImageToR2 } from "@/lib/uploads/presign-client";
 
 export function NewGameForm() {
   const router = useRouter();
@@ -63,10 +55,12 @@ export function NewGameForm() {
         isDefault,
       };
       if (iconFile) {
-        payload.iconDataUrl = await readFileAsDataUrl(iconFile);
+        const { publicUrl } = await uploadImageToR2(iconFile);
+        payload.iconImageUrl = publicUrl;
       }
       if (heroFile) {
-        payload.heroDataUrl = await readFileAsDataUrl(heroFile);
+        const { publicUrl } = await uploadImageToR2(heroFile);
+        payload.heroImageUrl = publicUrl;
       }
 
       const response = await fetch("/api/admin/games", {

@@ -5,15 +5,14 @@ import { extractRoles } from "@/lib/roles";
 import { slugify } from "@/lib/slugify";
 import prisma from "@/lib/prisma";
 import { GAME_DEFAULT_CONTENT } from "@/lib/game-default-content";
-import { joinUploadRelativePath, saveUploadFile, toPublicPath } from "@/lib/uploads/storage";
 
 type CreatePayload = {
   name?: string;
   slug?: string;
   legacyEnumKey?: string | null;
   isDefault?: boolean;
-  iconDataUrl?: string | null;
-  heroDataUrl?: string | null;
+  iconImageUrl?: string | null;
+  heroImageUrl?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -63,21 +62,21 @@ export async function POST(request: Request) {
       },
     });
 
-    let iconImagePath: string | null = null;
-    if (body.iconDataUrl) {
-      iconImagePath = await saveMediaFile(slug, body.iconDataUrl, "icon");
+    const iconImagePath = parseImageUrl(body.iconImageUrl);
+    if ("error" in iconImagePath) {
+      return NextResponse.json({ error: iconImagePath.error }, { status: 400 });
     }
-    let heroImagePath: string | null = null;
-    if (body.heroDataUrl) {
-      heroImagePath = await saveMediaFile(slug, body.heroDataUrl, "hero");
+    const heroImagePath = parseImageUrl(body.heroImageUrl);
+    if ("error" in heroImagePath) {
+      return NextResponse.json({ error: heroImagePath.error }, { status: 400 });
     }
 
-    if (iconImagePath || heroImagePath) {
+    if (iconImagePath.url || heroImagePath.url) {
       await prisma.game.update({
         where: { id: created.id },
         data: {
-          iconImagePath: iconImagePath ?? undefined,
-          heroImagePath: heroImagePath ?? undefined,
+          iconImagePath: iconImagePath.url ?? undefined,
+          heroImagePath: heroImagePath.url ?? undefined,
         },
       });
     }
@@ -121,44 +120,17 @@ export async function POST(request: Request) {
   }
 }
 
-async function saveMediaFile(slug: string, dataUrl: string, kind: "icon" | "hero") {
-  const { buffer, extension } = parseDataUrl(dataUrl);
-  const filename = `${slug}-${kind}-${Date.now()}.${extension}`;
-  const relativePath = joinUploadRelativePath(
-    "games",
-    kind === "icon" ? "icons" : "hero",
-    filename,
-  );
-  await saveUploadFile(relativePath, buffer);
-  return toPublicPath(relativePath);
-}
-
-function parseDataUrl(dataUrl: string) {
-  const match = /^data:(.+);base64,(.+)$/i.exec(dataUrl);
-  if (!match) {
-    throw new Error("Formato de imagen no válido.");
+function parseImageUrl(value: unknown) {
+  if (value === null || value === undefined) return { url: null as string | null };
+  if (typeof value !== "string") {
+    return { error: "URL de imagen invalida." };
   }
-  const mimeType = match[1];
-  const base64 = match[2];
-  const buffer = Buffer.from(base64, "base64");
-  const extension = mimeToExtension(mimeType);
-  return { buffer, extension };
-}
-
-function mimeToExtension(mime: string) {
-  switch (mime.toLowerCase()) {
-    case "image/jpeg":
-    case "image/jpg":
-      return "jpg";
-    case "image/png":
-      return "png";
-    case "image/webp":
-      return "webp";
-    case "image/gif":
-      return "gif";
-    default:
-      return "bin";
+  const trimmed = value.trim();
+  if (!trimmed) return { url: null as string | null };
+  if (trimmed.startsWith("data:")) {
+    return { error: "No se aceptan imagenes en base64." };
   }
+  return { url: trimmed };
 }
 
 async function keepOtrosLast() {

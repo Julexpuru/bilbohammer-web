@@ -7,12 +7,23 @@ import { auth } from "@/auth";
 import { userCanManageTables } from "@/lib/roles";
 import { parseIntOrNull, parseString, parseTableStatus, errorJson } from "../shared";
 
+const GAME_SELECT = {
+  id: true,
+  slug: true,
+  name: true,
+  iconImagePath: true,
+  heroImagePath: true,
+};
+
 export async function GET() {
   const tables = await prisma.clubTable.findMany({
     where: { isActive: true },
     orderBy: { name: "asc" },
     include: {
       layouts: true,
+      game: {
+        select: GAME_SELECT,
+      },
     },
   });
   return NextResponse.json(tables);
@@ -46,6 +57,17 @@ export async function POST(request: Request) {
   const sizeTag = parseString(raw.sizeTag);
   const notes = parseString(raw.notes);
   const status = parseTableStatus(raw.status) ?? "AVAILABLE";
+  const gameLabel = parseString(raw.gameLabel);
+  const layoutImagePath = parseString(raw.layoutImagePath);
+  const sceneryImagePath = parseString(raw.sceneryImagePath);
+
+  let gameId: string | null = null;
+  const rawGameId = parseString(raw.gameId);
+  if (rawGameId) {
+    const gameExists = await prisma.game.findUnique({ where: { id: rawGameId }, select: { id: true } });
+    if (!gameExists) return errorJson("Juego no encontrado.");
+    gameId = rawGameId;
+  }
 
   const table = await prisma.clubTable.create({
     data: {
@@ -58,7 +80,17 @@ export async function POST(request: Request) {
       sizeTag,
       notes,
       status,
+      gameId,
+      gameLabel,
+      layoutImagePath,
+      sceneryImagePath,
       isActive: raw.isActive !== false,
+    },
+    include: {
+      layouts: true,
+      game: {
+        select: GAME_SELECT,
+      },
     },
   });
 

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { uploadImageToR2 } from "@/lib/uploads/presign-client";
 
 type GameCardProps = {
   slug: string;
@@ -227,11 +228,11 @@ export function GameCard(props: GameCardProps) {
     const setUploading = kind === "icon" ? setIconUploading : setHeroUploading;
     setUploading(true);
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const { publicUrl } = await uploadImageToR2(file);
       const response = await fetch(`/api/admin/games/${encodeURIComponent(slug)}/media`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, dataUrl }),
+        body: JSON.stringify({ kind, imageUrl: publicUrl }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -611,11 +612,3 @@ function useMemberSearch(query: string) {
   return { results, loading };
 }
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}

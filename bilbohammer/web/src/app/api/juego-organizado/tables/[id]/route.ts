@@ -7,6 +7,14 @@ import { auth } from "@/auth";
 import { userCanManageTables } from "@/lib/roles";
 import { parseIntOrNull, parseString, parseTableStatus, errorJson } from "../../shared";
 
+const GAME_SELECT = {
+  id: true,
+  slug: true,
+  name: true,
+  iconImagePath: true,
+  heroImagePath: true,
+};
+
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
   if (!userCanManageTables(session)) {
@@ -18,13 +26,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud inválido.", 400);
+    return errorJson("Cuerpo de la solicitud invalido.", 400);
   }
 
   const data: any = {};
   if (raw.name !== undefined) {
     const name = parseString(raw.name);
-    if (!name) return errorJson("El nombre no puede estar vacío.");
+    if (!name) return errorJson("El nombre no puede estar vacio.");
     data.name = name;
   }
   if (raw.posX !== undefined) data.posX = parseIntOrNull(raw.posX);
@@ -36,14 +44,33 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (raw.notes !== undefined) data.notes = parseString(raw.notes);
   if (raw.status !== undefined) {
     const status = parseTableStatus(raw.status);
-    if (!status) return errorJson("Estado de mesa no válido.");
+    if (!status) return errorJson("Estado de mesa no valido.");
     data.status = status;
+  }
+  if (raw.gameLabel !== undefined) data.gameLabel = parseString(raw.gameLabel);
+  if (raw.layoutImagePath !== undefined) data.layoutImagePath = parseString(raw.layoutImagePath);
+  if (raw.sceneryImagePath !== undefined) data.sceneryImagePath = parseString(raw.sceneryImagePath);
+  if (raw.gameId !== undefined) {
+    const rawGameId = parseString(raw.gameId);
+    if (rawGameId) {
+      const gameExists = await prisma.game.findUnique({ where: { id: rawGameId }, select: { id: true } });
+      if (!gameExists) return errorJson("Juego no encontrado.");
+      data.gameId = rawGameId;
+    } else {
+      data.gameId = null;
+    }
   }
   if (raw.isActive !== undefined) data.isActive = Boolean(raw.isActive);
 
   const updated = await prisma.clubTable.update({
     where: { id },
     data,
+    include: {
+      layouts: true,
+      game: {
+        select: GAME_SELECT,
+      },
+    },
   });
 
   return NextResponse.json(updated);
