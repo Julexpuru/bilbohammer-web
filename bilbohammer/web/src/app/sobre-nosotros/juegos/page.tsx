@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { assetUrl } from "@/lib/assets";
 import { loadActiveGames } from "@/lib/game-catalog";
 import { GAME_DEFAULT_CONTENT, type GameDefaultContent } from "@/lib/game-default-content";
 import { buildGameContactDisplay } from "@/lib/game-info";
@@ -16,16 +17,16 @@ export const metadata = {
 };
 
 const HERO_IMAGES: Partial<Record<string, string>> = {
-  w40k: "/assets/icons/games/w40k.png",
-  aos: "/assets/icons/games/aos.png",
-  tow: "/assets/icons/games/tow.png",
-  esdla: "/assets/icons/games/esdla.png",
-  bb: "/assets/icons/games/bloodbowl.png",
-  marvel: "/assets/icons/games/mcp.png",
-  rol: "/assets/icons/games/rol.png",
-  magic: "/assets/icons/games/magic.png",
-  boardgames: "/assets/icons/games/juegosdemesa.png",
-  otros: "/assets/icons/games/otros.png",
+  w40k: assetUrl("/assets/icons/games/w40k.png"),
+  aos: assetUrl("/assets/icons/games/aos.png"),
+  tow: assetUrl("/assets/icons/games/tow.png"),
+  esdla: assetUrl("/assets/icons/games/esdla.png"),
+  bb: assetUrl("/assets/icons/games/bloodbowl.png"),
+  marvel: assetUrl("/assets/icons/games/mcp.png"),
+  rol: assetUrl("/assets/icons/games/rol.png"),
+  magic: assetUrl("/assets/icons/games/magic.png"),
+  boardgames: assetUrl("/assets/icons/games/juegosdemesa.png"),
+  otros: assetUrl("/assets/icons/games/otros.png"),
 };
 
 type GameDisplay = {
@@ -143,8 +144,8 @@ async function composeGameDisplay(): Promise<GameDisplay[]> {
   for (const entry of fallback) {
     const override = dbBySlug.get(entry.slug);
     const slug = entry.slug;
-    const iconImagePath = override?.iconImagePath ?? entry.iconImagePath ?? null;
-    const heroImagePath = override?.heroImagePath ?? entry.heroImagePath ?? null;
+    const iconImagePath = assetUrl(override?.iconImagePath ?? entry.iconImagePath ?? "") || null;
+    const heroImagePath = assetUrl(override?.heroImagePath ?? entry.heroImagePath ?? "") || null;
     results.push({
       id: override?.id ?? entry.slug,
       slug,
@@ -160,8 +161,8 @@ async function composeGameDisplay(): Promise<GameDisplay[]> {
   for (const game of dbGames) {
     if (seen.has(game.slug)) continue;
     const slug = game.slug;
-    const iconImagePath = game.iconImagePath ?? null;
-    const heroImagePath = game.heroImagePath ?? null;
+    const iconImagePath = assetUrl(game.iconImagePath ?? "") || null;
+    const heroImagePath = assetUrl(game.heroImagePath ?? "") || null;
     results.push({
       id: game.id,
       slug,

@@ -14,6 +14,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
+import { gameIconPath } from "@/lib/games";
 import { useGamesCatalog } from "@/lib/use-games-catalog";
 
 type GameEntry = {
@@ -43,7 +44,7 @@ export default function GameCarousel3D({ className }: { className?: string }) {
       .map((game) => ({
         slug: game.slug,
         name: game.name,
-        iconImagePath: game.iconImagePath ?? `/assets/icons/games/${game.slug}.png`,
+        iconImagePath: game.iconImagePath ?? gameIconPath(game.slug),
       }));
   }, [catalog]);
 

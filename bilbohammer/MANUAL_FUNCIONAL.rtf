@@ -79,7 +79,7 @@
 \bullet\tab Juegos: GameCard con descripcion, inversion y contactos; Junta/Admin puede editar y crear juegos.\par
 \bullet\tab Contacto: contenido dinamico desde siteContent, contador de socios y bloque de Discord para socios.\par
 \bullet\tab Tablon de socios: acceso para SOCIO/JUNTA/ADMIN, piramide de junta y listado completo con boton Ponme cara.\par
-\bullet\tab Ponme cara sube foto via /api/upload/avatar y actualiza /api/me/profile.\par
+\bullet\tab Ponme cara sube foto via R2 (presign) + /api/upload/avatar (imageUrl) y actualiza /api/me/profile.\par
 
 \pard\sb240\b\fs24 2.6 Politica de cookies\par
 \pard\fi-360\li360
@@ -91,7 +91,7 @@
 \pard\sb240\b\fs24 3.1 Mi perfil (/mi-perfil)\par
 \pard\fi-360\li360
 \bullet\tab Muestra avatar, roles, fechas, descripcion, juegos y eventos organizados/participados.\par
-\bullet\tab ClientEditWrapper permite editar nombre, nick, descripcion, fecha de membresia, avatar y juegos/facciones.\par
+\bullet\tab ClientEditWrapper permite editar nombre, nick, descripcion, fecha de membresia, avatar (R2 + /api/upload/avatar) y juegos/facciones.\par
 
 \pard\sb240\b\fs24 3.2 Acceso y registro\par
 \pard\fi-360\li360
@@ -122,11 +122,11 @@
 \bullet\tab /api/admin/contact-content guarda datos de contacto.\par
 \bullet\tab /api/admin/board-assignments maneja cargos del tablon.\par
 \bullet\tab /api/members/search asiste a tablon y galeria.\par
-\bullet\tab /api/upload/* controla almacenamiento en storage/uploads.\par
+\bullet\tab /api/uploads/presign y /api/uploads/* generan URLs prefirmadas para subir a R2.\par
 
 \pard\sb360\b\fs28 5. Consideraciones finales\par
 \pard\fi-360\li360
-\bullet\tab Los ficheros se sirven via /uploads/[...path]; ajustar UPLOADS\_ROOT o UPLOADS\_PUBLIC\_PREFIX si hace falta.\par
+\bullet\tab Los ficheros se sirven via CDN con /uploads/* redirigido (STORAGE_PUBLIC_BASE/NEXT_PUBLIC_UPLOAD_BASE).\par
 \bullet\tab middleware.ts fuerza HTTPS, aplica cabeceras y CORS.\par
 \bullet\tab Antes de anadir servicios externos, actualiza el banner y la pagina de cookies.\par
 

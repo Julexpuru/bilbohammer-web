@@ -11,6 +11,7 @@ import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { extractRoles } from "@/lib/roles";
+import { assetUrl } from "@/lib/assets";
 
 const primaryLinks = [
   { href: "/", label: "Inicio" },
@@ -234,7 +235,7 @@ export default function TopBar() {
         <div className="justify-self-start brand-container">
           <Link href="/" aria-label="Ir a inicio - Bilbohammer" className="brand-link">
             <Image
-              src="/assets/img/LogoBH_sinfondo_croppedtight.png"
+              src={assetUrl("/assets/img/LogoBH_sinfondo_croppedtight.png")}
               alt="Bilbohammer"
               width={880}
               height={244}

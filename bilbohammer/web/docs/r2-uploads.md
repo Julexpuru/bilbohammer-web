@@ -8,6 +8,7 @@
 - `STORAGE_SECRET_KEY`
 - `STORAGE_PUBLIC_BASE` (CDN base, e.g. `https://cdn.bilbohammer.es` or `https://cdn.bilbohammer.es/uploads`)
 - `NEXT_PUBLIC_UPLOAD_BASE` (same CDN base for client rendering, e.g. `https://cdn.bilbohammer.es/uploads`)
+- `NEXT_PUBLIC_ASSETS_BASE` (optional CDN base for static assets in `/public/assets`, e.g. `https://cdn.bilbohammer.es` or `https://cdn.bilbohammer.es/assets`)
 
 ## Test presign + PUT with curl
 1) Request a presigned URL:
@@ -49,6 +50,27 @@ Apply changes:
 ```bash
 npm run normalize:upload-urls -- --apply
 ```
+
+## Static assets on R2 (optional)
+Static images in `public/assets` can be mirrored to R2 under the `assets/` prefix. If you set `NEXT_PUBLIC_ASSETS_BASE`,
+the UI will render those images from the CDN instead of the app container.
+
+Dry-run:
+```bash
+npm run sync:public-assets -- --dry-run
+```
+Upload:
+```bash
+npm run sync:public-assets
+```
+Overwrite:
+```bash
+npm run sync:public-assets -- --overwrite
+```
+
+Notes:
+- `public/uploads` and `storage/uploads` are legacy locations used only for migration.
+- The app now redirects `/uploads/*` to the CDN when `STORAGE_PUBLIC_BASE` is set.
 
 ## What changed vs base64 uploads
 - Game admin images now use `/api/uploads/presign` + direct PUT to R2.

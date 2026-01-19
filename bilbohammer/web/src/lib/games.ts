@@ -1,3 +1,5 @@
+import { assetUrl } from "@/lib/assets";
+
 // === Game metadata & factions ===
 // Slugs follow the icon filenames in /public/assets/icons/games/*.png
 
@@ -16,7 +18,7 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
   w40k: {
     name: "Warhammer 40,000",
     iconImagePath: "/assets/icons/games/w40k.png",
-    heroImagePath: "/assets/heroes/games/w40k.jpg",
+    heroImagePath: "/assets/heroes/games/w40k.png",
     legacyEnumKey: "W40K",
     sortOrder: 10,
     isDefault: false,
@@ -24,7 +26,7 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
   aos: {
     name: "Age of Sigmar",
     iconImagePath: "/assets/icons/games/aos.png",
-    heroImagePath: "/assets/heroes/games/aos.jpg",
+    heroImagePath: "/assets/heroes/games/aos.png",
     legacyEnumKey: "AOS",
     sortOrder: 20,
     isDefault: false,
@@ -32,7 +34,7 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
   tow: {
     name: "The Old World",
     iconImagePath: "/assets/icons/games/tow.png",
-    heroImagePath: "/assets/heroes/games/tow.jpg",
+    heroImagePath: "/assets/heroes/games/tow.png",
     legacyEnumKey: "TOW",
     sortOrder: 30,
     isDefault: false,
@@ -40,7 +42,7 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
   esdla: {
     name: "ESDLA",
     iconImagePath: "/assets/icons/games/esdla.png",
-    heroImagePath: "/assets/heroes/games/esdla.jpg",
+    heroImagePath: "/assets/heroes/games/esdla.png",
     legacyEnumKey: "ESDLA",
     sortOrder: 40,
     isDefault: false,
@@ -48,7 +50,7 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
   bb: {
     name: "Blood Bowl",
     iconImagePath: "/assets/icons/games/bloodbowl.png",
-    heroImagePath: "/assets/heroes/games/bloodbowl.jpg",
+    heroImagePath: "/assets/heroes/games/bloodbowl.png",
     legacyEnumKey: "BB",
     sortOrder: 50,
     isDefault: false,
@@ -56,7 +58,7 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
   marvel: {
     name: "Marvel Crisis Protocol",
     iconImagePath: "/assets/icons/games/mcp.png",
-    heroImagePath: "/assets/heroes/games/marvel.jpg",
+    heroImagePath: "/assets/heroes/games/marvel.png",
     legacyEnumKey: "MARVEL",
     sortOrder: 60,
     isDefault: false,
@@ -64,7 +66,7 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
   rol: {
     name: "Rol",
     iconImagePath: "/assets/icons/games/rol.png",
-    heroImagePath: "/assets/heroes/games/rol.jpg",
+    heroImagePath: "/assets/heroes/games/rol.png",
     legacyEnumKey: "ROL",
     sortOrder: 70,
     isDefault: false,
@@ -72,7 +74,7 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
   magic: {
     name: "Magic",
     iconImagePath: "/assets/icons/games/magic.png",
-    heroImagePath: "/assets/heroes/games/magic.jpg",
+    heroImagePath: "/assets/heroes/games/magic.png",
     legacyEnumKey: "MAGIC",
     sortOrder: 80,
     isDefault: false,
@@ -80,7 +82,7 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
   boardgames: {
     name: "Juegos de mesa",
     iconImagePath: "/assets/icons/games/juegosdemesa.png",
-    heroImagePath: "/assets/heroes/games/boardgames.jpg",
+    heroImagePath: "/assets/heroes/games/boardgames.png",
     legacyEnumKey: "JUEGOS_DE_MESA",
     sortOrder: 90,
     isDefault: false,
@@ -88,7 +90,7 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
   otros: {
     name: "Otros",
     iconImagePath: "/assets/icons/games/otros.png",
-    heroImagePath: "/assets/heroes/games/otros.jpg",
+    heroImagePath: "/assets/heroes/games/otros.png",
     legacyEnumKey: "OTROS",
     sortOrder: 100,
     isDefault: true,
@@ -97,7 +99,12 @@ export const LEGACY_GAME_META: Record<string, LegacyGameMeta> = {
 
 export function fallbackGameList() {
   return Object.entries(LEGACY_GAME_META)
-    .map(([slug, meta]) => ({ slug, ...meta }))
+    .map(([slug, meta]) => ({
+      slug,
+      ...meta,
+      iconImagePath: assetUrl(meta.iconImagePath),
+      heroImagePath: meta.heroImagePath ? assetUrl(meta.heroImagePath) : meta.heroImagePath,
+    }))
     .sort((a, b) => {
       if (a.sortOrder === b.sortOrder) {
         return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
@@ -156,7 +163,7 @@ export const FACTIONS: Record<
     {
       id: "helmsmithsofhashut",
       name: "Helmsmiths of Hashut",
-      iconUrl: "/assets/icons/factions/tow/chaosdwarves.png",
+      iconUrl: assetUrl("/assets/icons/factions/tow/chaosdwarves.png"),
     },
     { id: "idoneth", name: "Idoneth Deepkin" },
     { id: "ironjawz", name: "Ironjawz" },
@@ -281,20 +288,21 @@ export function enumFactionToUi(game: "w40k" | "aos" | "tow", value: string): st
 // === Icons ===
 
 export function gameIconPath(slug: string): string {
-  return LEGACY_GAME_META[slug]?.iconImagePath ?? `/assets/icons/games/${slug}.png`;
+  const fallback = LEGACY_GAME_META[slug]?.iconImagePath ?? `/assets/icons/games/${slug}.png`;
+  return assetUrl(fallback);
 }
 
 export function gameHeroPath(slug: string): string {
   const hero = LEGACY_GAME_META[slug]?.heroImagePath;
-  if (hero) return hero;
-  return `/assets/heroes/games/${slug}.jpg`;
+  const fallback = hero ?? `/assets/heroes/games/${slug}.png`;
+  return assetUrl(fallback);
 }
 
 // Factions live under /assets/icons/factions/{game}/{uiId}.png
 // W40K has a missing imperial_agents icon, reusing deathwatch.png
 export function factionIconPath(game: "w40k" | "aos" | "tow", uiId: string): string {
   if (game === "w40k" && uiId === "imperial_agents") {
-    return `/assets/icons/factions/${game}/deathwatch.png`;
+    return assetUrl(`/assets/icons/factions/${game}/deathwatch.png`);
   }
-  return `/assets/icons/factions/${game}/${uiId}.png`;
+  return assetUrl(`/assets/icons/factions/${game}/${uiId}.png`);
 }

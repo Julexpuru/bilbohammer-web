@@ -4,6 +4,7 @@ import * as React from "react";
 import { useState, useCallback, memo } from "react";
 import { useSession } from "next-auth/react";
 import { FACTIONS, gameIconPath, factionIconPath } from "@/lib/games";
+import { assetUrl } from "@/lib/assets";
 import { useGamesCatalog } from "@/lib/use-games-catalog";
 import { uploadImageToR2 } from "@/lib/uploads/presign-client";
 
@@ -165,7 +166,7 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
     }) {
       const slug = option.slug as GameId;
       const label = option.name || slug;
-      const iconSrc = option.iconImagePath ?? gameIconPath(slug);
+      const iconSrc = assetUrl(option.iconImagePath ?? "") || gameIconPath(slug);
       return (
         <label className="flex items-center justify-between gap-3 px-2 py-1 rounded hover:bg-slate-800/60 border border-white/5 select-none">
           <div className="flex items-center gap-2 min-w-0">

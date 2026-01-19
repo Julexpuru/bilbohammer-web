@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { assetUrl } from "@/lib/assets";
 import GameCarousel3D from "./GameCarousel3D";
 
 type Slide = {
@@ -17,7 +18,7 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    src: "/assets/img/slide1.svg",
+    src: assetUrl("/assets/img/slide1.svg"),
     alt: "Partidas en el club",
     title: "Tu mesa para jugar, pintar y compartir",
     description:
@@ -27,7 +28,7 @@ const SLIDES: Slide[] = [
     secondaryCta: { label: "Quiero visitar", href: "/sobre-nosotros/contacto" },
   },
   {
-    src: "/assets/img/slide2.svg",
+    src: assetUrl("/assets/img/slide2.svg"),
     alt: "Competición y torneos",
     title: "Calendario competitivo y eventos especiales",
     description:
@@ -37,7 +38,7 @@ const SLIDES: Slide[] = [
     secondaryCta: { label: "Contactar con la junta", href: "/sobre-nosotros/contacto" },
   },
   {
-    src: "/assets/img/slide3.svg",
+    src: assetUrl("/assets/img/slide3.svg"),
     alt: "Actividades sociales",
     title: "Actividades sociales todo el año",
     description:

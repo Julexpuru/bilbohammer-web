@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { assetUrl } from "@/lib/assets";
 
 export const metadata = {
   title: "Quienes somos | Bilbohammer",
@@ -60,7 +61,7 @@ export default function QuienesSomosPage() {
         </div>
         <div className="relative mx-auto aspect-[4/3] w-full max-w-md overflow-hidden rounded-3xl border border-[var(--hairline)] bg-[var(--card-muted)]">
           <Image
-            src="/assets/img/slide2.svg"
+            src={assetUrl("/assets/img/slide2.svg")}
             alt="Ilustracion del espacio de juego de Bilbohammer"
             fill
             className="object-cover"

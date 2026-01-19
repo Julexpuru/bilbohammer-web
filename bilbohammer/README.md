@@ -7,7 +7,7 @@ Portal del club Bilbohammer desarrollado con Next.js 14 (App Router) y una API i
 - Autenticacion NextAuth v5 (JWT) con credenciales locales y Google OAuth opcional.
 - Roles basados en Prisma (`ADMIN`, `JUNTA`, `REDACTOR`, `SOCIO`, `AMIGO`) usados por middleware y componentes para abrir o cerrar vistas.
 - Modulos funcionales del club: novedades segmentadas por tipo, calendario de eventos con filtros, galeria con filtros y subidas, juegos con fichas editables, contacto dinamico, tablon de socios y panel de administracion (gestion de usuarios, roles y cargos).
-- Uploads locales servidos desde `storage/uploads` con API propia (`/api/upload/avatar`) y helpers para moverlos a un CDN si hace falta.
+- Uploads directos a Cloudflare R2 con URLs prefirmadas y CDN (sin base64 ni disco local).
 - Politica de cookies en `/politica-de-cookies` con banner GDPR ready (solo cargamos Google Tag Manager al aceptar analiticas).
 
 ## Stack tecnico
@@ -62,8 +62,10 @@ Define las variables en `web/.env` (para Docker) o en el proveedor de hosting:
 - `APP_BASE_URL`: URL publica del frontend (ej. https://bilbohammer.es).
 - `AUTH_URL` y `NEXTAUTH_URL`: URL que NextAuth usara para callbacks (generalmente igual que `APP_BASE_URL`).
 - `CORS_ALLOWED_ORIGINS`: lista separada por comas para las apps que consumen la API.
-- `UPLOADS_ROOT` (opcional): ruta absoluta para guardar ficheros. Por defecto `storage/uploads`.
-- `UPLOADS_PUBLIC_PREFIX` (opcional): prefijo publico desde el que se sirven (`/uploads` por defecto).
+- `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`: credenciales R2 (S3 compatible).
+- `STORAGE_PUBLIC_BASE`: base CDN para archivos subidos (ej. `https://cdn.bilbohammer.es/uploads`).
+- `NEXT_PUBLIC_UPLOAD_BASE`: misma base CDN para render en cliente.
+- `NEXT_PUBLIC_ASSETS_BASE` (opcional): base CDN para assets estaticos (`/public/assets`).
 
 **Autenticacion**
 - `AUTH_SECRET` / `NEXTAUTH_SECRET`: clave usada para firmar JWT.
@@ -85,6 +87,9 @@ Define las variables en `web/.env` (para Docker) o en el proveedor de hosting:
 - `npm run lint`: reglas ESLint/Next.
 - `npm run seed` / `npm run seed:prod`: semillas descritas arriba.
 - `npm run migrate:legacy-media`: script auxiliar para mover iconos y assets de juegos antiguos.
+- `npm run migrate:uploads-r2`: migra ficheros legacy desde `storage/uploads` a R2.
+- `npm run normalize:upload-urls`: normaliza URLs legacy en BD a la base CDN.
+- `npm run sync:public-assets`: sube `public/assets` a R2 (prefijo `assets/`).
 - `npx prisma migrate dev --name <nombre>`: crea una migracion nueva.
 
 ## Estructura del repo
@@ -99,8 +104,8 @@ bilbohammer/
     |   |-- schema.prisma
     |   |-- seed.ts, seed.production.ts
     |   `-- migrations/
-    |-- public/ (assets estaticos, favicon, uploads legacy)
-    |-- storage/uploads (destino por defecto de `/api/upload/*`)
+    |-- public/ (assets estaticos, favicon)
+    |-- storage/uploads (legacy, solo para migraciones puntuales)
     `-- src/
         |-- app/ (App Router + API routes)
         |-- components/ (UI compartida, cookies, perfil, eventos, galeria...)
@@ -120,22 +125,24 @@ bilbohammer/
 La logica de comprobacion esta centralizada en `src/lib/roles.ts` y los middlewares/guardas de cada pagina. Consulta `MANUAL_FUNCIONAL.md` para la descripcion funcional completa.
 
 ## Uploads y ficheros estaticos
-- Las rutas `/api/upload/avatar` aceptan formularios `multipart/form-data` (max 10 MB) y guardan los ficheros en `storage/uploads/avatars`. Se sirven desde `/uploads/*` o el prefijo configurado.
-- Cambia `UPLOADS_ROOT` para montar un volumen distinto (por ejemplo un bucket montado via FUSE o un disco externo).
-- `storage/uploads` esta versionado para desarrollo pero puedes anadirlo al `.gitignore` si sincronizas contra S3/Cloudflare R2.
+- Las subidas usan URLs prefirmadas a R2; el backend solo guarda la URL final (no base64, no disco local).
+- `/uploads/*` redirige al CDN cuando `STORAGE_PUBLIC_BASE` esta configurado.
+- `public/assets` son estaticos del repo; puedes mantenerlos en la imagen o sincronizarlos a R2 con `npm run sync:public-assets` y `NEXT_PUBLIC_ASSETS_BASE`.
+- Estructura recomendada en R2: `uploads/` para contenido generado por usuarios y `assets/` para estaticos versionados.
+- `public/uploads` y `storage/uploads` son legacy y solo se usan para migraciones.
 
 ## Despliegue
 1. Prepara una base de datos Postgres gestionada (Neon, Supabase, Railway, RDS...) y copia la URL en `DATABASE_URL`.
 2. Ejecuta `npm run build` (o deja que Vercel lo haga). Antes de arrancar, corre `npx prisma migrate deploy` o `npx prisma db push`.
 3. Configura las variables en la plataforma (APP_BASE_URL, NEXTAUTH_URL, AUTH_SECRET, SMTP si aplica, etc.).
 4. Publica la carpeta `web` en Vercel, Render, Fly.io o un VPS con Docker. Si usas Vercel, anade `NEXT_PUBLIC_GTM_ID` para que el banner pueda cargar GTM en produccion.
-5. Si necesitas servir los uploads desde un CDN, coloca un reverse proxy que apunte al prefijo configurado o sincroniza `storage/uploads` con el proveedor.
+5. Configura las variables de R2/CDN y ejecuta las migraciones de uploads/URLs si vienes de storage local.
 
 ## Seguridad y cumplimiento
 - El `middleware.ts` fuerza HTTPS en produccion, anade HSTS, Content-Security-Policy (upgrade-insecure-requests) y cabeceras de seguridad comunes.
 - Las APIs controlan CORS con `APP_BASE_URL` y `CORS_ALLOWED_ORIGINS` (en dev ya se permiten localhost/127.0.0.1).
 - Banner de cookies y pagina detallada en `/politica-de-cookies` con consentimiento granular para GTM/Analytics. Sin consentimiento no se ejecuta ningun script de terceros.
-- Las subidas solo aceptan formatos `multipart/form-data`, limitadas a 10 MB y se nombran con timestamp para evitar colisiones.
+- Las subidas validan el content-type y generan claves unicas en R2 con cache-control largo.
 
 ## Documentacion extra
 - `MANUAL_FUNCIONAL.md`: explica cada seccion funcional y como operan los distintos roles.

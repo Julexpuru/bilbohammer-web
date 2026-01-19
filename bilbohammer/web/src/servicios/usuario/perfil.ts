@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import type { UserProfile } from "@/types/profile";
 import { FACTIONS, enumFactionToUi, factionIconPath, gameIconPath } from "@/lib/games";
+import { assetUrl } from "@/lib/assets";
 
 type AnyObject = Record<string, any>;
 
@@ -70,7 +71,7 @@ export async function getCurrentUserProfile(): Promise<UserProfile> {
     const slug: string | null = entry.game?.slug ?? entry.gameId ?? null;
     if (!slug) return null;
     const name: string = entry.game?.name ?? slug;
-    const iconUrl: string | null = entry.game?.iconImagePath ?? gameIconPath(slug);
+    const iconUrl: string | null = assetUrl(entry.game?.iconImagePath ?? "") || gameIconPath(slug);
 
     let selectedFactionIds: string[] = [];
     if (slug === "w40k")

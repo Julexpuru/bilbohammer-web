@@ -5,16 +5,18 @@ import { Footer } from "@/components/Footer";
 import { CookieConsentProvider } from "@/components/cookies/CookieConsentContext";
 import { CookieConsentBanner } from "@/components/cookies/CookieConsentBanner";
 import { GtmLoader } from "@/components/cookies/GtmLoader";
+import { assetUrl } from "@/lib/assets";
 
 const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
+const favicon = assetUrl("/assets/img/favicon.png");
 
 export const metadata = {
   title: "Bilbohammer",
   description: "Club de juegos de mesa y wargames",
   icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
+    icon: favicon,
+    shortcut: favicon,
+    apple: favicon,
   },
 };
 

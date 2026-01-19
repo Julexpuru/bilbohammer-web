@@ -55,7 +55,7 @@ Este documento resume que muestra cada seccion de la web, que flujos hay impleme
 - `Tablon de socios`: acceso restringido a cuentas con `SOCIO`, `JUNTA` o `ADMIN`.
   - Estructura en piramide (`BOARD_SLOT_CONFIG`) mostrando presidencia, cargos y vocalias. Junta/Admin pueden asignar y quitar personas con los botones `Asignar`.
   - Listado completo de socios ordenado alfabeticamente (`toMemberCard`), con etiquetas de rol y fecha de alta.
-  - Boton `Ponme cara` permite a cada persona subir una foto facial (usa `/api/upload/avatar` y luego PATCH `/api/me/profile` con `facePhotoUrl`). Solo el propio usuario ve el control de subida.
+- Boton `Ponme cara` permite a cada persona subir una foto facial (subida directa a R2 + POST `/api/upload/avatar` con `imageUrl`, luego PATCH `/api/me/profile` con `facePhotoUrl`). Solo el propio usuario ve el control de subida.
 
 ### 2.6 Politica de cookies y consentimiento
 - Banner (`CookieConsentBanner`) aparece hasta aceptar o rechazar las cookies de analitica. Solo al aceptar se monta `GtmLoader` con `NEXT_PUBLIC_GTM_ID`.
@@ -67,7 +67,7 @@ Este documento resume que muestra cada seccion de la web, que flujos hay impleme
 - Server component que carga datos del usuario (`prisma.user`) y los muestra con `Avatar`, roles, email, resumen de membresia y biografia.
 - `GamesSection` lista los juegos con iconos y facciones (mapeadas con `toUiId`). `EventsTabs` ensena los eventos que el usuario ha organizado o en los que aparece en rankings/highlights.
 - `ClientEditWrapper` (modal) permite editar:
-  - Nombre, nick, descripcion, fecha de alta (almacenada al primer dia del mes), avatar (`/api/upload/avatar`), juegos marcados y facciones para W40K/AoS/TOW.
+  - Nombre, nick, descripcion, fecha de alta (almacenada al primer dia del mes), avatar (subida directa a R2 + `/api/upload/avatar`), juegos marcados y facciones para W40K/AoS/TOW.
   - Las altas/bajas de juegos se sincronizan con `userGame` y las facciones con los enums Prisma correspondientes (`PATCH /api/me/profile`).
 
 ### 3.2 Login, registro e invitaciones
@@ -100,10 +100,11 @@ Este documento resume que muestra cada seccion de la web, que flujos hay impleme
 - `/api/admin/contact-content`: guardado de la pagina de contacto.
 - `/api/admin/board-assignments`: asignacion de cargos del tablon.
 - `/api/members/search`: buscador de miembros activo por nombre, nick o email (usado en tablon y galeria).
-- `/api/upload/*`: subida de ficheros (avatar, fotos de cara) en `storage/uploads`.
+- `/api/uploads/presign` y `/api/uploads/*`: generan URLs prefirmadas para subir a R2 (banners, adjuntos, imagenes).
+- `/api/upload/avatar`: valida `imageUrl` (subida directa previa) y se persiste en `/api/me/profile`.
 
 ## 5. Notas finales
-- Los ficheros subidos se sirven desde `/uploads/[...path]` (ver `src/app/uploads/[...path]/route.ts`). Se puede cambiar la raiz con `UPLOADS_ROOT` y el prefijo publico con `UPLOADS_PUBLIC_PREFIX`.
+- Los ficheros subidos viven en R2 y `/uploads/*` redirige al CDN (ver `src/app/uploads/[...path]/route.ts`). Configura `STORAGE_PUBLIC_BASE`/`NEXT_PUBLIC_UPLOAD_BASE`.
 - `middleware.ts` aplica HTTPS, cabeceras de seguridad y CORS dinamico. Si despliegas detras de un proxy, asegurate de reenviar `x-forwarded-proto`.
 - Antes de habilitar nuevos servicios de terceros revisa el banner de cookies y actualiza `/politica-de-cookies` y `CookieConsentBanner` para respetar el consentimiento.
 

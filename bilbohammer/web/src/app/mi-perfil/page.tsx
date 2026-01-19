@@ -5,6 +5,7 @@ import { GamesSection } from "@/components/profile/GamesSection";
 import { EventsTabs } from "@/components/profile/EventsTabs";
 import { toUiId } from "@/lib/games_helpers";
 import { gameIconPath } from "@/lib/games";
+import { assetUrl } from "@/lib/assets";
 import { Avatar } from "@/components/profile/Avatar";
 import { auth } from "@/lib/auth";
 
@@ -76,7 +77,7 @@ export default async function Page() {
       const slug: string | null = entry.game?.slug ?? entry.gameId ?? null;
       if (!slug) return null;
       const name: string = entry.game?.name ?? slug;
-      const iconUrl: string | null = entry.game?.iconImagePath ?? gameIconPath(slug);
+      const iconUrl: string | null = assetUrl(entry.game?.iconImagePath ?? "") || gameIconPath(slug);
       const factionsForGame =
         slug === "w40k"
           ? factions.w40k.map((fid) => ({ id: fid, name: fid.replace(/_/g, " ").toUpperCase() }))

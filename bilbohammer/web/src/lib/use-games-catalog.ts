@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { GameCatalogItem } from "@/lib/game-catalog";
+import { assetUrl } from "@/lib/assets";
 import { fallbackGameList } from "@/lib/games";
 
 export type GameCatalogEntry = {
@@ -31,12 +32,13 @@ function normalizeResponse(json: unknown): GameCatalogItem[] {
 }
 
 function mergeWithFallback(data: GameCatalogItem[]): GameCatalogEntry[] {
+  const normalizeAsset = (value: string | null | undefined) => (value ? assetUrl(value) : null);
   const fallbackEntries = fallbackGameList().map((item) => ({
     id: item.slug,
     slug: item.slug,
     name: item.name,
-    iconImagePath: item.iconImagePath ?? null,
-    heroImagePath: item.heroImagePath ?? null,
+    iconImagePath: normalizeAsset(item.iconImagePath),
+    heroImagePath: normalizeAsset(item.heroImagePath),
     legacyEnumKey: item.legacyEnumKey ?? null,
     isDefault: item.isDefault ?? false,
     sortOrder: item.sortOrder ?? 999,
@@ -56,8 +58,8 @@ function mergeWithFallback(data: GameCatalogItem[]): GameCatalogEntry[] {
       id: game.id,
       slug: game.slug,
       name: game.name ?? fallback?.name ?? game.slug,
-      iconImagePath: game.iconImagePath ?? fallback?.iconImagePath ?? null,
-      heroImagePath: game.heroImagePath ?? fallback?.heroImagePath ?? null,
+      iconImagePath: normalizeAsset(game.iconImagePath ?? fallback?.iconImagePath ?? null),
+      heroImagePath: normalizeAsset(game.heroImagePath ?? fallback?.heroImagePath ?? null),
       legacyEnumKey: game.legacyEnumKey ?? fallback?.legacyEnumKey ?? null,
       isDefault: game.isDefault ?? fallback?.isDefault ?? false,
       sortOrder: game.sortOrder ?? fallback?.sortOrder ?? 999,

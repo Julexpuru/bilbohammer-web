@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
+import { assetUrl } from "@/lib/assets";
 import { useGamesCatalog } from "@/lib/use-games-catalog";
 
 type TableStatus = "AVAILABLE" | "RESERVED" | "IN_PLAY" | "BLOCKED";
@@ -104,11 +105,11 @@ const stateLabel: Record<UiState, string> = {
 };
 
 const SPECIAL_GAME_OPTIONS = [
-  { value: "custom:comodin", label: "Comodin", icon: "/assets/icons/games/otros.png" },
-  { value: "custom:especialista", label: "Juegos especialista", icon: "/assets/icons/games/boardgames.png" },
+  { value: "custom:comodin", label: "Comodin", icon: assetUrl("/assets/icons/games/otros.png") },
+  { value: "custom:especialista", label: "Juegos especialista", icon: assetUrl("/assets/icons/games/boardgames.png") },
 ];
 
-const DEFAULT_GAME_ICON = "/assets/icons/games/otros.png";
+const DEFAULT_GAME_ICON = assetUrl("/assets/icons/games/otros.png");
 
 const MAP_BASE_WIDTH = 1100;
 const MAP_BASE_HEIGHT = 950;
@@ -331,9 +332,8 @@ export function TableMap({ canManage }: Props) {
       (customMatch ? customMatch.label : null);
     if (!resolvedLabel) return null;
     const icon =
-      table.game?.iconImagePath ??
-      gameFromCatalog?.iconImagePath ??
-      customMatch?.icon ??
+      assetUrl(table.game?.iconImagePath ?? gameFromCatalog?.iconImagePath ?? "") ||
+      customMatch?.icon ||
       DEFAULT_GAME_ICON;
     const slug = table.game?.slug ?? gameFromCatalog?.slug ?? (customMatch ? normalizeLabel(customMatch.label) : null);
     return { label: resolvedLabel, icon: icon || DEFAULT_GAME_ICON, slug: slug || null };

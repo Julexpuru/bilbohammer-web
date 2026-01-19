@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { assetUrl } from "@/lib/assets";
 import { uploadImageToR2 } from "@/lib/uploads/presign-client";
 
 type GameCardProps = {
@@ -285,7 +286,7 @@ export function GameCard(props: GameCardProps) {
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative h-36 w-36 overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--card-muted)]">
             <Image
-              src={iconPreview || heroPreview || "/assets/icons/games/otros.png"}
+              src={iconPreview || heroPreview || assetUrl("/assets/icons/games/otros.png")}
               alt={`${name} icon`}
               fill
               className="object-contain p-3"
@@ -370,7 +371,12 @@ export function GameCard(props: GameCardProps) {
 
       <div className="overflow-hidden border-t border-[var(--hairline)]">
         <div className="relative h-64 w-full">
-          <Image src={heroPreview || "/assets/img/placeholder-game-hero.jpg"} alt={`${name} banner`} fill className="object-cover" />
+          <Image
+            src={heroPreview || assetUrl("/assets/img/placeholder-game-hero.png")}
+            alt={`${name} banner`}
+            fill
+            className="object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-[var(--card)]" />
         </div>
         <div className="space-y-6 px-6 py-6">
