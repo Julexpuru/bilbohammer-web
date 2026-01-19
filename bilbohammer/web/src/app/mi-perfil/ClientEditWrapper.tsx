@@ -5,6 +5,7 @@ import { useState, useCallback, memo } from "react";
 import { useSession } from "next-auth/react";
 import { FACTIONS, gameIconPath, factionIconPath } from "@/lib/games";
 import { useGamesCatalog } from "@/lib/use-games-catalog";
+import { uploadImageToR2 } from "@/lib/uploads/presign-client";
 
 import EditToolbar from "@/components/profile/EditToolbar";
 
@@ -116,12 +117,8 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
   }, []);
 
   async function handleUpload(file: File) {
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/api/upload/avatar", { method: "POST", body: fd });
-    if (!res.ok) throw new Error("Upload failed");
-    const data = await res.json();
-    setAvatarDraft(data.url); // preview (NO se aplica fuera)
+    const { publicUrl } = await uploadImageToR2(file);
+    setAvatarDraft(publicUrl); // preview (NO se aplica fuera)
   }
 
   async function onSubmit(e?: React.FormEvent) {
@@ -342,7 +339,12 @@ export default function ClientEditWrapper({ profile }: { profile: Profile }) {
     accept="image/*"
     onChange={(e) => {
       const f = e.target.files?.[0];
-      if (f) handleUpload(f);
+      if (f) {
+        handleUpload(f).catch((error) => {
+          console.error(error);
+          alert("No se pudo subir el avatar.");
+        });
+      }
     }}
   />
 

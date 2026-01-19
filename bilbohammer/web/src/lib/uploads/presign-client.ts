@@ -4,6 +4,8 @@ export type PresignResponse = {
   publicUrl: string;
 };
 
+const DEFAULT_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
 const ALLOWED_CONTENT_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -39,10 +41,18 @@ export async function requestPresignedUpload(file: File): Promise<PresignRespons
   return payload as PresignResponse;
 }
 
-export async function uploadToPresignedUrl(file: File, uploadUrl: string, contentType: string) {
+export async function uploadToPresignedUrl(
+  file: File,
+  uploadUrl: string,
+  contentType: string,
+  cacheControl: string = DEFAULT_CACHE_CONTROL,
+) {
   const response = await fetch(uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": contentType },
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": cacheControl,
+    },
     body: file,
   });
 

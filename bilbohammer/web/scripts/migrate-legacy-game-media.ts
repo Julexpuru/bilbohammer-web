@@ -15,6 +15,36 @@ type GameRecord = {
   heroImagePath: string | null;
 };
 
+function hasRemoteOrUploadsPath(value?: string | null) {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (/^https?:\/\//i.test(trimmed)) return true;
+  const normalized = trimmed.replace(/^\/+/, "");
+  return normalized.startsWith("uploads/");
+}
+
+function guessContentType(filePath: string) {
+  const ext = path.extname(filePath).toLowerCase();
+  switch (ext) {
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".png":
+      return "image/png";
+    case ".webp":
+      return "image/webp";
+    case ".gif":
+      return "image/gif";
+    case ".bmp":
+      return "image/bmp";
+    case ".svg":
+      return "image/svg+xml";
+    default:
+      return "application/octet-stream";
+  }
+}
+
 async function fileExists(target: string) {
   try {
     await fs.access(target);
@@ -89,14 +119,14 @@ async function migrateFile(slug: string, kind: "icon" | "hero", sourcePath: stri
   const extension = path.extname(sourcePath) || ".png";
   const baseName = `${slug}-${kind}-${Date.now()}${extension}`;
   const relativePath = joinUploadRelativePath("games", kind === "icon" ? "icons" : "hero", baseName);
-  await saveUploadFile(relativePath, buffer);
+  await saveUploadFile(relativePath, buffer, { contentType: guessContentType(sourcePath) });
   return toPublicPath(relativePath);
 }
 
 async function migrateGame(game: GameRecord) {
   const updates: Partial<Pick<GameRecord, "iconImagePath" | "heroImagePath">> = {};
 
-  if (!game.iconImagePath || !game.iconImagePath.startsWith("/uploads/")) {
+  if (!game.iconImagePath || !hasRemoteOrUploadsPath(game.iconImagePath)) {
     const source = await resolveLegacyFile(game.slug, {
       currentPath: game.iconImagePath,
       kind: "icon",
@@ -109,7 +139,7 @@ async function migrateGame(game: GameRecord) {
     }
   }
 
-  if (!game.heroImagePath || !game.heroImagePath.startsWith("/uploads/")) {
+  if (!game.heroImagePath || !hasRemoteOrUploadsPath(game.heroImagePath)) {
     const source = await resolveLegacyFile(game.slug, {
       currentPath: game.heroImagePath,
       kind: "hero",

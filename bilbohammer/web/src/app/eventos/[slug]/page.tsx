@@ -42,6 +42,9 @@ const highlightLabels: Record<string, string> = {
 };
 
 const BILBO_ORGANIZATION_NAME = "Bilbohammer";
+const RAW_PUBLIC_UPLOAD_BASE =
+  process.env.NEXT_PUBLIC_UPLOAD_BASE ?? process.env.STORAGE_PUBLIC_BASE ?? process.env.UPLOADS_PUBLIC_PREFIX ?? "/uploads";
+const PUBLIC_UPLOAD_PREFIX = RAW_PUBLIC_UPLOAD_BASE.trim().replace(/\/+$/, "") || "/uploads";
 
 export const dynamic = "force-dynamic";
 
@@ -62,14 +65,27 @@ function formatDateRange(start: Date, end: Date, timeZone = "Europe/Madrid") {
   }
 }
 
+function joinBaseAndPath(base: string, value: string) {
+  const trimmedBase = base.replace(/\/+$/, "");
+  const trimmedValue = value.replace(/^\/+/, "");
+  return `${trimmedBase}/${trimmedValue}`;
+}
+
 function toPublicPath(storagePath: string | null | undefined) {
   if (!storagePath) {
     return null;
   }
+  if (/^https?:\/\//i.test(storagePath)) {
+    return storagePath;
+  }
   if (storagePath.startsWith("/")) {
     return storagePath;
   }
-  return `/uploads/${storagePath}`.replace(/\/{2,}/g, "/");
+  const normalized = storagePath.replace(/^\/+/, "");
+  if (PUBLIC_UPLOAD_PREFIX.endsWith("/uploads") && normalized.startsWith("uploads/")) {
+    return joinBaseAndPath(PUBLIC_UPLOAD_PREFIX, normalized.slice("uploads/".length));
+  }
+  return joinBaseAndPath(PUBLIC_UPLOAD_PREFIX, normalized);
 }
 
 export default async function EventDetailPage({

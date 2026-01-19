@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import path from "path";
 import { randomUUID } from "crypto";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { auth } from "@/auth";
 import { userCanEditEvent } from "@/lib/roles";
 import { slugify } from "@/lib/slugify";
-import { joinUploadRelativePath, saveUploadFile, toPublicPath } from "@/lib/uploads/storage";
 
-const MAX_FILE_SIZE = 6 * 1024 * 1024; // 6MB
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -26,11 +26,30 @@ const MIME_EXTENSION: Record<string, string> = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function resolveExtension(file: File, fallbackName: string): string {
-  if (file.type && MIME_EXTENSION[file.type]) {
-    return MIME_EXTENSION[file.type];
+function mustEnv(name: string) {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing env var: ${name}`);
+  return v;
+}
+
+function normalizePublicBase(value: string) {
+  return value.trim().replace(/\/+$/, "");
+}
+
+function buildPublicUrl(base: string, key: string) {
+  const normalizedBase = normalizePublicBase(base);
+  const normalizedKey = key.replace(/^\/+/, "");
+  if (normalizedBase.endsWith("/uploads") && normalizedKey.startsWith("uploads/")) {
+    return `${normalizedBase}/${normalizedKey.slice("uploads/".length)}`;
   }
-  const originalExt = path.extname(fallbackName);
+  return `${normalizedBase}/${normalizedKey}`;
+}
+
+function resolveExtension(filename: string, contentType: string): string {
+  if (contentType && MIME_EXTENSION[contentType]) {
+    return MIME_EXTENSION[contentType];
+  }
+  const originalExt = path.extname(filename);
   if (originalExt) {
     return originalExt.toLowerCase();
   }
@@ -39,54 +58,63 @@ function resolveExtension(file: File, fallbackName: string): string {
 
 export async function POST(request: Request) {
   const session = await auth();
-  const contentType = request.headers.get("content-type") ?? "";
-  if (!contentType.includes("multipart/form-data")) {
+  const contentTypeHeader = request.headers.get("content-type") ?? "";
+  if (!contentTypeHeader.includes("application/json")) {
     return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
   }
 
-  const form = await request.formData();
-  const eventIdValue = form.get("eventId");
-  const eventId =
-    typeof eventIdValue === "string" && eventIdValue.trim().length ? eventIdValue.trim() : null;
+  const body = (await request.json()) as {
+    filename?: string;
+    contentType?: string;
+    eventId?: string | null;
+  };
+  const eventId = typeof body?.eventId === "string" ? body.eventId.trim() : null;
   const canEdit = await userCanEditEvent(session, eventId);
   if (!canEdit) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
 
-  const file = form.get("file");
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Archivo requerido." }, { status: 400 });
+  const filename = body?.filename?.trim() ?? "";
+  const contentType = body?.contentType?.trim() ?? "";
+  if (!filename || !contentType) {
+    return NextResponse.json({ error: "filename y contentType son obligatorios." }, { status: 400 });
   }
 
-  if (file.size === 0) {
-    return NextResponse.json({ error: "El archivo esta vacio." }, { status: 400 });
-  }
-
-  if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ error: "El archivo supera el limite de 6MB." }, { status: 413 });
-  }
-
-  if (file.type && !ALLOWED_TYPES.has(file.type)) {
+  if (!ALLOWED_TYPES.has(contentType)) {
     return NextResponse.json(
       { error: "Formato no permitido. Usa PNG, JPG, WEBP, GIF o SVG." },
       { status: 415 }
     );
   }
 
-  const providedName = form.get("filename");
-  const fallbackName =
-    (typeof providedName === "string" && providedName.trim()) || file.name || "banner";
-
-  const baseName = slugify(fallbackName.replace(/\.[^.]+$/, ""), "banner");
-  const extension = resolveExtension(file, fallbackName);
+  const baseName = slugify(filename.replace(/\.[^.]+$/, ""), "banner");
+  const extension = resolveExtension(filename, contentType);
   const uniqueName = `${baseName}-${randomUUID()}${extension}`;
+  const key = `uploads/event-banners/${uniqueName}`;
 
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const bucket = mustEnv("STORAGE_BUCKET");
+  const region = mustEnv("STORAGE_REGION");
+  const endpoint = mustEnv("STORAGE_ENDPOINT");
+  const accessKeyId = mustEnv("STORAGE_ACCESS_KEY");
+  const secretAccessKey = mustEnv("STORAGE_SECRET_KEY");
+  const publicBase = mustEnv("STORAGE_PUBLIC_BASE");
 
-  const relativePath = joinUploadRelativePath("event-banners", uniqueName);
-  await saveUploadFile(relativePath, buffer);
-  const url = toPublicPath(relativePath);
+  const s3 = new S3Client({
+    region,
+    endpoint,
+    credentials: { accessKeyId, secretAccessKey },
+    forcePathStyle: true,
+  });
 
-  return NextResponse.json({ url }, { status: 201 });
+  const cmd = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    ContentType: contentType,
+    CacheControl: "public, max-age=31536000, immutable",
+  });
+
+  const uploadUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 });
+  const publicUrl = buildPublicUrl(publicBase, key);
+
+  return NextResponse.json({ key, uploadUrl, publicUrl });
 }

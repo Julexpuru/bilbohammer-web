@@ -1,1 +1,70 @@
-{"node":{"1369b7a1438eea68e3afac315a00e93d0443c67e":{"workers":{"app/page":"8405","app/eventos/[slug]/editar/page":"8405","app/eventos/[slug]/page":"8405","app/novedades/page":"8405","app/novedades/[category]/[slug]/page":"8405","app/novedades/[category]/[slug]/editar/page":"8405"},"layer":{"app/page":"rsc","app/eventos/[slug]/editar/page":"rsc","app/eventos/[slug]/page":"rsc","app/novedades/page":"rsc","app/novedades/[category]/[slug]/page":"rsc","app/novedades/[category]/[slug]/editar/page":"rsc"}},"3fbe17690e9335d4922fcd77379496eed116b44c":{"workers":{"app/page":"8405","app/eventos/[slug]/editar/page":"8405","app/eventos/[slug]/page":"8405","app/novedades/page":"8405","app/novedades/[category]/[slug]/page":"8405","app/novedades/[category]/[slug]/editar/page":"8405"},"layer":{"app/page":"rsc","app/eventos/[slug]/editar/page":"rsc","app/eventos/[slug]/page":"rsc","app/novedades/page":"rsc","app/novedades/[category]/[slug]/page":"rsc","app/novedades/[category]/[slug]/editar/page":"rsc"}},"46f911f25beebbc16cf326de6cbf2a6136dfea17":{"workers":{"app/page":"8405","app/eventos/[slug]/editar/page":"8405","app/eventos/[slug]/page":"8405","app/novedades/page":"8405","app/novedades/[category]/[slug]/page":"8405","app/novedades/[category]/[slug]/editar/page":"8405"},"layer":{"app/page":"rsc","app/eventos/[slug]/editar/page":"rsc","app/eventos/[slug]/page":"rsc","app/novedades/page":"rsc","app/novedades/[category]/[slug]/page":"rsc","app/novedades/[category]/[slug]/editar/page":"rsc"}},"71f6cd6bc7b7f04ead0b47c71f00831b21e193fb":{"workers":{"app/page":"8405","app/eventos/[slug]/editar/page":"8405","app/eventos/[slug]/page":"8405","app/novedades/page":"8405","app/novedades/[category]/[slug]/page":"8405","app/novedades/[category]/[slug]/editar/page":"8405"},"layer":{"app/page":"rsc","app/eventos/[slug]/editar/page":"rsc","app/eventos/[slug]/page":"rsc","app/novedades/page":"rsc","app/novedades/[category]/[slug]/page":"rsc","app/novedades/[category]/[slug]/editar/page":"rsc"}},"73aff8b4bf122cd2b8374847db75d440acaa7144":{"workers":{"app/page":"8405","app/eventos/[slug]/editar/page":"8405","app/eventos/[slug]/page":"8405","app/novedades/page":"8405","app/novedades/[category]/[slug]/page":"8405","app/novedades/[category]/[slug]/editar/page":"8405"},"layer":{"app/page":"rsc","app/eventos/[slug]/editar/page":"rsc","app/eventos/[slug]/page":"rsc","app/novedades/page":"rsc","app/novedades/[category]/[slug]/page":"rsc","app/novedades/[category]/[slug]/editar/page":"rsc"}},"c3210333660779e35c35d651c652fc46d50b30ac":{"workers":{"app/page":"8405","app/eventos/[slug]/editar/page":"8405","app/eventos/[slug]/page":"8405","app/novedades/page":"8405","app/novedades/[category]/[slug]/page":"8405","app/novedades/[category]/[slug]/editar/page":"8405"},"layer":{"app/page":"rsc","app/eventos/[slug]/editar/page":"rsc","app/eventos/[slug]/page":"rsc","app/novedades/page":"rsc","app/novedades/[category]/[slug]/page":"rsc","app/novedades/[category]/[slug]/editar/page":"rsc"}},"c913701d19bc826a90d8ad0c5cbf2a8e11bab992":{"workers":{"app/page":"8405","app/eventos/[slug]/editar/page":"8405","app/eventos/[slug]/page":"8405","app/novedades/page":"8405","app/novedades/[category]/[slug]/page":"8405","app/novedades/[category]/[slug]/editar/page":"8405"},"layer":{"app/page":"rsc","app/eventos/[slug]/editar/page":"rsc","app/eventos/[slug]/page":"rsc","app/novedades/page":"rsc","app/novedades/[category]/[slug]/page":"rsc","app/novedades/[category]/[slug]/editar/page":"rsc"}},"ee4f0f87756b78721d6e6478a45822abfeca44f4":{"workers":{"app/page":"8405","app/eventos/[slug]/editar/page":"8405","app/eventos/[slug]/page":"8405","app/novedades/page":"8405","app/novedades/[category]/[slug]/page":"8405","app/novedades/[category]/[slug]/editar/page":"8405"},"layer":{"app/page":"rsc","app/eventos/[slug]/editar/page":"rsc","app/eventos/[slug]/page":"rsc","app/novedades/page":"rsc","app/novedades/[category]/[slug]/page":"rsc","app/novedades/[category]/[slug]/editar/page":"rsc"}}},"edge":{},"encryptionKey":"tLmmH1CCv8gZ7jU4j3iR+buPkZvRlaoVtDTZ/yIyWQA="}
+{
+  "node": {
+    "1369b7a1438eea68e3afac315a00e93d0443c67e": {
+      "workers": {
+        "app/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fsrc%2Flib%2Fnovedades-repository.ts%22%2C%5B%22getAllArticles%22%2C%22getArticlesGrouped%22%2C%22findArticleByCategoryAndSlug%22%2C%22findArticleById%22%2C%22getArticlesByCategory%22%2C%22saveArticle%22%2C%22deleteArticleById%22%2C%22searchChronicles%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/page": "rsc"
+      }
+    },
+    "3fbe17690e9335d4922fcd77379496eed116b44c": {
+      "workers": {
+        "app/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fsrc%2Flib%2Fnovedades-repository.ts%22%2C%5B%22getAllArticles%22%2C%22getArticlesGrouped%22%2C%22findArticleByCategoryAndSlug%22%2C%22findArticleById%22%2C%22getArticlesByCategory%22%2C%22saveArticle%22%2C%22deleteArticleById%22%2C%22searchChronicles%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/page": "rsc"
+      }
+    },
+    "46f911f25beebbc16cf326de6cbf2a6136dfea17": {
+      "workers": {
+        "app/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fsrc%2Flib%2Fnovedades-repository.ts%22%2C%5B%22getAllArticles%22%2C%22getArticlesGrouped%22%2C%22findArticleByCategoryAndSlug%22%2C%22findArticleById%22%2C%22getArticlesByCategory%22%2C%22saveArticle%22%2C%22deleteArticleById%22%2C%22searchChronicles%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/page": "rsc"
+      }
+    },
+    "71f6cd6bc7b7f04ead0b47c71f00831b21e193fb": {
+      "workers": {
+        "app/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fsrc%2Flib%2Fnovedades-repository.ts%22%2C%5B%22getAllArticles%22%2C%22getArticlesGrouped%22%2C%22findArticleByCategoryAndSlug%22%2C%22findArticleById%22%2C%22getArticlesByCategory%22%2C%22saveArticle%22%2C%22deleteArticleById%22%2C%22searchChronicles%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/page": "rsc"
+      }
+    },
+    "73aff8b4bf122cd2b8374847db75d440acaa7144": {
+      "workers": {
+        "app/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fsrc%2Flib%2Fnovedades-repository.ts%22%2C%5B%22getAllArticles%22%2C%22getArticlesGrouped%22%2C%22findArticleByCategoryAndSlug%22%2C%22findArticleById%22%2C%22getArticlesByCategory%22%2C%22saveArticle%22%2C%22deleteArticleById%22%2C%22searchChronicles%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/page": "rsc"
+      }
+    },
+    "c3210333660779e35c35d651c652fc46d50b30ac": {
+      "workers": {
+        "app/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fsrc%2Flib%2Fnovedades-repository.ts%22%2C%5B%22getAllArticles%22%2C%22getArticlesGrouped%22%2C%22findArticleByCategoryAndSlug%22%2C%22findArticleById%22%2C%22getArticlesByCategory%22%2C%22saveArticle%22%2C%22deleteArticleById%22%2C%22searchChronicles%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/page": "rsc"
+      }
+    },
+    "c913701d19bc826a90d8ad0c5cbf2a8e11bab992": {
+      "workers": {
+        "app/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fsrc%2Flib%2Fnovedades-repository.ts%22%2C%5B%22getAllArticles%22%2C%22getArticlesGrouped%22%2C%22findArticleByCategoryAndSlug%22%2C%22findArticleById%22%2C%22getArticlesByCategory%22%2C%22saveArticle%22%2C%22deleteArticleById%22%2C%22searchChronicles%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/page": "rsc"
+      }
+    },
+    "ee4f0f87756b78721d6e6478a45822abfeca44f4": {
+      "workers": {
+        "app/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fsrc%2Flib%2Fnovedades-repository.ts%22%2C%5B%22getAllArticles%22%2C%22getArticlesGrouped%22%2C%22findArticleByCategoryAndSlug%22%2C%22findArticleById%22%2C%22getArticlesByCategory%22%2C%22saveArticle%22%2C%22deleteArticleById%22%2C%22searchChronicles%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/page": "rsc"
+      }
+    }
+  },
+  "edge": {},
+  "encryptionKey": "VIMWTZjFBoAPxs1Vqe1JvwiaRwmppmuhHXOvWfRfBFM="
+}

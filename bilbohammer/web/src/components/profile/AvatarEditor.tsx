@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { uploadImageToR2 } from "@/lib/uploads/presign-client";
 
 export function AvatarEditor({
   url,
@@ -50,18 +51,18 @@ export function AvatarEditor({
   async function upload() {
     if (!preview) return;
     setBusy(true);
-    const res = await fetch(preview);
-    const blob = await res.blob();
-    const fd = new FormData();
-    fd.append("file", new File([blob], "avatar.jpg", { type: "image/jpeg" }));
-    const up = await fetch("/api/upload/avatar", { method: "POST", body: fd });
-    const json = await up.json();
-    setBusy(false);
-    if (json?.url) {
-      onUploaded(json.url);
+    try {
+      const res = await fetch(preview);
+      const blob = await res.blob();
+      const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+      const { publicUrl } = await uploadImageToR2(file);
+      onUploaded(publicUrl);
       setPreview(null);
-    } else {
+    } catch (error) {
+      console.error(error);
       alert("Error subiendo avatar");
+    } finally {
+      setBusy(false);
     }
   }
 

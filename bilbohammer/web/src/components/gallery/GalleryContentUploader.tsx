@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import type { GalleryAlbum, GalleryStandalonePhoto } from "@/components/gallery/types";
+import { uploadImageToR2 } from "@/lib/uploads/presign-client";
 
 export type UploadMode = "standalone" | "album";
 
@@ -16,6 +17,8 @@ export type UploadablePhoto = {
   location?: string;
   existingImageId?: string;
   storagePath?: string;
+  mimeType?: string;
+  fileSize?: number;
 };
 
 export type CollaboratorOption = {
@@ -296,6 +299,8 @@ export function GalleryContentUploader({
           title: "",
           date: fallbackDate,
           location: fallbackLocation,
+          mimeType: file.type || undefined,
+          fileSize: file.size,
         });
       } catch (error) {
         console.error("No se pudo preparar la imagen seleccionada", error);
@@ -397,24 +402,10 @@ export function GalleryContentUploader({
     const collaborators = albumMeta.collaborators.map((collaborator) => collaborator.id);
     const parsedTags = parseTags(albumMeta.tags);
 
-    const body = {
-      mode,
-      albumId: editingAlbumId ?? undefined,
-      album:
-        mode === "album"
-          ? {
-              title: albumMeta.title,
-              date: albumMeta.date,
-              location: albumMeta.location,
-              description: albumMeta.description,
-              tags: parsedTags,
-              collaborators,
-              coverPhotoId: coverCandidate ? coverCandidate.id : null,
-              game: albumMeta.game,
-              format: albumMeta.format,
-            }
-          : undefined,
-      photos: photos.map((photo, index) => {
+    try {
+      const preparedPhotos = [];
+      for (let index = 0; index < photos.length; index += 1) {
+        const photo = photos[index];
         const trimmedTitle = photo.title.trim();
         const normalizedTitle = trimmedTitle.length > 0 ? trimmedTitle : null;
         const base = {
@@ -424,23 +415,50 @@ export function GalleryContentUploader({
           location: photo.location ?? "",
           order: index,
         };
-        const isDataUrl = typeof photo.preview === "string" && photo.preview.startsWith("data:");
-        if (photo.file || isDataUrl) {
-          return {
+
+        if (photo.file) {
+          const { publicUrl } = await uploadImageToR2(photo.file);
+          preparedPhotos.push({
             ...base,
-            dataUrl: photo.preview,
-            originalName: photo.file?.name ?? `${photo.id}.jpg`,
-          };
+            imageUrl: publicUrl,
+            originalName: photo.file.name || `${photo.id}.jpg`,
+            mimeType: photo.mimeType ?? photo.file.type ?? null,
+            fileSize: photo.fileSize ?? photo.file.size ?? null,
+          });
+          continue;
         }
-        return {
+
+        if (!photo.storagePath) {
+          continue;
+        }
+
+        preparedPhotos.push({
           ...base,
           existingImageId: photo.existingImageId ?? photo.id,
           storagePath: photo.storagePath,
-        };
-      }),
-    };
+        });
+      }
 
-    try {
+      const body = {
+        mode,
+        albumId: editingAlbumId ?? undefined,
+        album:
+          mode === "album"
+            ? {
+                title: albumMeta.title,
+                date: albumMeta.date,
+                location: albumMeta.location,
+                description: albumMeta.description,
+                tags: parsedTags,
+                collaborators,
+                coverPhotoId: coverCandidate ? coverCandidate.id : null,
+                game: albumMeta.game,
+                format: albumMeta.format,
+              }
+            : undefined,
+        photos: preparedPhotos,
+      };
+
       const response = await fetch("/api/gallery/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

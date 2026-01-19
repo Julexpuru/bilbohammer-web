@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import path from "path";
-import { promises as fs } from "fs";
 import { auth } from "@/auth";
 import { userCanEditAlbum, userCanManageGallery } from "@/lib/roles";
 import prisma from "@/lib/prisma";
 import { slugify } from "@/lib/slugify";
 import { mapAlbum, mapStandaloneImage } from "@/lib/gallery/mappers";
-import {
-  joinUploadRelativePath,
-  resolveUploadAbsolute,
-  saveUploadFile,
-} from "@/lib/uploads/storage";
 
 type UploadMode = "album" | "standalone";
 
@@ -19,8 +13,10 @@ type IncomingPhoto = {
   title?: string;
   date?: string;
   location?: string;
-  dataUrl?: string;
+  imageUrl?: string;
   originalName?: string;
+  mimeType?: string | null;
+  fileSize?: number | null;
   existingImageId?: string;
   storagePath?: string | null;
   order?: number;
@@ -45,62 +41,31 @@ type UploadRequestBody = {
   albumId?: string;
 };
 
-const ALBUMS_DIR = joinUploadRelativePath("gallery", "albums");
-const STANDALONE_DIR = joinUploadRelativePath("gallery", "standalone");
 const ALLOWED_FORMATS = new Set(["Exposición", "Liga", "Otros", "Social", "Taller", "Torneo"]);
 const LEGACY_FORMAT_NORMALIZATION = new Map<string, string>([["Exposicion", "Exposición"]]);
 
-async function ensureBaseDirectories() {
-  await fs.mkdir(resolveUploadAbsolute(ALBUMS_DIR), { recursive: true });
-  await fs.mkdir(resolveUploadAbsolute(STANDALONE_DIR), { recursive: true });
+function normalizeImageUrl(value?: string | null) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.startsWith("data:")) return null;
+  return trimmed;
 }
 
-function parseDataUrl(dataUrl: string) {
-  const match = /^data:(.+);base64,(.+)$/i.exec(dataUrl);
-  if (!match) {
-    throw new Error("Formato de imagen no valido.");
+function resolveIncomingStoragePath(photo: IncomingPhoto) {
+  return normalizeImageUrl(photo.imageUrl ?? photo.storagePath ?? null);
+}
+
+function normalizeFileSize(value?: number | null) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return null;
   }
-  const mimeType = match[1];
-  const base64 = match[2];
-  const buffer = Buffer.from(base64, "base64");
-
-  const extension = mimeTypeToExtension(mimeType);
-  return { buffer, mimeType, extension };
+  return Math.floor(value);
 }
 
-function mimeTypeToExtension(mimeType: string) {
-  switch (mimeType.toLowerCase()) {
-    case "image/jpeg":
-    case "image/jpg":
-      return "jpg";
-    case "image/png":
-      return "png";
-    case "image/webp":
-      return "webp";
-    case "image/gif":
-      return "gif";
-    default:
-      return "bin";
-  }
-}
-
-function sanitizeFilename(filename: string) {
-  const base = slugify(filename.replace(/\.[^.]+$/, ""), "imagen");
-  return base;
-}
-
-async function uniqueFilename(dir: string, baseName: string, extension: string) {
-  let candidate = `${baseName}.${extension}`;
-  let attempt = 2;
-  while (true) {
-    try {
-      await fs.access(path.join(dir, candidate));
-      candidate = `${baseName}-${attempt}.${extension}`;
-      attempt += 1;
-    } catch {
-      return candidate;
-    }
-  }
+function normalizeMimeType(value?: string | null) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 async function generateAlbumSlug(title: string, existingAlbumId?: string) {
@@ -145,23 +110,14 @@ function getFacetYear(date: Date | null) {
 
 async function handleStandaloneUpload(photos: IncomingPhoto[], uploaderId: number | null) {
   const savedPhotos = [];
-  const now = new Date();
-  const yearSegment = String(now.getFullYear());
-  const yearDirRelative = joinUploadRelativePath("gallery", "standalone", yearSegment);
-  const yearDir = resolveUploadAbsolute(yearDirRelative);
-  await fs.mkdir(yearDir, { recursive: true });
 
   for (const photo of photos) {
-    if (!photo.dataUrl) {
+    const storagePath = resolveIncomingStoragePath(photo);
+    if (!storagePath) {
       continue;
     }
-    const { buffer, mimeType, extension } = parseDataUrl(photo.dataUrl);
     const normalizedTitle = normalizeTitle(photo.title);
-    const baseNameSeed = normalizedTitle ?? photo.originalName ?? photo.id;
-    const baseName = sanitizeFilename(baseNameSeed);
-    const filename = await uniqueFilename(yearDir, baseName, extension);
-    const relativePath = joinUploadRelativePath("gallery", "standalone", yearSegment, filename);
-    await saveUploadFile(relativePath, buffer);
+    const baseName = normalizedTitle ?? photo.originalName ?? path.posix.basename(storagePath);
 
     const takenAt = safeDateInput(photo.date);
 
@@ -169,7 +125,7 @@ async function handleStandaloneUpload(photos: IncomingPhoto[], uploaderId: numbe
       data: {
         albumId: null,
         uploaderId,
-        storagePath: relativePath,
+        storagePath,
         thumbnailPath: null,
         title: normalizedTitle,
         altText: normalizedTitle ?? baseName,
@@ -178,13 +134,17 @@ async function handleStandaloneUpload(photos: IncomingPhoto[], uploaderId: numbe
         location: photo.location ?? null,
         width: null,
         height: null,
-        fileSize: buffer.length,
-        mimeType,
+        fileSize: normalizeFileSize(photo.fileSize),
+        mimeType: normalizeMimeType(photo.mimeType),
         position: null,
       },
     });
 
     savedPhotos.push(mapStandaloneImage(imageRecord));
+  }
+
+  if (savedPhotos.length === 0) {
+    throw new Error("No se pudo procesar ninguna imagen.");
   }
 
   return savedPhotos;
@@ -199,9 +159,6 @@ async function createAlbum(meta: IncomingAlbumMeta, photos: IncomingPhoto[], upl
   const displayDate = formatDisplayDate(eventDate);
   const facetYear = getFacetYear(eventDate);
   const albumSlug = await generateAlbumSlug(meta.title);
-  const albumDirRelative = joinUploadRelativePath("gallery", "albums", albumSlug);
-  const albumDir = resolveUploadAbsolute(albumDirRelative);
-  await fs.mkdir(albumDir, { recursive: true });
 
   const collaboratorIds = meta.collaborators
     .map((id) => Number(id))
@@ -251,17 +208,12 @@ async function createAlbum(meta: IncomingAlbumMeta, photos: IncomingPhoto[], upl
     const createdPhotos: { recordId: string; clientId: string; storagePath: string; altText: string | null }[] = [];
 
     for (const photo of photos) {
-      if (!photo.dataUrl) {
+      const storagePath = resolveIncomingStoragePath(photo);
+      if (!storagePath) {
         continue;
       }
       const normalizedTitle = normalizeTitle(photo.title);
-      const { buffer, mimeType, extension } = parseDataUrl(photo.dataUrl);
-      const baseNameSeed = normalizedTitle ?? photo.originalName ?? photo.id;
-      const baseName = sanitizeFilename(baseNameSeed);
-      const filename = await uniqueFilename(albumDir, baseName, extension);
-      const relativePath = joinUploadRelativePath("gallery", "albums", albumSlug, filename);
-      await saveUploadFile(relativePath, buffer);
-
+      const baseName = normalizedTitle ?? photo.originalName ?? path.posix.basename(storagePath);
       const takenAt = safeDateInput(photo.date);
       const position = typeof photo.order === "number" ? photo.order : createdPhotos.length;
 
@@ -269,7 +221,7 @@ async function createAlbum(meta: IncomingAlbumMeta, photos: IncomingPhoto[], upl
         data: {
           albumId: albumRecord.id,
           uploaderId,
-          storagePath: relativePath,
+          storagePath,
           thumbnailPath: null,
           title: normalizedTitle,
           altText: normalizedTitle ?? baseName,
@@ -278,8 +230,8 @@ async function createAlbum(meta: IncomingAlbumMeta, photos: IncomingPhoto[], upl
           location: photo.location ?? null,
           width: null,
           height: null,
-          fileSize: buffer.length,
-          mimeType,
+          fileSize: normalizeFileSize(photo.fileSize),
+          mimeType: normalizeMimeType(photo.mimeType),
           position,
         },
       });
@@ -287,9 +239,13 @@ async function createAlbum(meta: IncomingAlbumMeta, photos: IncomingPhoto[], upl
       createdPhotos.push({
         recordId: imageRecord.id,
         clientId: photo.id,
-        storagePath: relativePath,
+        storagePath,
         altText: imageRecord.altText,
       });
+    }
+
+    if (createdPhotos.length === 0) {
+      throw new Error("No se pudo procesar ninguna imagen.");
     }
 
     const coverImageMatch = meta.coverPhotoId
@@ -342,20 +298,6 @@ async function updateAlbum(
   const normalizedFormat = normalizeFormat(meta.format);
 
   const newSlug = await generateAlbumSlug(meta.title, albumId);
-  const currentDir = resolveUploadAbsolute(joinUploadRelativePath("gallery", "albums", existing.slug));
-  const targetDir = resolveUploadAbsolute(joinUploadRelativePath("gallery", "albums", newSlug));
-  if (existing.slug !== newSlug) {
-    try {
-      await fs.mkdir(path.dirname(targetDir), { recursive: true });
-      await fs.rename(currentDir, targetDir);
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT") {
-        throw error;
-      }
-    }
-  }
-  await fs.mkdir(targetDir, { recursive: true });
 
   const existingImageMap = new Map(existing.images.map((image) => [image.id, image]));
 
@@ -411,10 +353,7 @@ async function updateAlbum(
         seenImageIds.add(original.id);
         const takenAt = safeDateInput(photo.date);
         const normalizedTitle = normalizeTitle(photo.title);
-        const storagePath =
-          albumRecord.slug !== original.storagePath.split("/")[2]
-            ? path.posix.join("gallery", "albums", albumRecord.slug, path.posix.basename(original.storagePath))
-            : original.storagePath;
+        const storagePath = original.storagePath;
         const updated = await tx.galleryImage.update({
           where: { id: original.id },
           data: {
@@ -432,21 +371,19 @@ async function updateAlbum(
           storagePath: updated.storagePath,
           altText: updated.altText,
         });
-      } else if (photo.dataUrl) {
+      } else {
+        const storagePath = resolveIncomingStoragePath(photo);
+        if (!storagePath) {
+          continue;
+        }
         const normalizedTitle = normalizeTitle(photo.title);
-        const { buffer, mimeType, extension } = parseDataUrl(photo.dataUrl);
-        const baseNameSeed = normalizedTitle ?? photo.originalName ?? photo.id;
-        const baseName = sanitizeFilename(baseNameSeed);
-        const filename = await uniqueFilename(targetDir, baseName, extension);
-        const relativePath = joinUploadRelativePath("gallery", "albums", albumRecord.slug, filename);
-        await saveUploadFile(relativePath, buffer);
-
+        const baseName = normalizedTitle ?? photo.originalName ?? path.posix.basename(storagePath);
         const takenAt = safeDateInput(photo.date);
         const imageRecord = await tx.galleryImage.create({
           data: {
             albumId,
             uploaderId,
-            storagePath: relativePath,
+            storagePath,
             thumbnailPath: null,
             title: normalizedTitle,
             altText: normalizedTitle ?? baseName,
@@ -455,8 +392,8 @@ async function updateAlbum(
             location: photo.location ?? null,
             width: null,
             height: null,
-            fileSize: buffer.length,
-            mimeType,
+            fileSize: normalizeFileSize(photo.fileSize),
+            mimeType: normalizeMimeType(photo.mimeType),
             position,
           },
         });
@@ -464,7 +401,7 @@ async function updateAlbum(
         createdPhotos.push({
           recordId: imageRecord.id,
           clientId: photo.id,
-          storagePath: relativePath,
+          storagePath,
           altText: imageRecord.altText,
         });
       }
@@ -536,8 +473,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Modo de subida no soportado." }, { status: 400 });
     }
 
-    await ensureBaseDirectories();
-
     if (body.mode === "standalone") {
       if (!hasGalleryPrivileges) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -577,7 +512,9 @@ export async function POST(request: Request) {
     console.error("Fallo al procesar la subida de la galería", error);
     const message =
       error instanceof Error ? error.message : "No se pudo procesar la subida. Inténtalo de nuevo más tarde.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const lower = message.toLowerCase();
+    const status = lower.includes("imagen") || lower.includes("album") ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 

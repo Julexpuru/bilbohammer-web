@@ -114,10 +114,7 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
       try {
         await deleteUploadFile(photo.storagePath);
       } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code !== "ENOENT") {
-          console.warn("No se pudo eliminar el archivo de la foto:", error);
-        }
+        console.warn("No se pudo eliminar el archivo de la foto:", error);
       }
     }
 

@@ -1,3 +1,5 @@
+import { uploadToPresignedUrl } from "@/lib/uploads/presign-client";
+
 const MAX_BANNER_SIZE = 6 * 1024 * 1024; // 6MB
 const ALLOWED_BANNER_TYPES = new Set([
   "image/jpeg",
@@ -11,6 +13,40 @@ export type UploadBannerOptions = {
   signal?: AbortSignal;
   eventId?: string | null;
 };
+
+async function requestPresignedEventUpload(options: {
+  endpoint: string;
+  filename: string;
+  contentType: string;
+  eventId?: string | null;
+  signal?: AbortSignal;
+}) {
+  const response = await fetch(options.endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      filename: options.filename,
+      contentType: options.contentType,
+      eventId: options.eventId ?? null,
+    }),
+    signal: options.signal,
+    cache: "no-store",
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | { uploadUrl?: string; publicUrl?: string; error?: string }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(data?.error ?? "No se pudo preparar la subida.");
+  }
+
+  if (!data?.uploadUrl || !data?.publicUrl) {
+    throw new Error("Respuesta inesperada del servidor al subir el archivo.");
+  }
+
+  return { uploadUrl: data.uploadUrl, publicUrl: data.publicUrl };
+}
 
 export async function uploadBannerFile(file: File, options?: UploadBannerOptions): Promise<string> {
   if (!(file instanceof File)) {
@@ -29,33 +65,21 @@ export async function uploadBannerFile(file: File, options?: UploadBannerOptions
     throw new Error("Tipo de archivo no permitido. Usa PNG, JPG, WEBP, GIF o SVG.");
   }
 
-  const formData = new FormData();
-  formData.append("file", file);
-  if (file.name) {
-    formData.append("filename", file.name);
-  }
-  const bannerEventId = options?.eventId?.trim();
-  if (bannerEventId) {
-    formData.append("eventId", bannerEventId);
+  const contentType = file.type;
+  if (!contentType) {
+    throw new Error("No se pudo determinar el tipo de archivo.");
   }
 
-  const response = await fetch("/api/uploads/event-banner", {
-    method: "POST",
-    body: formData,
+  const { uploadUrl, publicUrl } = await requestPresignedEventUpload({
+    endpoint: "/api/uploads/event-banner",
+    filename: file.name || "banner",
+    contentType,
+    eventId: options?.eventId?.trim(),
     signal: options?.signal,
   });
 
-  const data = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
-
-  if (!response.ok) {
-    throw new Error(data?.error ?? "No se pudo subir el banner.");
-  }
-
-  if (!data?.url) {
-    throw new Error("Respuesta inesperada del servidor al subir el banner.");
-  }
-
-  return data.url;
+  await uploadToPresignedUrl(file, uploadUrl, contentType);
+  return publicUrl;
 }
 
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB
@@ -75,6 +99,7 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
   "image/gif",
   "image/svg+xml",
   "text/plain",
+  "application/octet-stream",
 ]);
 
 export type UploadAttachmentOptions = {
@@ -102,31 +127,16 @@ export async function uploadAttachmentFile(
     throw new Error("Tipo de archivo no permitido para adjuntos.");
   }
 
-  const formData = new FormData();
-  formData.append("file", file);
-  if (file.name) {
-    formData.append("filename", file.name);
-  }
-  const attachmentEventId = options?.eventId?.trim();
-  if (attachmentEventId) {
-    formData.append("eventId", attachmentEventId);
-  }
+  const contentType = file.type || "application/octet-stream";
 
-  const response = await fetch("/api/uploads/event-attachment", {
-    method: "POST",
-    body: formData,
+  const { uploadUrl, publicUrl } = await requestPresignedEventUpload({
+    endpoint: "/api/uploads/event-attachment",
+    filename: file.name || "adjunto",
+    contentType,
+    eventId: options?.eventId?.trim(),
     signal: options?.signal,
   });
 
-  const data = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
-
-  if (!response.ok) {
-    throw new Error(data?.error ?? "No se pudo subir el adjunto.");
-  }
-
-  if (!data?.url) {
-    throw new Error("Respuesta inesperada del servidor al subir el adjunto.");
-  }
-
-  return data.url;
+  await uploadToPresignedUrl(file, uploadUrl, contentType);
+  return publicUrl;
 }

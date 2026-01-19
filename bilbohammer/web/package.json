@@ -13,6 +13,7 @@
     "lint": "next lint",
     "migrate:legacy-media": "tsx scripts/migrate-legacy-game-media.ts",
     "migrate:uploads-r2": "tsx scripts/migrate-uploads-to-r2.ts",
+    "normalize:upload-urls": "tsx scripts/normalize-upload-urls.ts",
     "migration:guards": "tsx scripts/run-migration-guards.ts"
   },
   "prisma": {

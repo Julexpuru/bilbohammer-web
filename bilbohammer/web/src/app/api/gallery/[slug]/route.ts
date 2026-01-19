@@ -1,14 +1,53 @@
 'use server';
 
 import { NextResponse } from "next/server";
-import path from "path";
-import { promises as fs } from "fs";
 import { auth } from "@/auth";
 import { userCanEditAlbum } from "@/lib/roles";
 import prisma from "@/lib/prisma";
-import { joinUploadRelativePath, resolveUploadAbsolute } from "@/lib/uploads/storage";
+import { copyUploadObject, deleteUploadObject } from "@/lib/uploads/r2";
+import {
+  ensureUploadsKey,
+  resolveUploadsKey,
+  stripUploadsPrefix,
+} from "@/lib/uploads/public-url";
 
-const ALBUMS_DIR = joinUploadRelativePath("gallery", "albums");
+const REMOVED_PREFIX_ROOT = "removed/gallery/albums";
+
+function buildRemovedPrefix(slug: string, timestamp: string) {
+  const safeSlug = slug.trim() || "album";
+  return ensureUploadsKey(`${REMOVED_PREFIX_ROOT}/${safeSlug}__removed__${timestamp}`);
+}
+
+function buildRemovedKey(removedPrefix: string, key: string) {
+  const normalizedPrefix = removedPrefix.replace(/\/+$/, "");
+  const normalizedKey = stripUploadsPrefix(key).replace(/^\/+/, "");
+  return `${normalizedPrefix}/${normalizedKey}`;
+}
+
+async function moveObjectsToRemovedPrefix(keys: string[], removedPrefix: string) {
+  const uniqueKeys = Array.from(new Set(keys));
+  const concurrency = 5;
+  for (let idx = 0; idx < uniqueKeys.length; idx += concurrency) {
+    const batch = uniqueKeys.slice(idx, idx + concurrency);
+    const results = await Promise.allSettled(
+      batch.map(async (key) => {
+        const targetKey = buildRemovedKey(removedPrefix, key);
+        if (targetKey === key) return;
+        await copyUploadObject(key, targetKey);
+        await deleteUploadObject(key);
+      })
+    );
+    results.forEach((result, offset) => {
+      if (result.status === "rejected") {
+        console.warn(
+          "[gallery] No se pudo mover un archivo a la zona de eliminados:",
+          batch[offset],
+          result.reason
+        );
+      }
+    });
+  }
+}
 
 export async function DELETE(_: Request, { params }: { params: { slug: string } }) {
   try {
@@ -31,6 +70,11 @@ export async function DELETE(_: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
+    const images = await prisma.galleryImage.findMany({
+      where: { albumId: album.id },
+      select: { storagePath: true },
+    });
+
     await prisma.$transaction(async (tx) => {
       await tx.galleryImage.deleteMany({ where: { albumId: album.id } });
       await tx.galleryAlbumTag.deleteMany({ where: { albumId: album.id } });
@@ -38,16 +82,17 @@ export async function DELETE(_: Request, { params }: { params: { slug: string } 
       await tx.galleryAlbum.delete({ where: { id: album.id } });
     });
 
-    const currentDir = resolveUploadAbsolute(joinUploadRelativePath("gallery", "albums", album.slug));
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const targetDir = resolveUploadAbsolute(
-      joinUploadRelativePath("gallery", "albums", `${album.slug}__removed__${timestamp}`),
-    );
-    try {
-      await fs.rename(currentDir, targetDir);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        console.warn("No se pudo renombrar la carpeta del album eliminado:", error);
+    const keys = images
+      .map((image) => resolveUploadsKey(image.storagePath))
+      .filter((value): value is string => Boolean(value));
+
+    if (keys.length > 0) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const removedPrefix = buildRemovedPrefix(album.slug, timestamp);
+      try {
+        await moveObjectsToRemovedPrefix(keys, removedPrefix);
+      } catch (error) {
+        console.warn("No se pudo mover el contenido del album eliminado:", error);
       }
     }
 

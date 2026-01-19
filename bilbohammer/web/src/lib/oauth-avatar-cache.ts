@@ -58,7 +58,7 @@ export async function cacheRemoteAvatar({ userId, remoteUrl, currentLocalPath }:
     const safeUser = Number.isFinite(userId) && userId != null ? userId : "anon";
     const filename = `oauth_${safeUser}_${Date.now()}_${hash}${extensionFromMime(contentType)}`;
     const relativePath = joinUploadRelativePath("oauth-cache", filename);
-    await saveUploadFile(relativePath, buffer);
+    await saveUploadFile(relativePath, buffer, { contentType });
     await deleteLocalIfNeeded(currentLocalPath ?? null);
     return toPublicPath(relativePath);
   } catch {

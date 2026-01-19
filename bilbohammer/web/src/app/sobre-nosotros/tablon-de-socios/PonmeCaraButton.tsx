@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { uploadImageToR2 } from "@/lib/uploads/presign-client";
 
 export function PonmeCaraButton({
   memberId,
@@ -37,13 +38,8 @@ export function PonmeCaraButton({
     setError(null);
 
     try {
-      const uploadData = new FormData();
-      uploadData.append("file", file);
-      const uploadResponse = await fetch("/api/upload/avatar", { method: "POST", body: uploadData });
-      if (!uploadResponse.ok) throw new Error("UPLOAD_FAILED");
-      const uploadJson = await uploadResponse.json();
-      const newUrl = uploadJson?.url;
-      if (!newUrl) throw new Error("INVALID_URL");
+      const { publicUrl } = await uploadImageToR2(file);
+      const newUrl = publicUrl;
 
       const patchResponse = await fetch("/api/me/profile", {
         method: "PATCH",
