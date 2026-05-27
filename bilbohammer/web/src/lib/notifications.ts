@@ -50,6 +50,11 @@ type MarkNotificationsReadInput = {
   all?: boolean;
 };
 
+type DeleteNotificationsInput = {
+  ids?: string[];
+  all?: boolean;
+};
+
 type ProposalNotificationInput = {
   recipientUserId: number;
   actorUserId?: number | null;
@@ -247,6 +252,33 @@ export async function markUserNotificationsRead(userId: number, input: MarkNotif
   const result = await prisma.userNotification.updateMany({
     where,
     data: {
+      readAt: new Date(),
+    },
+  });
+
+  return result.count;
+}
+
+export async function deleteUserNotifications(userId: number, input: DeleteNotificationsInput) {
+  const ids = Array.isArray(input.ids)
+    ? input.ids.map((value) => value.trim()).filter(Boolean)
+    : [];
+
+  const where = input.all
+    ? {
+        userId,
+        visibleInApp: true,
+      }
+    : {
+        userId,
+        visibleInApp: true,
+        id: { in: ids.length > 0 ? ids : ["__none__"] },
+      };
+
+  const result = await prisma.userNotification.updateMany({
+    where,
+    data: {
+      visibleInApp: false,
       readAt: new Date(),
     },
   });

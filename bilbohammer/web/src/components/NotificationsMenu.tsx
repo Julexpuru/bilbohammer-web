@@ -30,6 +30,7 @@ type PushState = {
   supported: boolean;
   configured: boolean;
   subscribed: boolean;
+  permission: NotificationPermission | "unsupported";
   publicKey: string | null;
 };
 
@@ -72,6 +73,7 @@ export default function NotificationsMenu({ className }: Props) {
     supported: false,
     configured: false,
     subscribed: false,
+    permission: "unsupported",
     publicKey: null,
   });
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -106,11 +108,16 @@ export default function NotificationsMenu({ className }: Props) {
       "PushManager" in window &&
       "Notification" in window;
     if (!supported) {
-      setPushState({ supported: false, configured: false, subscribed: false, publicKey: null });
+      setPushState({ supported: false, configured: false, subscribed: false, permission: "unsupported", publicKey: null });
       return;
     }
 
-    const registration = await navigator.serviceWorker.getRegistration("/");
+    let registration = await navigator.serviceWorker.getRegistration("/");
+    if (!registration && Notification.permission === "granted") {
+      await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      registration = await navigator.serviceWorker.ready;
+    }
+
     const localSubscription = (await registration?.pushManager.getSubscription()) ?? null;
     const endpoint = localSubscription?.endpoint ?? "";
     const url = new URL("/api/me/push-subscription", window.location.origin);
@@ -121,7 +128,13 @@ export default function NotificationsMenu({ className }: Props) {
     const response = await fetch(url.toString(), { cache: "no-store" });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      setPushState({ supported: true, configured: false, subscribed: false, publicKey: null });
+      setPushState({
+        supported: true,
+        configured: false,
+        subscribed: false,
+        permission: Notification.permission,
+        publicKey: null,
+      });
       return;
     }
 
@@ -139,6 +152,7 @@ export default function NotificationsMenu({ className }: Props) {
       supported: true,
       configured: Boolean(body.configured),
       subscribed,
+      permission: Notification.permission,
       publicKey: typeof body.publicKey === "string" ? body.publicKey : null,
     });
   }, [isAuthenticated]);
@@ -220,6 +234,33 @@ export default function NotificationsMenu({ className }: Props) {
     }
   }
 
+  async function deleteNotifications(ids: string[], all = false) {
+    if (ids.length === 0 && !all) return;
+    try {
+      const response = await fetch("/api/me/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(all ? { all: true } : { ids }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error || "No se pudieron borrar las notificaciones.");
+      }
+
+      const deletedIds = new Set(ids);
+      setNotifications((current) => (all ? [] : current.filter((notification) => !deletedIds.has(notification.id))));
+      setUnreadCount((current) => {
+        if (all) return 0;
+        const deletedUnread = notifications.filter(
+          (notification) => deletedIds.has(notification.id) && !notification.readAt
+        ).length;
+        return Math.max(0, current - deletedUnread);
+      });
+    } catch (err: any) {
+      setError(err?.message || "No se pudieron borrar las notificaciones.");
+    }
+  }
+
   async function updatePreference(field: NotificationPreferenceField, value: boolean) {
     const previous = preferences;
     if (!previous) return;
@@ -275,6 +316,7 @@ export default function NotificationsMenu({ className }: Props) {
   async function enablePush() {
     setError(null);
     if (!pushState.supported || !pushState.configured || !pushState.publicKey) return;
+    setSaving("push");
 
     try {
       const permission = await Notification.requestPermission();
@@ -283,8 +325,9 @@ export default function NotificationsMenu({ className }: Props) {
         return;
       }
 
-      const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      await navigator.serviceWorker.ready;
+      await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      const registration = await navigator.serviceWorker.ready;
+      await registration.update().catch(() => undefined);
       const existing = await registration.pushManager.getSubscription();
       const subscription =
         existing ??
@@ -306,12 +349,21 @@ export default function NotificationsMenu({ className }: Props) {
       setPushState((current) => ({ ...current, subscribed: true }));
       await loadPushState();
     } catch (err: any) {
-      setError(err?.message || "No se pudo activar push.");
+      const message = String(err?.message || "");
+      setError(
+        message.toLowerCase().includes("push service")
+          ? "El navegador ha concedido permiso, pero no ha podido crear el canal push. En Brave/Android revisa que las notificaciones del sitio no esten bloqueadas y prueba a activar desde la app instalada o desde Chrome."
+          : message || "No se pudo activar push."
+      );
+      await loadPushState().catch(() => undefined);
+    } finally {
+      setSaving(null);
     }
   }
 
   async function disablePush() {
     setError(null);
+    setSaving("push");
     try {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
@@ -326,6 +378,8 @@ export default function NotificationsMenu({ className }: Props) {
       await loadPushState();
     } catch (err: any) {
       setError(err?.message || "No se pudo desactivar push.");
+    } finally {
+      setSaving(null);
     }
   }
 
@@ -354,34 +408,48 @@ export default function NotificationsMenu({ className }: Props) {
 
       {open && (
         <div className="fixed inset-x-2 top-[calc(var(--nav-h)_+_0.5rem)] z-50 flex max-h-[calc(100dvh_-_var(--nav-h)_-_1rem)] flex-col overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--card)] shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[min(92vw,24rem)] sm:max-h-none">
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--hairline)] px-4 py-3">
-            <div>
-              <div className="text-sm font-semibold text-[var(--text)]">Notificaciones</div>
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[var(--hairline)] px-4 py-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-[var(--text)]">
+                {settingsOpen ? "Ajustes de notificaciones" : "Notificaciones"}
+              </div>
               <div className="text-xs text-[var(--muted)]">
-                {unreadCount > 0 ? `${unreadCount} sin leer` : "Sin pendientes"}
+                {settingsOpen ? "Preferencias y push" : unreadCount > 0 ? `${unreadCount} sin leer` : "Sin pendientes"}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {!settingsOpen && (
+                <>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-[var(--hairline)] px-2 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
+                    disabled={unreadCount === 0}
+                    onClick={() => markRead([], true)}
+                  >
+                    Marcar todo
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-[var(--hairline)] px-2 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
+                    disabled={notifications.length === 0}
+                    onClick={() => deleteNotifications([], true)}
+                  >
+                    Borrar
+                  </button>
+                </>
+              )}
               <button
                 type="button"
-                className="rounded-lg border border-[var(--hairline)] px-2.5 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
-                disabled={unreadCount === 0}
-                onClick={() => markRead([], true)}
-              >
-                Marcar todo
-              </button>
-              <button
-                type="button"
-                className="rounded-lg border border-[var(--hairline)] px-2.5 py-1 text-xs font-semibold text-[var(--text)]"
+                className="rounded-lg border border-[var(--hairline)] px-2 py-1 text-xs font-semibold text-[var(--text)]"
                 onClick={() => setSettingsOpen((current) => !current)}
               >
-                Ajustes
+                {settingsOpen ? "Volver" : "Ajustes"}
               </button>
             </div>
           </div>
 
-          {settingsOpen && preferences && (
-            <div className="max-h-[calc(100dvh_-_var(--nav-h)_-_7rem)] shrink overflow-y-auto border-b border-[var(--hairline)] bg-[var(--bg)] px-4 py-3 sm:max-h-[24rem]">
+          {settingsOpen && preferences ? (
+            <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--bg)] px-4 py-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Preferencias</div>
               <div className="space-y-3">
                 <div className="rounded-xl border border-[var(--hairline)] bg-[var(--card)] p-3">
@@ -393,7 +461,9 @@ export default function NotificationsMenu({ className }: Props) {
                           ? pushState.configured
                             ? pushState.subscribed
                               ? "Activo"
-                              : "Disponible"
+                              : pushState.permission === "granted"
+                                ? "Permiso concedido, pendiente de registro push"
+                                : "Disponible"
                             : "Pendiente de claves VAPID"
                           : "No soportado por este navegador"}
                       </div>
@@ -402,6 +472,7 @@ export default function NotificationsMenu({ className }: Props) {
                       <button
                         type="button"
                         className="rounded-lg border border-[var(--hairline)] px-2.5 py-1 text-xs font-semibold text-[var(--text)]"
+                        disabled={saving === "push"}
                         onClick={disablePush}
                       >
                         Desactivar
@@ -410,10 +481,10 @@ export default function NotificationsMenu({ className }: Props) {
                       <button
                         type="button"
                         className="rounded-lg border border-[var(--hairline)] px-2.5 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
-                        disabled={!pushState.supported || !pushState.configured}
+                        disabled={!pushState.supported || !pushState.configured || saving === "push"}
                         onClick={enablePush}
                       >
-                        Activar
+                        {saving === "push" ? "Activando..." : "Activar"}
                       </button>
                     )}
                   </div>
@@ -471,9 +542,9 @@ export default function NotificationsMenu({ className }: Props) {
                   </div>
                 ))}
               </div>
+              {error && <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
             </div>
-          )}
-
+          ) : (
           <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:max-h-[26rem]">
             {loading && visibleNotifications.length === 0 && (
               <div className="rounded-xl border border-dashed border-[var(--hairline)] bg-[var(--bg)] px-3 py-4 text-sm text-[var(--muted)]">
@@ -499,8 +570,8 @@ export default function NotificationsMenu({ className }: Props) {
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="text-sm font-semibold text-[var(--text)]">{notification.title}</div>
-                      <div className="shrink-0 text-[11px] text-[var(--muted)]">
+                      <div className="min-w-0 text-sm font-semibold text-[var(--text)]">{notification.title}</div>
+                      <div className="shrink-0 pr-16 text-[11px] text-[var(--muted)]">
                         {formatClubDateTime(notification.createdAt, DATE_LABEL_OPTIONS)}
                       </div>
                     </div>
@@ -510,42 +581,59 @@ export default function NotificationsMenu({ className }: Props) {
 
                 if (notification.linkUrl) {
                   return (
-                    <Link
-                      key={notification.id}
-                      href={notification.linkUrl}
-                      className="block"
-                      onClick={() => {
-                        if (isUnread) {
-                          markRead([notification.id]).catch?.(() => undefined);
-                        }
-                        setOpen(false);
-                        setSettingsOpen(false);
-                      }}
-                    >
-                      {content}
-                    </Link>
+                    <div key={notification.id} className="relative">
+                      <Link
+                        href={notification.linkUrl}
+                        className="block"
+                        onClick={() => {
+                          if (isUnread) {
+                            markRead([notification.id]).catch?.(() => undefined);
+                          }
+                          setOpen(false);
+                          setSettingsOpen(false);
+                        }}
+                      >
+                        {content}
+                      </Link>
+                      <button
+                        type="button"
+                        className="absolute right-3 top-3 rounded-md border border-[var(--hairline)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--text)]"
+                        onClick={() => deleteNotifications([notification.id]).catch?.(() => undefined)}
+                      >
+                        Borrar
+                      </button>
+                    </div>
                   );
                 }
 
                 return (
-                  <button
-                    key={notification.id}
-                    type="button"
-                    className="block w-full text-left"
-                    onClick={() => {
-                      if (isUnread) {
-                        markRead([notification.id]).catch?.(() => undefined);
-                      }
-                    }}
-                  >
-                    {content}
-                  </button>
+                  <div key={notification.id} className="relative">
+                    <button
+                      type="button"
+                      className="block w-full text-left"
+                      onClick={() => {
+                        if (isUnread) {
+                          markRead([notification.id]).catch?.(() => undefined);
+                        }
+                      }}
+                    >
+                      {content}
+                    </button>
+                    <button
+                      type="button"
+                      className="absolute right-3 top-3 rounded-md border border-[var(--hairline)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--text)]"
+                      onClick={() => deleteNotifications([notification.id]).catch?.(() => undefined)}
+                    >
+                      Borrar
+                    </button>
+                  </div>
                 );
               })}
             </div>
 
             {error && <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
           </div>
+          )}
         </div>
       )}
     </div>
