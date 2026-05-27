@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 
 type ThemeToggleProps = {
   variant?: "nav" | "surface";
+  compactDesktop?: boolean;
 };
 
-export default function ThemeToggle({ variant = "nav" }: ThemeToggleProps) {
+export default function ThemeToggle({ variant = "nav", compactDesktop = false }: ThemeToggleProps) {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
   useEffect(() => {
@@ -57,7 +58,9 @@ export default function ThemeToggle({ variant = "nav" }: ThemeToggleProps) {
           <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2"/>
         </svg>
       )}
-      <span className="text-sm">{isDark ? "Oscuro" : "Claro"}</span>
+      <span className={compactDesktop ? "text-sm lg:hidden 2xl:inline" : "text-sm"}>
+        {isDark ? "Oscuro" : "Claro"}
+      </span>
     </button>
   );
 }

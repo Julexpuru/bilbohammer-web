@@ -20,7 +20,7 @@ const INSTAGRAM_STYLE: CSSProperties = {
   borderRadius: "24px",
   border: "1px solid rgba(0,0,0,0.08)",
   boxShadow: "0 12px 32px rgba(15, 23, 42, 0.12)",
-  margin: "0",
+  margin: "0 auto",
   maxWidth: "100%",
   width: "100%",
   display: "block",
@@ -45,7 +45,7 @@ export default function InstagramFeed() {
   }, []);
 
   return (
-    <section className="mt-16 rounded-[32px] border border-[var(--hairline)] bg-[var(--card)] p-6 shadow">
+    <section className="mt-16 min-w-0 rounded-[32px] border border-[var(--hairline)] bg-[var(--card)] p-4 shadow sm:p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-[var(--text)]">Desde nuestras redes sociales</h2>
@@ -73,10 +73,10 @@ export default function InstagramFeed() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <article className="rounded-[28px] border border-[var(--hairline)] bg-[var(--card)] p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
+      <div className="mt-6 grid min-w-0 gap-6 md:grid-cols-2">
+        <article className="min-w-0 overflow-hidden rounded-[28px] border border-[var(--hairline)] bg-[var(--card)] p-4 shadow-sm">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="min-w-0">
               <h3 className="text-sm font-semibold uppercase tracking-[0.32em] text-[var(--muted)]">Instagram</h3>
               <p className="text-sm text-[var(--muted)]">Historias y fotos desde Bilbao.</p>
             </div>
@@ -84,12 +84,12 @@ export default function InstagramFeed() {
               href={INSTAGRAM_PROFILE}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-[var(--accent-600)] hover:text-[var(--accent)]"
+              className="shrink-0 text-sm font-medium text-[var(--accent-600)] hover:text-[var(--accent)]"
             >
               Ver perfil
             </Link>
           </div>
-          <div className="mt-4 w-full overflow-hidden rounded-[24px]">
+          <div className="mt-4 min-w-0 overflow-hidden rounded-[24px]">
             <blockquote
               className="instagram-media"
               data-instgrm-permalink={INSTAGRAM_PROFILE}
@@ -99,9 +99,9 @@ export default function InstagramFeed() {
           </div>
         </article>
 
-        <article className="rounded-[28px] border border-[var(--hairline)] bg-[var(--card)] p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
+        <article className="min-w-0 overflow-hidden rounded-[28px] border border-[var(--hairline)] bg-[var(--card)] p-4 shadow-sm">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="min-w-0">
               <h3 className="text-sm font-semibold uppercase tracking-[0.32em] text-[var(--muted)]">YouTube</h3>
               <p className="text-sm text-[var(--muted)]">Directos, informes de batalla y eventos del club.</p>
             </div>
@@ -109,7 +109,7 @@ export default function InstagramFeed() {
               href="https://www.youtube.com/@Bilbohammer"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-[var(--accent-600)] hover:text-[var(--accent)]"
+              className="shrink-0 text-sm font-medium text-[var(--accent-600)] hover:text-[var(--accent)]"
             >
               Abrir canal
             </Link>

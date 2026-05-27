@@ -47,8 +47,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <GtmLoader gtmId={gtmId} />
           <Providers>
             {/* Header azul fijo */}
-            <header className="nav-bar" style={{ height: "var(--nav-h)" }}>
-              <div className="container h-full">
+            <header className="nav-bar">
+              <div className="header-shell w-full">
                 <TopBar />
               </div>
             </header>

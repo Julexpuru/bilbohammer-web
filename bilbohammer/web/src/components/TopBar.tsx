@@ -257,7 +257,7 @@ export default function TopBar() {
         </div>
       </div>
 
-      <div className="hidden h-full w-full min-w-0 items-center gap-4 lg:flex">
+      <div className="hidden h-full w-full min-w-0 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-4">
         <div className="brand-container min-w-0 shrink-0">
           <Link href="/" aria-label="Ir a inicio - Bilbohammer" className="brand-link">
             <Image
@@ -271,7 +271,7 @@ export default function TopBar() {
           </Link>
         </div>
 
-        <nav className="center-nav nav-scrollless hidden min-w-0 flex-1 flex-nowrap items-center justify-center gap-4 overflow-x-auto px-2 font-medium lg:flex xl:gap-6 xl:px-4">
+        <nav className="center-nav nav-scrollless hidden min-w-0 items-center justify-center gap-3 px-1 font-medium lg:flex xl:gap-4 xl:px-2 2xl:gap-5">
           {primaryLinks.map(({ href, label }) => (
             <Link
               key={href}
@@ -330,13 +330,11 @@ export default function TopBar() {
               </div>
             )}
           </div>
-        </nav>
 
-        <div className="hidden shrink-0 items-center gap-3 lg:flex">
           {canManageClub && (
             <div
               ref={clubRef}
-              className="relative"
+              className="relative shrink-0"
               onMouseEnter={() => {
                 cancelScheduledClubClose();
                 setClubOpen(true);
@@ -356,7 +354,9 @@ export default function TopBar() {
                   setClubOpen((prev) => !prev);
                 }}
               >
-                Gestion del club
+                <span className="hidden 2xl:inline">Gestion del club</span>
+                <span className="hidden xl:inline 2xl:hidden">Gestion club</span>
+                <span className="xl:hidden">Gestion</span>
                 <ChevronIcon open={clubOpen} />
               </button>
               {clubOpen && (
@@ -379,7 +379,10 @@ export default function TopBar() {
               )}
             </div>
           )}
-          <ThemeToggle variant="nav" />
+        </nav>
+
+        <div className="hidden shrink-0 items-center justify-self-end gap-2 lg:flex xl:gap-3">
+          <ThemeToggle variant="nav" compactDesktop />
           {session?.user ? (
             <>
               <NotificationsMenu />
