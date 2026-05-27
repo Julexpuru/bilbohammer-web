@@ -77,6 +77,13 @@ cypress/screenshots/
 cypress/videos/
 playwright-report/
 test-results/
+
+# ── IA ─────────────────────────────────────────────────────
+.codegraph/
+**/.codegraph/
+
+/tmp_*
+
 web/public/uploads/
 bilbohammer/web/public/uploads/
 bilbohammer/web/storage/

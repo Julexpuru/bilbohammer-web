@@ -13,6 +13,7 @@ const favicon = assetUrl("/assets/img/favicon.png");
 export const metadata = {
   title: "Bilbohammer",
   description: "Club de juegos de mesa y wargames",
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: favicon,
     shortcut: favicon,

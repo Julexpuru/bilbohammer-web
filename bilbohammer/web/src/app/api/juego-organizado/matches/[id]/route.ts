@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import type { MatchStatus, ReservationStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { userCanManageMatches } from "@/lib/roles";
@@ -13,6 +14,23 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return errorJson("No tienes permisos para editar partidas.", 403);
   }
   const { id } = params;
+  const existing = await prisma.match.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      startsAt: true,
+      endsAt: true,
+      status: true,
+      reservations: {
+        where: { status: { not: "CANCELLED" } },
+        select: { id: true, tableId: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+  if (!existing) return errorJson("Partida no encontrada.", 404);
+
   let raw: any;
   try {
     raw = await request.json();
@@ -35,10 +53,63 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (raw.eventId !== undefined) data.eventId = parseString(raw.eventId);
   if (raw.slotId !== undefined) data.slotId = parseString(raw.slotId);
 
-  const updated = await prisma.match.update({
-    where: { id },
-    data,
-    include: { participants: true },
+  const nextStartsAt = data.startsAt instanceof Date ? data.startsAt : existing.startsAt;
+  const nextEndsAt = data.endsAt instanceof Date ? data.endsAt : existing.endsAt;
+  const nextStatus = (data.status as MatchStatus | undefined) ?? existing.status;
+
+  if (!(nextStartsAt instanceof Date) || Number.isNaN(nextStartsAt.getTime()) || !(nextEndsAt instanceof Date) || Number.isNaN(nextEndsAt.getTime())) {
+    return errorJson("Horario de partida invalido.");
+  }
+  if (nextStartsAt >= nextEndsAt) return errorJson("startsAt debe ser anterior a endsAt.");
+
+  const reservation = existing.reservations[0] ?? null;
+  if (reservation) {
+    const [overlappingReservation, overlappingBlock] = await Promise.all([
+      prisma.tableReservation.findFirst({
+        where: {
+          id: { not: reservation.id },
+          tableId: reservation.tableId,
+          status: { in: ACTIVE_RESERVATION_STATUSES },
+          start: { lt: nextEndsAt },
+          end: { gt: nextStartsAt },
+        },
+        select: { id: true },
+      }),
+      prisma.tableBlock.findFirst({
+        where: {
+          tableId: reservation.tableId,
+          start: { lt: nextEndsAt },
+          end: { gt: nextStartsAt },
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    if (overlappingBlock) return errorJson("La mesa reservada para esta partida esta bloqueada en el nuevo horario.", 409);
+    if (overlappingReservation) {
+      return errorJson("La mesa reservada para esta partida colisiona con otra reserva en el nuevo horario.", 409);
+    }
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const match = await tx.match.update({
+      where: { id },
+      data,
+      include: { participants: true },
+    });
+
+    if (reservation) {
+      await tx.tableReservation.update({
+        where: { id: reservation.id },
+        data: {
+          start: nextStartsAt,
+          end: nextEndsAt,
+          status: toReservationStatus(nextStatus),
+        },
+      });
+    }
+
+    return match;
   });
 
   return NextResponse.json(updated);
@@ -50,7 +121,10 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
     return errorJson("No tienes permisos para eliminar partidas.", 403);
   }
   const { id } = params;
-  await prisma.match.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.tableReservation.deleteMany({ where: { matchId: id } });
+    await tx.match.delete({ where: { id } });
+  });
   return NextResponse.json({ ok: true });
 }
 
@@ -89,3 +163,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
   return NextResponse.json(refreshed);
 }
+
+function toReservationStatus(status: MatchStatus): ReservationStatus {
+  if (status === "IN_PLAY") return "IN_PLAY";
+  if (status === "DONE") return "ENDED";
+  if (status === "CANCELLED") return "CANCELLED";
+  if (status === "CONFIRMED") return "CONFIRMED";
+  return "PENDING";
+}
+
+const ACTIVE_RESERVATION_STATUSES: ReservationStatus[] = ["PENDING", "CONFIRMED", "IN_PLAY"];

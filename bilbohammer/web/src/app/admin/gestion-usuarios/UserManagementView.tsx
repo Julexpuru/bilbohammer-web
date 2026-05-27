@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import clsx from "clsx";
 import { Avatar } from "@/components/profile/Avatar";
+import { ChevronIcon } from "@/components/ui/ChevronIcon";
 import type { ColumnConfig, PreparedRow } from "./table-config";
 import { COLUMN_LABELS } from "./table-config";
 import { formatClubDateTime, getClubDateTimeFormatter } from "@/lib/date-format";
@@ -356,7 +357,7 @@ function RolesDropdown({ value, onChange }: { value: string | undefined; onChang
         onClick={() => setOpen((prev) => !prev)}
       >
         {label}
-        <span className="text-xs">{open ? "^" : "v"}</span>
+        <ChevronIcon open={open} />
       </button>
       {open && (
         <div className="absolute left-0 z-10 mt-2 w-48 rounded-xl border border-[var(--hairline)] bg-[var(--card)] p-3 shadow-xl">

@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { buildArchivedTableName } from "@/lib/organized-table-naming";
 import { userCanManageTables } from "@/lib/roles";
 import { parseIntOrNull, parseString, parseTableStatus, errorJson } from "../../shared";
 
@@ -82,9 +83,19 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
     return errorJson("No tienes permisos para eliminar mesas.", 403);
   }
   const { id } = params;
+  const existing = await prisma.clubTable.findUnique({
+    where: { id },
+    select: { id: true, name: true },
+  });
+  if (!existing) {
+    return errorJson("Mesa no encontrada.", 404);
+  }
   await prisma.clubTable.update({
     where: { id },
-    data: { isActive: false },
+    data: {
+      isActive: false,
+      name: buildArchivedTableName(existing.name, existing.id),
+    },
   });
   return NextResponse.json({ ok: true });
 }

@@ -4,6 +4,7 @@ import clsx from "clsx";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
+import { ChevronIcon } from "@/components/ui/ChevronIcon";
 import { getClubDateTimeFormatter } from "@/lib/date-format";
 import { buildEventSlug } from "@/lib/events/slug";
 
@@ -221,20 +222,7 @@ export default function EventsCalendar() {
                 className="rounded-full bg-[var(--card)] px-3 py-2 text-sm font-semibold text-[var(--text)] transition hover:bg-[var(--accent)] hover:text-[#0b1216] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-600)]"
                 aria-label="Mes anterior"
               >
-                <svg
-                  aria-hidden="true"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="block"
-                >
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
+                <ChevronIcon direction="left" className="h-3.5 w-3.5" />
               </button>
               <span className="rounded-full bg-transparent px-4 py-2 text-sm font-semibold uppercase tracking-[0.28em] text-[var(--text)]">
                 {monthLabel}
@@ -245,20 +233,7 @@ export default function EventsCalendar() {
                 className="rounded-full bg-[var(--card)] px-3 py-2 text-sm font-semibold text-[var(--text)] transition hover:bg-[var(--accent)] hover:text-[#0b1216] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-600)]"
                 aria-label="Mes siguiente"
               >
-                <svg
-                  aria-hidden="true"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="block"
-                >
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
+                <ChevronIcon direction="right" className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>

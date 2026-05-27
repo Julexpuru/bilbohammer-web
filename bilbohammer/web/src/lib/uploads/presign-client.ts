@@ -3,6 +3,9 @@ export type PresignResponse = {
   uploadUrl: string;
   publicUrl: string;
 };
+type PresignUploadOptions = {
+  folder?: string;
+};
 
 const DEFAULT_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
@@ -13,7 +16,7 @@ const ALLOWED_CONTENT_TYPES = new Set([
   "image/gif",
 ]);
 
-export async function requestPresignedUpload(file: File): Promise<PresignResponse> {
+export async function requestPresignedUpload(file: File, options?: PresignUploadOptions): Promise<PresignResponse> {
   const contentType = file.type;
   if (!contentType || !ALLOWED_CONTENT_TYPES.has(contentType)) {
     throw new Error("Formato no permitido. Usa JPG, PNG, WEBP o GIF.");
@@ -25,6 +28,7 @@ export async function requestPresignedUpload(file: File): Promise<PresignRespons
     body: JSON.stringify({
       filename: file.name || "upload",
       contentType,
+      folder: options?.folder ?? "",
     }),
     cache: "no-store",
   });
@@ -61,8 +65,8 @@ export async function uploadToPresignedUrl(
   }
 }
 
-export async function uploadImageToR2(file: File): Promise<PresignResponse> {
-  const presign = await requestPresignedUpload(file);
+export async function uploadImageToR2(file: File, options?: PresignUploadOptions): Promise<PresignResponse> {
+  const presign = await requestPresignedUpload(file, options);
   await uploadToPresignedUrl(file, presign.uploadUrl, file.type);
   return presign;
 }

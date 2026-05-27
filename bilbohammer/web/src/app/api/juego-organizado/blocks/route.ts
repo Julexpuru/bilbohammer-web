@@ -2,15 +2,25 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { userCanManageBlocks } from "@/lib/roles";
-import { parseDate, parseIntOrNull, parseString, errorJson } from "../shared";
+import { errorJson, parseDate, parseIntOrNull, parseString } from "../shared";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const from = parseDate(searchParams.get("from"));
+  const to = parseDate(searchParams.get("to"));
+
+  if ((searchParams.get("from") || searchParams.get("to")) && (!from || !to || from >= to)) {
+    return errorJson("Rango de fechas invalido.");
+  }
+
   const blocks = await prisma.tableBlock.findMany({
+    where: from && to ? { start: { lt: to }, end: { gt: from } } : undefined,
     orderBy: { start: "asc" },
   });
+
   return NextResponse.json(blocks);
 }
 
@@ -19,11 +29,12 @@ export async function POST(request: Request) {
   if (!userCanManageBlocks(session)) {
     return errorJson("No tienes permisos para bloquear mesas.", 403);
   }
+
   let raw: any;
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud inválido.", 400);
+    return errorJson("Cuerpo de la solicitud invalido.", 400);
   }
 
   const tableId = parseString(raw.tableId);

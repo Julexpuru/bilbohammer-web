@@ -66,13 +66,6 @@ function mergeWithFallback(data: GameCatalogItem[]): GameCatalogEntry[] {
     };
   });
 
-  const knownSlugs = new Set(merged.map((item) => item.slug));
-  for (const fallback of fallbackMap.values()) {
-    if (!knownSlugs.has(fallback.slug)) {
-      merged.push(fallback);
-    }
-  }
-
   return merged.sort((a, b) => {
     if (a.sortOrder === b.sortOrder) {
       return a.name.localeCompare(b.name, "es", { sensitivity: "base" });

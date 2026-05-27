@@ -1,53 +1,67 @@
-import Link from "next/link";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { extractRoles } from "@/lib/roles";
+import { isZoneTableName } from "@/lib/organized-tables";
+import { OrganizedHubTabs } from "@/components/juego-organizado/OrganizedHubTabs";
 
-const tiles = [
-  {
-    href: "/juego-organizado/mesas",
-    title: "Mapa de mesas",
-    desc: "Vista aérea con estado en tiempo real y herramientas de administración.",
-  },
-  {
-    href: "/juego-organizado/calendario",
-    title: "Calendario",
-    desc: "Partidas y reservas por día/semana con filtros por juego y mesa.",
-  },
-  {
-    href: "/juego-organizado/mis-partidas",
-    title: "Mis partidas",
-    desc: "Tus slots de disponibilidad, partidas futuras y reservas asociadas.",
-  },
-];
+export const dynamic = "force-dynamic";
 
-export default function JuegoOrganizadoHubPage() {
+async function loadHubData() {
+  try {
+    const [tables, games] = await Promise.all([
+      prisma.clubTable.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      }),
+      prisma.game.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, name: true },
+      }),
+    ]);
+
+    return {
+      tables: tables.filter((table) => !isZoneTableName(table.name)),
+      games,
+      loadError: null,
+    };
+  } catch (error) {
+    console.error("[organized-hub-data]", error);
+    return { tables: [], games: [], loadError: "No se pudo conectar con la base de datos." };
+  }
+}
+
+export default async function JuegoOrganizadoHubPage() {
+  const session = await auth();
+  const roles = extractRoles(session);
+  const canManage = roles.includes("ADMIN") || roles.includes("JUNTA");
+  const { tables, games, loadError } = await loadHubData();
+
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-0">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 lg:px-0">
       <div className="space-y-3">
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">Juego organizado</p>
-        <h1 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">Hub de mesas y partidas</h1>
+        <h1 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">Juego organizado</h1>
         <p className="max-w-3xl text-[var(--muted)]">
-          Punto de entrada único al ecosistema: estado de mesas, calendario de partidas, tus horarios y eventos activos.
+          Punto de entrada unico al ecosistema: calendario vivo de partidas, gestiona tus partidas y disponibilidades y
+          consulta del estado actual de las mesas del club.
         </p>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {tiles.map((tile) => (
-          <Link
-            key={tile.href}
-            href={tile.href}
-            className="group rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-[var(--text)]">{tile.title}</h2>
-                <p className="mt-2 text-sm text-[var(--muted)]">{tile.desc}</p>
-              </div>
-              <span className="rounded-full bg-[var(--accent-50)] px-3 py-1 text-xs font-semibold text-[var(--accent-600)]">
-                Abrir
-              </span>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {!session?.user && (
+        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-4 text-sm text-[var(--muted)]">
+          El area de consulta esta abierta. Para usar <span className="font-semibold text-[var(--text)]">Mis partidas</span>{" "}
+          necesitas iniciar sesion.
+        </div>
+      )}
+
+      <OrganizedHubTabs
+        games={games}
+        tables={tables}
+        initialError={loadError}
+        canManage={canManage}
+        isAuthenticated={Boolean(session?.user)}
+      />
     </div>
   );
 }

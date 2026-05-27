@@ -74,11 +74,28 @@ Define las variables en `web/.env` (para Docker) o en el proveedor de hosting:
 **Correo saliente (opcional)**
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`.
 
+**Notificaciones push y recordatorios**
+- `VAPID_PUBLIC_KEY` y `NEXT_PUBLIC_VAPID_PUBLIC_KEY`: misma clave publica VAPID, la segunda expuesta al navegador.
+- `VAPID_PRIVATE_KEY`: clave privada VAPID, solo servidor.
+- `VAPID_SUBJECT`: contacto del emisor push, previsto como `mailto:no-reply@bilbohammer.es`.
+- `NOTIFICATIONS_CRON_SECRET`: secreto para invocar `/api/notifications/dispatch-reminders` desde el cron de produccion.
+
 **Variables publicas (expuestas al navegador)**
 - `NEXT_PUBLIC_INSTAGRAM_PROFILE`
 - `NEXT_PUBLIC_YOUTUBE_PLAYLIST_ID`
 - `NEXT_PUBLIC_YOUTUBE_VIDEO_ID`
 - `NEXT_PUBLIC_GTM_ID` (GTM-WBXCJ8QS en produccion ahora mismo).
+
+**SEO y control de bots**
+- `SEO_ROBOTS_BLOCKED_BOTS`: user-agents que apareceran bloqueados en `robots.txt`.
+- `SEO_ROBOTS_THROTTLED_BOTS`: user-agents a los que se aplicara `crawl-delay` en `robots.txt` (opcional).
+- `SEO_ROBOTS_CRAWL_DELAY_SECONDS`: segundos de `crawl-delay` para `SEO_ROBOTS_THROTTLED_BOTS`.
+- `BOT_BLOCKED_USER_AGENTS`: bloqueo duro en middleware (HTTP 403), incluso si ignoran `robots.txt`.
+- `BOT_TRUSTED_INDEXER_USER_AGENTS`: bots de indexacion permitidos para no romper SEO.
+- `BOT_RATE_LIMIT_ENABLED`: activa limitacion por IP para trafico automatizado detectado.
+- `BOT_RATE_LIMIT_WINDOW_SECONDS` y `BOT_RATE_LIMIT_MAX_REQUESTS`: ventana y cupo de requests.
+- `BOT_RATE_LIMIT_PATH_PREFIXES`: rutas protegidas por rate-limit (`/` aplica a todo el sitio).
+- `BOT_RATE_LIMIT_EXEMPT_PATHS`: rutas exentas (por defecto `robots.txt` y `sitemap.xml`).
 
 ## Scripts disponibles
 - `npm run dev`: Next.js en modo desarrollo.
@@ -134,8 +151,8 @@ La logica de comprobacion esta centralizada en `src/lib/roles.ts` y los middlewa
 ## Despliegue
 1. Prepara una base de datos Postgres gestionada (Neon, Supabase, Railway, RDS...) y copia la URL en `DATABASE_URL`.
 2. Ejecuta `npm run build` (o deja que Vercel lo haga). Antes de arrancar, corre `npx prisma migrate deploy` o `npx prisma db push`.
-3. Configura las variables en la plataforma (APP_BASE_URL, NEXTAUTH_URL, AUTH_SECRET, SMTP si aplica, etc.).
-4. Publica la carpeta `web` en Vercel, Render, Fly.io o un VPS con Docker. Si usas Vercel, anade `NEXT_PUBLIC_GTM_ID` para que el banner pueda cargar GTM en produccion.
+3. Configura las variables en la plataforma (APP_BASE_URL, NEXTAUTH_URL, AUTH_SECRET, SMTP si aplica, VAPID y `NOTIFICATIONS_CRON_SECRET` para push/recordatorios, etc.).
+4. Publica la carpeta `web` en Vercel, Render, Fly.io o un VPS con Docker. Si usas Render, deja el start command como `npm start` para que Next.js respete el `PORT` inyectado por la plataforma y configura `APP_BASE_URL` con la URL publica final. Si usas Vercel, anade `NEXT_PUBLIC_GTM_ID` para que el banner pueda cargar GTM en produccion.
 5. Configura las variables de R2/CDN y ejecuta las migraciones de uploads/URLs si vienes de storage local.
 
 ## Seguridad y cumplimiento

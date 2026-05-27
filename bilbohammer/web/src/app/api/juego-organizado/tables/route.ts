@@ -2,10 +2,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { buildArchivedTableName, buildNextMesaName, compareTableNames, extractMesaNumber } from "@/lib/organized-table-naming";
+import { prisma } from "@/lib/prisma";
 import { userCanManageTables } from "@/lib/roles";
-import { parseIntOrNull, parseString, parseTableStatus, errorJson } from "../shared";
+import { errorJson, parseIntOrNull, parseString, parseTableStatus } from "../shared";
 
 const GAME_SELECT = {
   id: true,
@@ -18,7 +19,6 @@ const GAME_SELECT = {
 export async function GET() {
   const tables = await prisma.clubTable.findMany({
     where: { isActive: true },
-    orderBy: { name: "asc" },
     include: {
       layouts: true,
       game: {
@@ -26,6 +26,9 @@ export async function GET() {
       },
     },
   });
+
+  tables.sort((a, b) => compareTableNames(a.name, b.name));
+
   return NextResponse.json(tables);
 }
 
@@ -39,11 +42,11 @@ export async function POST(request: Request) {
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud inválido.", 400);
+    return errorJson("Cuerpo de la solicitud invalido.", 400);
   }
 
-  const name = parseString(raw.name);
-  if (!name) return errorJson("El nombre es obligatorio.");
+  const requestedName = parseString(raw.name);
+  const shouldAutoName = raw.autoName === true || !requestedName;
 
   const posX = parseIntOrNull(raw.posX);
   const posY = parseIntOrNull(raw.posY);
@@ -68,6 +71,32 @@ export async function POST(request: Request) {
     if (!gameExists) return errorJson("Juego no encontrado.");
     gameId = rawGameId;
   }
+
+  let name = requestedName;
+  if (shouldAutoName) {
+    const allTables = await prisma.clubTable.findMany({
+      select: { id: true, name: true, isActive: true },
+    });
+
+    const legacyInactiveMesas = allTables.filter(
+      (table) => table.isActive === false && extractMesaNumber(table.name) != null
+    );
+
+    if (legacyInactiveMesas.length > 0) {
+      await prisma.$transaction(
+        legacyInactiveMesas.map((table) =>
+          prisma.clubTable.update({
+            where: { id: table.id },
+            data: { name: buildArchivedTableName(table.name, table.id) },
+          })
+        )
+      );
+    }
+
+    name = buildNextMesaName(allTables.filter((table) => table.isActive !== false));
+  }
+
+  if (!name) return errorJson("El nombre es obligatorio.");
 
   const table = await prisma.clubTable.create({
     data: {

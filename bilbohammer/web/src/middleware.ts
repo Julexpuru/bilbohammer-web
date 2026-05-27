@@ -3,6 +3,10 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth-edge";
 type AuthedRequest = NextRequest & { auth?: unknown };
 
+type RateLimitBucket = { count: number; resetAt: number };
+type BotRateLimitStore = Map<string, RateLimitBucket>;
+type GlobalWithBotRateLimit = typeof globalThis & { __bhBotRateLimit?: BotRateLimitStore };
+
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const ENFORCE_HTTPS = IS_PRODUCTION;
 const HSTS_VALUE = "max-age=63072000; includeSubDomains; preload";
@@ -26,17 +30,55 @@ const DEV_ONLY_QUERY_PARAM = "beta";
 const DEV_ONLY_BYPASS_TOKEN = (process.env.DEV_ONLY_BYPASS_TOKEN ?? "").trim();
 const devOnlyPaths = buildDevOnlyPaths();
 const DEV_ONLY_DISABLE = (process.env.DEV_ONLY_DISABLE ?? "").trim() === "1";
-const AUTH_PROTECTED_PREFIXES = ["/mi-perfil", "/profile", "/api/members"];
+const AUTH_PROTECTED_PREFIXES = ["/mi-perfil", "/profile", "/api/members", "/juego-organizado/mis-partidas"];
+const NOINDEX_PATH_PREFIXES = ["/api", "/admin", "/login", "/register", "/mi-perfil", "/juego-organizado/mis-partidas"];
+const BOT_BLOCKED_USER_AGENTS = parseStringList(
+  process.env.BOT_BLOCKED_USER_AGENTS,
+  ["GPTBot", "ClaudeBot", "anthropic-ai", "CCBot", "Bytespider", "Diffbot", "PerplexityBot", "Perplexity-User"]
+);
+const TRUSTED_INDEXER_USER_AGENTS = parseStringList(
+  process.env.BOT_TRUSTED_INDEXER_USER_AGENTS,
+  ["Googlebot", "Bingbot", "DuckDuckBot", "Applebot"]
+);
+const BOT_RATE_LIMIT_ENABLED = parseBoolean(process.env.BOT_RATE_LIMIT_ENABLED, IS_PRODUCTION);
+const BOT_RATE_LIMIT_WINDOW_SECONDS = parsePositiveInteger(process.env.BOT_RATE_LIMIT_WINDOW_SECONDS, 60);
+const BOT_RATE_LIMIT_MAX_REQUESTS = parsePositiveInteger(process.env.BOT_RATE_LIMIT_MAX_REQUESTS, 180);
+const BOT_RATE_LIMIT_PATH_PREFIXES = parsePathPrefixes(process.env.BOT_RATE_LIMIT_PATH_PREFIXES, ["/"]);
+const BOT_RATE_LIMIT_EXEMPT_PATHS = parsePathPrefixes(process.env.BOT_RATE_LIMIT_EXEMPT_PATHS, ["/robots.txt", "/sitemap.xml"]);
+const BOT_RATE_LIMIT_STORE = getBotRateLimitStore();
+const BOT_HINT_TOKENS = [
+  "bot",
+  "crawl",
+  "crawler",
+  "spider",
+  "scrape",
+  "fetch",
+  "headless",
+  "python-requests",
+  "axios",
+  "curl",
+  "wget",
+  "go-http-client",
+  "libwww-perl",
+];
 
 export const middleware = auth((request: AuthedRequest) => {
   const pathname = normalizePathname(request.nextUrl.pathname);
+  const isApiRoute = pathname === "/api" || pathname.startsWith("/api/");
   const protocol = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")).toLowerCase();
   const isHttps = protocol === "https";
 
   if (ENFORCE_HTTPS && !isHttps) {
     const httpsUrl = request.nextUrl.clone();
     httpsUrl.protocol = "https";
-    return NextResponse.redirect(httpsUrl, 308);
+    const redirect = NextResponse.redirect(httpsUrl, 308);
+    applyCommonHeaders(redirect, {
+      isHttpsRequest: false,
+      pathname,
+      request,
+      isApiRoute,
+    });
+    return redirect;
   }
 
   if (ENFORCE_CANONICAL_HOST && canonicalHost) {
@@ -44,19 +86,48 @@ export const middleware = auth((request: AuthedRequest) => {
     if (requestHost && !hostsMatch(requestHost, canonicalHost)) {
       const canonicalUrl = request.nextUrl.clone();
       canonicalUrl.host = canonicalHost;
-      return NextResponse.redirect(canonicalUrl, 308);
+      const redirect = NextResponse.redirect(canonicalUrl, 308);
+      applyCommonHeaders(redirect, {
+        isHttpsRequest: isHttps,
+        pathname,
+        request,
+        isApiRoute,
+      });
+      return redirect;
     }
+  }
+
+  const botDecision = evaluateBotAccess(request, pathname);
+  if (botDecision.action !== "allow") {
+    const blockedResponse = new NextResponse("Too Many Requests", {
+      status: botDecision.action === "deny" ? 403 : 429,
+    });
+    blockedResponse.headers.set("x-bot-protection", botDecision.action);
+    if (botDecision.action === "throttle" && botDecision.retryAfterSeconds > 0) {
+      blockedResponse.headers.set("Retry-After", String(botDecision.retryAfterSeconds));
+    }
+    applyCommonHeaders(blockedResponse, {
+      isHttpsRequest: isHttps,
+      pathname,
+      request,
+      isApiRoute,
+    });
+    return blockedResponse;
   }
 
   if (isAuthProtectedPath(pathname) && !request.auth) {
     const signInUrl = new URL("/api/auth/signin", request.nextUrl);
     signInUrl.searchParams.set("callbackUrl", request.nextUrl.href);
     const redirect = NextResponse.redirect(signInUrl, 307);
-    applySecurityHeaders(redirect, isHttps);
+    applyCommonHeaders(redirect, {
+      isHttpsRequest: isHttps,
+      pathname,
+      request,
+      isApiRoute,
+    });
     return redirect;
   }
 
-  const isApiRoute = request.nextUrl.pathname.startsWith("/api");
   const devOnlyDecision = evaluateDevOnlyAccess(request, isApiRoute, pathname);
 
   if (devOnlyDecision?.action === "redirect") {
@@ -68,7 +139,12 @@ export const middleware = auth((request: AuthedRequest) => {
         decision: devOnlyDecision.action,
       })
     );
-    applySecurityHeaders(redirect, isHttps);
+    applyCommonHeaders(redirect, {
+      isHttpsRequest: isHttps,
+      pathname,
+      request,
+      isApiRoute,
+    });
     return redirect;
   }
 
@@ -81,8 +157,12 @@ export const middleware = auth((request: AuthedRequest) => {
         decision: devOnlyDecision?.action,
       })
     );
-    applySecurityHeaders(preflight, isHttps);
-    applyCorsHeaders(request, preflight);
+    applyCommonHeaders(preflight, {
+      isHttpsRequest: isHttps,
+      pathname,
+      request,
+      isApiRoute,
+    });
     return preflight;
   }
 
@@ -107,14 +187,31 @@ export const middleware = auth((request: AuthedRequest) => {
     });
   }
 
-  applySecurityHeaders(response, isHttps);
-
-  if (isApiRoute) {
-    applyCorsHeaders(request, response);
-  }
+  applyCommonHeaders(response, {
+    isHttpsRequest: isHttps,
+    pathname,
+    request,
+    isApiRoute,
+  });
 
   return response;
 });
+
+function applyCommonHeaders(
+  response: NextResponse,
+  options: {
+    isHttpsRequest: boolean;
+    pathname: string;
+    request: NextRequest;
+    isApiRoute: boolean;
+  }
+) {
+  applySecurityHeaders(response, options.isHttpsRequest);
+  applyRobotsHeaders(response, options.pathname);
+  if (options.isApiRoute) {
+    applyCorsHeaders(options.request, response);
+  }
+}
 
 function applySecurityHeaders(response: NextResponse, isHttpsRequest: boolean) {
   for (const [header, value] of SECURITY_HEADERS) {
@@ -122,6 +219,12 @@ function applySecurityHeaders(response: NextResponse, isHttpsRequest: boolean) {
   }
   if (isHttpsRequest) {
     response.headers.set("Strict-Transport-Security", HSTS_VALUE);
+  }
+}
+
+function applyRobotsHeaders(response: NextResponse, pathname: string) {
+  if (shouldNoIndex(pathname)) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
   }
 }
 
@@ -148,6 +251,10 @@ function resolveAllowedOrigin(originHeader: string | null, serverOrigin: string)
 
 function hostsMatch(requestHost: string, targetHost: string) {
   return requestHost.trim().toLowerCase() === targetHost;
+}
+
+function shouldNoIndex(pathname: string) {
+  return NOINDEX_PATH_PREFIXES.some((prefix) => pathMatchesPrefix(pathname, prefix));
 }
 
 function buildAllowedOrigins() {
@@ -198,6 +305,158 @@ function normalizeOrigin(value?: string | null) {
   }
 }
 
+function parseStringList(raw: string | undefined, fallback: string[] = []) {
+  if (!raw) return [...fallback];
+  const list = raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return list.length > 0 ? list : [...fallback];
+}
+
+function parseBoolean(raw: string | undefined, fallback: boolean) {
+  if (!raw) return fallback;
+  const normalized = raw.trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on") return true;
+  if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off") return false;
+  return fallback;
+}
+
+function parsePositiveInteger(raw: string | undefined, fallback: number) {
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.floor(parsed);
+}
+
+function parsePathPrefixes(raw: string | undefined, fallback: string[]) {
+  const values = parseStringList(raw, fallback)
+    .map((value) => (value.startsWith("/") ? value : `/${value}`))
+    .map((value) => (value.length > 1 && value.endsWith("/") ? value.slice(0, -1) : value));
+  return Array.from(new Set(values));
+}
+
+function getBotRateLimitStore() {
+  const globalValue = globalThis as GlobalWithBotRateLimit;
+  if (!globalValue.__bhBotRateLimit) {
+    globalValue.__bhBotRateLimit = new Map<string, RateLimitBucket>();
+  }
+  return globalValue.__bhBotRateLimit;
+}
+
+function evaluateBotAccess(
+  request: NextRequest,
+  pathname: string
+): { action: "allow" } | { action: "deny" } | { action: "throttle"; retryAfterSeconds: number } {
+  const userAgent = (request.headers.get("user-agent") ?? "").trim();
+  if (!userAgent) return { action: "allow" };
+
+  const normalizedUA = userAgent.toLowerCase();
+  if (matchesUserAgent(normalizedUA, BOT_BLOCKED_USER_AGENTS)) {
+    return { action: "deny" };
+  }
+
+  if (!BOT_RATE_LIMIT_ENABLED) {
+    return { action: "allow" };
+  }
+
+  if (!isRateLimitEligiblePath(pathname)) {
+    return { action: "allow" };
+  }
+
+  if (!isLikelyAutomatedClient(normalizedUA)) {
+    return { action: "allow" };
+  }
+
+  if (matchesUserAgent(normalizedUA, TRUSTED_INDEXER_USER_AGENTS)) {
+    return { action: "allow" };
+  }
+
+  const clientIp = getClientIp(request);
+  const throttleResult = consumeBotRateLimit(clientIp);
+  if (throttleResult.blocked) {
+    return {
+      action: "throttle",
+      retryAfterSeconds: throttleResult.retryAfterSeconds,
+    };
+  }
+
+  return { action: "allow" };
+}
+
+function isRateLimitEligiblePath(pathname: string) {
+  const isExempt = BOT_RATE_LIMIT_EXEMPT_PATHS.some((prefix) => pathMatchesPrefix(pathname, prefix));
+  if (isExempt) return false;
+  return BOT_RATE_LIMIT_PATH_PREFIXES.some((prefix) => pathMatchesPrefix(pathname, prefix));
+}
+
+function matchesUserAgent(userAgentLower: string, patterns: string[]) {
+  return patterns.some((pattern) => {
+    const normalized = pattern.trim().toLowerCase();
+    if (!normalized) return false;
+    return userAgentLower.includes(normalized);
+  });
+}
+
+function isLikelyAutomatedClient(userAgentLower: string) {
+  return BOT_HINT_TOKENS.some((token) => userAgentLower.includes(token));
+}
+
+function getClientIp(request: NextRequest) {
+  const cfIp = request.headers.get("cf-connecting-ip");
+  if (cfIp) return cfIp.trim();
+
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
+
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const first = forwardedFor.split(",")[0]?.trim();
+    if (first) return first;
+  }
+
+  return "unknown";
+}
+
+function consumeBotRateLimit(clientIp: string) {
+  const now = Date.now();
+  const windowMs = BOT_RATE_LIMIT_WINDOW_SECONDS * 1000;
+  const key = clientIp;
+  const current = BOT_RATE_LIMIT_STORE.get(key);
+
+  if (!current || current.resetAt <= now) {
+    BOT_RATE_LIMIT_STORE.set(key, {
+      count: 1,
+      resetAt: now + windowMs,
+    });
+    pruneRateLimitStore(now);
+    return { blocked: false, retryAfterSeconds: 0 };
+  }
+
+  current.count += 1;
+  BOT_RATE_LIMIT_STORE.set(key, current);
+  const remainingMs = Math.max(0, current.resetAt - now);
+
+  if (current.count > BOT_RATE_LIMIT_MAX_REQUESTS) {
+    return {
+      blocked: true,
+      retryAfterSeconds: Math.ceil(remainingMs / 1000),
+    };
+  }
+
+  return { blocked: false, retryAfterSeconds: 0 };
+}
+
+function pruneRateLimitStore(now = Date.now()) {
+  if (BOT_RATE_LIMIT_STORE.size <= 5000) return;
+  for (const [key, value] of BOT_RATE_LIMIT_STORE.entries()) {
+    if (value.resetAt <= now) {
+      BOT_RATE_LIMIT_STORE.delete(key);
+    }
+  }
+}
+
 function inferVercelUrl() {
   const vercelUrl = process.env.VERCEL_URL;
   if (!vercelUrl) return null;
@@ -234,17 +493,22 @@ function evaluateDevOnlyAccess(request: NextRequest, isApiRoute: boolean, pathOv
 }
 
 function isDevOnlyPath(pathname: string) {
-  return devOnlyPaths.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return devOnlyPaths.some((prefix) => pathMatchesPrefix(pathname, prefix));
 }
 
 function isAuthProtectedPath(pathname: string) {
-  return AUTH_PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return AUTH_PROTECTED_PREFIXES.some((prefix) => pathMatchesPrefix(pathname, prefix));
 }
 
 function normalizePathname(pathname: string) {
   if (!pathname.startsWith("/")) return `/${pathname}`;
   if (pathname.length > 1 && pathname.endsWith("/")) return pathname.slice(0, -1);
   return pathname;
+}
+
+function pathMatchesPrefix(pathname: string, prefix: string) {
+  if (prefix === "/") return pathname.startsWith("/");
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
 function buildDevOnlyDebugHeader(opts: { pathname: string; decision?: string }) {

@@ -45,11 +45,28 @@ function resolveExtension(filename: string, contentType: string) {
   return mapped ?? "bin";
 }
 
+function sanitizeFolder(rawValue: string) {
+  const cleaned = rawValue
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/\/{2,}/g, "/")
+    .replace(/^\/+|\/+$/g, "");
+  if (!cleaned) return "";
+  const safe = cleaned
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => segment.replace(/[^a-zA-Z0-9._-]/g, "").replace(/^\.+$/, ""))
+    .filter(Boolean)
+    .join("/");
+  return safe;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const filename = typeof body?.filename === "string" ? body.filename : "";
     const contentType = typeof body?.contentType === "string" ? body.contentType : "";
+    const folder = typeof body?.folder === "string" ? sanitizeFolder(body.folder) : "";
 
     if (!filename || !contentType) {
       return NextResponse.json(
@@ -80,7 +97,7 @@ export async function POST(req: Request) {
     const id = crypto.randomUUID();
     const ext = resolveExtension(filename, contentType);
     const safeExt = ext ? `.${ext}` : "";
-    const key = `uploads/${id}${safeExt}`;
+    const key = folder ? `uploads/${folder}/${id}${safeExt}` : `uploads/${id}${safeExt}`;
 
     const cmd = new PutObjectCommand({
       Bucket: bucket,

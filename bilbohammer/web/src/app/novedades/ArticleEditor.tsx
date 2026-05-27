@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronIcon } from "@/components/ui/ChevronIcon";
 
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import type { Article, ArticleBlock, ArticleCategory, ArticleStatus } from "./data";
@@ -512,7 +513,7 @@ function AddSectionMenu({ onAdd }: AddSectionMenuProps) {
           className="flex items-center gap-2 rounded-full border border-[var(--hairline)] bg-[var(--card-muted)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--text)] shadow-sm transition hover:border-[var(--accent-400)]"
         >
           Añadir sección
-          <span className={`text-[0.7rem] transition ${open ? "rotate-180" : ""}`}>▼</span>
+          <ChevronIcon open={open} />
         </button>
         {open && (
           <div className="absolute bottom-[calc(100%+0.5rem)] right-0 w-56 overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--card)] shadow-xl">

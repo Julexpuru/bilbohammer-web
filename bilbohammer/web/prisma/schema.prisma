@@ -77,6 +77,13 @@ enum SlotStatus {
   CANCELLED
 }
 
+enum SlotProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
 enum ParticipantRole {
   HOST
   GUEST
@@ -87,6 +94,26 @@ enum ParticipantStatus {
   PENDING
   CONFIRMED
   DECLINED
+}
+
+enum UserNotificationType {
+  SLOT_PROPOSAL_RECEIVED
+  SLOT_PROPOSAL_ACCEPTED
+  SLOT_PROPOSAL_REJECTED
+  SLOT_PROPOSAL_SUPERSEDED
+  MATCH_REMINDER
+  COMPATIBLE_SLOT_CREATED
+}
+
+enum UserNotificationChannel {
+  EMAIL
+  PUSH
+}
+
+enum UserNotificationDeliveryStatus {
+  SENT
+  FAILED
+  SKIPPED
 }
 
 model NewsArticle {
@@ -158,11 +185,16 @@ model User {
   createdInvites           UserInvite[]               @relation("UserInviteCreator")
   claimedInvites           UserInvite[]               @relation("UserInviteTarget")
   availabilitySlots        AvailabilitySlot[]         @relation("AvailabilitySlotCreator")
+  sentSlotProposals        SlotProposal[]             @relation("SlotProposalRequester")
   recurringAvailability    RecurringAvailability[]
   matchParticipations      MatchParticipant[]
   createdMatches           Match[]                    @relation("MatchCreator")
   createdTableReservations TableReservation[]         @relation("TableReservationCreator")
   createdTableBlocks       TableBlock[]               @relation("TableBlockCreator")
+  receivedNotifications    UserNotification[]         @relation("UserNotificationRecipient")
+  actedNotifications       UserNotification[]         @relation("UserNotificationActor")
+  notificationPreference   UserNotificationPreference?
+  pushSubscriptions        UserPushSubscription[]
 }
 
 model Account {
@@ -204,6 +236,7 @@ model Game {
   tableLayouts      TableLayout[]
   clubTables        ClubTable[]
   availabilitySlots AvailabilitySlot[]
+  slotProposals     SlotProposal[]
   matches           Match[]
 }
 
@@ -346,6 +379,88 @@ model Notification {
   createdAt DateTime @default(now())
 }
 
+model UserNotification {
+  id              String               @id @default(cuid())
+  userId          Int
+  type            UserNotificationType
+  title           String
+  body            String               @db.Text
+  linkUrl         String?
+  metadata        Json?
+  actorUserId     Int?
+  dedupeKey       String?              @unique
+  visibleInApp    Boolean              @default(true)
+  readAt          DateTime?
+  createdAt       DateTime             @default(now())
+
+  user       User                       @relation("UserNotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor      User?                      @relation("UserNotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  deliveries UserNotificationDelivery[]
+
+  @@index([userId, createdAt])
+  @@index([userId, visibleInApp, readAt])
+}
+
+model UserNotificationDelivery {
+  id             String                         @id @default(cuid())
+  notificationId String
+  channel        UserNotificationChannel
+  status         UserNotificationDeliveryStatus
+  error          String?
+  sentAt         DateTime?
+  createdAt      DateTime                       @default(now())
+  updatedAt      DateTime                       @updatedAt
+
+  notification UserNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, channel])
+  @@index([channel, status])
+}
+
+model UserNotificationPreference {
+  userId                  Int      @id
+  proposalReceivedInApp   Boolean  @default(true)
+  proposalReceivedEmail   Boolean  @default(false)
+  proposalReceivedPush    Boolean  @default(true)
+  proposalAcceptedInApp   Boolean  @default(true)
+  proposalAcceptedEmail   Boolean  @default(false)
+  proposalAcceptedPush    Boolean  @default(true)
+  proposalRejectedInApp   Boolean  @default(true)
+  proposalRejectedEmail   Boolean  @default(false)
+  proposalRejectedPush    Boolean  @default(true)
+  proposalSupersededInApp Boolean  @default(true)
+  proposalSupersededEmail Boolean  @default(false)
+  proposalSupersededPush  Boolean  @default(true)
+  matchReminderInApp      Boolean  @default(true)
+  matchReminderEmail      Boolean  @default(false)
+  matchReminderPush       Boolean  @default(true)
+  matchReminderMinutes    Int      @default(1440)
+  compatibleSlotInApp     Boolean  @default(true)
+  compatibleSlotEmail     Boolean  @default(false)
+  compatibleSlotPush      Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserPushSubscription {
+  id        String    @id @default(cuid())
+  userId    Int
+  endpoint  String    @unique @db.Text
+  p256dh    String    @db.Text
+  auth      String    @db.Text
+  userAgent String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  lastSeenAt DateTime @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+}
+
 model ClubTable {
   id        String      @id @default(cuid())
   name      String
@@ -418,7 +533,7 @@ model TableReservation {
   start       DateTime
   end         DateTime
   status      ReservationStatus @default(PENDING)
-  matchId     String?
+  matchId     String?           @unique
   createdById Int?
   notes       String?
   createdAt   DateTime          @default(now())
@@ -429,7 +544,6 @@ model TableReservation {
   createdBy User?     @relation("TableReservationCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([tableId, start, end])
-  @@index([matchId])
 }
 
 model Match {
@@ -437,6 +551,7 @@ model Match {
   gameId      String?
   eventId     String?
   slotId      String?     @unique
+  proposalId  String?     @unique
   startsAt    DateTime
   endsAt      DateTime
   status      MatchStatus @default(PENDING)
@@ -450,6 +565,7 @@ model Match {
   game         Game?              @relation(fields: [gameId], references: [id], onDelete: SetNull)
   event        Event?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
   slot         AvailabilitySlot?  @relation("SlotMatch", fields: [slotId], references: [id], onDelete: SetNull)
+  proposal     SlotProposal?      @relation("ProposalMatch", fields: [proposalId], references: [id], onDelete: SetNull)
   createdBy    User?              @relation("MatchCreator", fields: [createdById], references: [id], onDelete: SetNull)
   participants MatchParticipant[]
   reservations TableReservation[]
@@ -489,10 +605,33 @@ model AvailabilitySlot {
   creator User   @relation("AvailabilitySlotCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   game    Game?  @relation(fields: [gameId], references: [id], onDelete: SetNull)
   match   Match? @relation("SlotMatch")
+  proposals SlotProposal[]
 
   @@index([creatorId])
   @@index([start, end])
   @@index([gameId])
+}
+
+model SlotProposal {
+  id            String             @id @default(cuid())
+  slotId         String
+  requesterId    Int
+  gameId         String?
+  proposedStart  DateTime
+  proposedEnd    DateTime
+  note           String?
+  status         SlotProposalStatus @default(PENDING)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  slot      AvailabilitySlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  requester User             @relation("SlotProposalRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  game      Game?            @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  match     Match?           @relation("ProposalMatch")
+
+  @@index([slotId, status])
+  @@index([requesterId, status])
+  @@index([proposedStart, proposedEnd])
 }
 
 model RecurringAvailability {

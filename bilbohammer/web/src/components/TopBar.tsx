@@ -6,7 +6,9 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import ThemeToggle from "@/components/ThemeToggle";
 import UserAvatarMenu from "@/components/UserAvatarMenu";
+import NotificationsMenu from "@/components/NotificationsMenu";
 import LoginModal from "@/components/auth/LoginModal";
+import { ChevronIcon } from "@/components/ui/ChevronIcon";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
@@ -32,28 +34,6 @@ const clubLinks = [
   { href: "/admin/gestion-usuarios", label: "Gestión de Usuarios" },
   { href: "/admin/gestion-documental", label: "Gestión Documental" },
 ];
-
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      className={clsx("transition-transform duration-150", open ? "rotate-180" : "rotate-0")}
-      focusable="false"
-    >
-      <path
-        d="M2 4.5 6 8l4-3.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 function MenuIcon() {
   return (
@@ -186,10 +166,12 @@ export default function TopBar() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     function handleResize() {
-      if (window.innerWidth >= 768) {
+      const isDesktop = window.innerWidth >= 1024;
+      if (isDesktop) {
         closeMobileMenu();
       }
     }
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [closeMobileMenu]);
@@ -231,8 +213,52 @@ export default function TopBar() {
 
   return (
     <>
-      <div className="header-grid">
-        <div className="justify-self-start brand-container">
+      <div className="flex h-full w-full min-w-0 items-center justify-between gap-2 lg:hidden">
+        <div className="min-w-0">
+          <Link href="/" aria-label="Ir a inicio - Bilbohammer" className="brand-link">
+            <Image
+              src={assetUrl("/assets/img/LogoBH_sinfondo_croppedtight.png")}
+              alt="Bilbohammer"
+              width={880}
+              height={244}
+              className="brand-img"
+              style={{ maxWidth: "clamp(135px, 44vw, 220px)" }}
+              priority
+            />
+          </Link>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          {session?.user ? (
+            <>
+              <NotificationsMenu />
+              <UserAvatarMenu profileHref="/mi-perfil" />
+            </>
+          ) : (
+            <button
+              className="inline-flex items-center rounded-xl border border-[var(--hairline)] bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[#0b1216] hover:bg-[var(--accent-600)] hover:text-white"
+              onClick={() => setLoginOpen(true)}
+            >
+              Entrar
+            </button>
+          )}
+          <button
+            type="button"
+            className={clsx(
+              "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--hairline)] bg-[var(--card)] text-[var(--text)] shadow-sm transition-colors",
+              mobileMenuOpen && "bg-[var(--accent-600)] text-white"
+            )}
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? "Cerrar menu de navegacion" : "Abrir menu de navegacion"}
+            onClick={toggleMobileMenu}
+          >
+            <MenuIcon />
+          </button>
+        </div>
+      </div>
+
+      <div className="hidden h-full w-full min-w-0 items-center gap-4 lg:flex">
+        <div className="brand-container min-w-0 shrink-0">
           <Link href="/" aria-label="Ir a inicio - Bilbohammer" className="brand-link">
             <Image
               src={assetUrl("/assets/img/LogoBH_sinfondo_croppedtight.png")}
@@ -245,12 +271,15 @@ export default function TopBar() {
           </Link>
         </div>
 
-        <nav className="center-nav hidden md:flex gap-6 justify-center font-medium">
+        <nav className="center-nav nav-scrollless hidden min-w-0 flex-1 flex-nowrap items-center justify-center gap-4 overflow-x-auto px-2 font-medium lg:flex xl:gap-6 xl:px-4">
           {primaryLinks.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
-              className={clsx("transition-opacity hover:opacity-90", activeMap.get(href) && "text-[var(--nav-active)]")}
+              className={clsx(
+                "shrink-0 whitespace-nowrap transition-opacity hover:opacity-90",
+                activeMap.get(href) && "text-[var(--nav-active)]"
+              )}
               style={{ color: activeMap.get(href) ? undefined : "var(--nav-text)" }}
             >
               {label}
@@ -258,7 +287,7 @@ export default function TopBar() {
           ))}
           <div
             ref={aboutRef}
-            className="relative"
+            className="relative shrink-0"
             onMouseEnter={() => {
               cancelScheduledClose();
               setAboutOpen(true);
@@ -272,7 +301,7 @@ export default function TopBar() {
                 setAboutOpen((prev) => !prev);
               }}
               className={clsx(
-                "flex items-center gap-1 transition-opacity hover:opacity-90",
+                "flex shrink-0 items-center gap-1 whitespace-nowrap leading-none transition-opacity hover:opacity-90",
                 activeMap.get("/sobre-nosotros") && "text-[var(--nav-active)]"
               )}
               style={{ color: activeMap.get("/sobre-nosotros") ? undefined : "var(--nav-text)" }}
@@ -303,7 +332,7 @@ export default function TopBar() {
           </div>
         </nav>
 
-        <div className="hidden md:flex justify-self-end items-center gap-3">
+        <div className="hidden shrink-0 items-center gap-3 lg:flex">
           {canManageClub && (
             <div
               ref={clubRef}
@@ -352,7 +381,10 @@ export default function TopBar() {
           )}
           <ThemeToggle variant="nav" />
           {session?.user ? (
-            <UserAvatarMenu profileHref="/mi-perfil" />
+            <>
+              <NotificationsMenu />
+              <UserAvatarMenu profileHref="/mi-perfil" />
+            </>
           ) : (
             <button className="btn btn-accent" onClick={() => setLoginOpen(true)}>
               Entrar
@@ -360,31 +392,10 @@ export default function TopBar() {
           )}
         </div>
 
-        <div className="flex items-center justify-self-end gap-2 md:hidden">
-          {session?.user ? (
-            <UserAvatarMenu profileHref="/mi-perfil" />
-          ) : (
-            <button className="btn btn-accent px-4 py-2 text-sm" onClick={() => setLoginOpen(true)}>
-              Entrar
-            </button>
-          )}
-          <button
-            type="button"
-            className={clsx(
-              "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--hairline)] bg-[var(--card)] text-[var(--text)] shadow-sm transition-colors",
-              mobileMenuOpen && "bg-[var(--accent-600)] text-white"
-            )}
-            aria-expanded={mobileMenuOpen}
-            aria-label={mobileMenuOpen ? "Cerrar menu de navegacion" : "Abrir menu de navegacion"}
-            onClick={toggleMobileMenu}
-          >
-            <MenuIcon />
-          </button>
-        </div>
       </div>
 
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"
             aria-hidden="true"
