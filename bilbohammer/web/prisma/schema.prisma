@@ -102,6 +102,7 @@ enum UserNotificationType {
   SLOT_PROPOSAL_REJECTED
   SLOT_PROPOSAL_SUPERSEDED
   MATCH_REMINDER
+  MATCH_CANCELLED
   COMPATIBLE_SLOT_CREATED
 }
 
@@ -435,6 +436,9 @@ model UserNotificationPreference {
   matchReminderEmail      Boolean  @default(false)
   matchReminderPush       Boolean  @default(true)
   matchReminderMinutes    Int      @default(1440)
+  matchCancelledInApp     Boolean  @default(true)
+  matchCancelledEmail     Boolean  @default(false)
+  matchCancelledPush      Boolean  @default(true)
   compatibleSlotInApp     Boolean  @default(true)
   compatibleSlotEmail     Boolean  @default(false)
   compatibleSlotPush      Boolean  @default(true)

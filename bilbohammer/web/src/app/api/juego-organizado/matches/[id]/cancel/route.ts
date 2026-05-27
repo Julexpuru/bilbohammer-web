@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { userCanManageMatches } from "@/lib/roles";
 import { parseIntOrNull, errorJson } from "../../../shared";
 import { getEffectiveMatchStatus } from "@/lib/organized-slot-status";
+import { getUserDisplayName, notifyMatchCancelled } from "@/lib/notifications";
 
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
@@ -16,7 +17,13 @@ export async function POST(_request: Request, { params }: { params: { id: string
   const match = await prisma.match.findUnique({
     where: { id: params.id },
     include: {
-      participants: { select: { userId: true } },
+      game: { select: { name: true } },
+      participants: {
+        select: {
+          userId: true,
+          user: { select: { id: true, email: true, name: true, nick: true } },
+        },
+      },
       reservations: { select: { id: true } },
     },
   });
@@ -55,6 +62,32 @@ export async function POST(_request: Request, { params }: { params: { id: string
       data: { status: "CANCELLED" },
     });
   });
+
+  const actor = match.participants.find((participant) => participant.userId === userId)?.user;
+  const actorName = actor
+    ? getUserDisplayName(actor)
+    : getUserDisplayName((session?.user as any) ?? {});
+  const recipients = match.participants
+    .map((participant) => participant.userId)
+    .filter((participantUserId) => participantUserId !== userId);
+
+  await Promise.all(
+    recipients.map(async (recipientUserId) => {
+      try {
+        await notifyMatchCancelled({
+          recipientUserId,
+          actorUserId: userId,
+          actorName,
+          matchId: match.id,
+          gameName: match.game?.name ?? null,
+          startsAt: match.startsAt,
+          endsAt: match.endsAt,
+        });
+      } catch (error) {
+        console.error("[match-cancelled-notification]", error);
+      }
+    })
+  );
 
   return NextResponse.json({ ok: true });
 }

@@ -11,6 +11,12 @@ self.addEventListener("push", function (event) {
     body: data.body || "Tienes una nueva notificacion.",
     icon: "/assets/img/favicon.png",
     badge: "/assets/img/favicon.png",
+    tag: data.tag || data.url || "bilbohammer-notification",
+    renotify: true,
+    requireInteraction: Boolean(data.requireInteraction),
+    silent: false,
+    vibrate: Array.isArray(data.vibrate) ? data.vibrate : [120, 50, 120],
+    timestamp: data.timestamp || Date.now(),
     data: {
       url: data.url || "/",
     },

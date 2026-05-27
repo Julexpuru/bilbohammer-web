@@ -23,24 +23,37 @@ function parseSubscription(raw: any) {
   return { endpoint, p256dh, auth: authKey };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth();
   const userId = parseUserId(session);
   if (!userId) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const count = await prisma.userPushSubscription.count({
-    where: {
-      userId,
-      revokedAt: null,
-    },
-  });
+  const endpoint = new URL(request.url).searchParams.get("endpoint")?.trim() ?? "";
+  const activeWhere = {
+    userId,
+    revokedAt: null,
+  };
+  const [totalCount, endpointCount] = await Promise.all([
+    prisma.userPushSubscription.count({
+      where: activeWhere,
+    }),
+    endpoint
+      ? prisma.userPushSubscription.count({
+          where: {
+            ...activeWhere,
+            endpoint,
+          },
+        })
+      : Promise.resolve(0),
+  ]);
 
   return NextResponse.json({
     publicKey: getPublicKey(),
     configured: Boolean(getPublicKey() && process.env.VAPID_PRIVATE_KEY),
-    subscribed: count > 0,
+    subscribed: endpoint ? endpointCount > 0 : totalCount > 0,
+    totalSubscriptions: totalCount,
   });
 }
 
@@ -99,7 +112,10 @@ export async function DELETE(request: Request) {
   }
 
   await prisma.userPushSubscription.updateMany({
-    where: { userId, endpoint },
+    where: {
+      userId,
+      endpoint,
+    },
     data: { revokedAt: new Date() },
   });
 

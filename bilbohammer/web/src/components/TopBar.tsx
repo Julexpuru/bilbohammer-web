@@ -213,7 +213,7 @@ export default function TopBar() {
 
   return (
     <>
-      <div className="flex h-full w-full min-w-0 items-center justify-between gap-2 lg:hidden">
+      <div className="flex h-full w-full min-w-0 items-center justify-between gap-1.5 lg:hidden">
         <div className="min-w-0">
           <Link href="/" aria-label="Ir a inicio - Bilbohammer" className="brand-link">
             <Image
@@ -222,13 +222,13 @@ export default function TopBar() {
               width={880}
               height={244}
               className="brand-img"
-              style={{ maxWidth: "clamp(135px, 44vw, 220px)" }}
+              style={{ maxWidth: "clamp(128px, 40vw, 178px)" }}
               priority
             />
           </Link>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           {session?.user ? (
             <>
               <NotificationsMenu />

@@ -303,6 +303,9 @@ export function serializeNotificationPreferences(preferences: UserNotificationPr
     matchReminderEmail: preferences.matchReminderEmail,
     matchReminderPush: preferences.matchReminderPush,
     matchReminderMinutes: preferences.matchReminderMinutes,
+    matchCancelledInApp: preferences.matchCancelledInApp,
+    matchCancelledEmail: preferences.matchCancelledEmail,
+    matchCancelledPush: preferences.matchCancelledPush,
     compatibleSlotInApp: preferences.compatibleSlotInApp,
     compatibleSlotEmail: preferences.compatibleSlotEmail,
     compatibleSlotPush: preferences.compatibleSlotPush,
@@ -609,6 +612,29 @@ export async function notifyMatchReminder(input: {
     title: "Tu partida empieza pronto",
     body: `Tienes una partida${getGamePhrase(input.gameName)} programada para ${when}.`,
     dedupeKey: `match-reminder:${input.matchId}:${input.recipientUserId}`,
+    metadata: {
+      matchId: input.matchId,
+    },
+  });
+}
+
+export async function notifyMatchCancelled(input: {
+  recipientUserId: number;
+  actorUserId?: number | null;
+  actorName: string;
+  matchId: string;
+  gameName?: string | null;
+  startsAt: Date;
+  endsAt: Date;
+}) {
+  const when = formatWindow(input.startsAt, input.endsAt);
+  return createUserNotification({
+    recipientUserId: input.recipientUserId,
+    actorUserId: input.actorUserId ?? null,
+    type: UserNotificationType.MATCH_CANCELLED,
+    title: "Han cancelado tu partida",
+    body: `${input.actorName} ha cancelado tu partida${getGamePhrase(input.gameName)} prevista para ${when}.`,
+    dedupeKey: `match-cancelled:${input.matchId}:${input.recipientUserId}`,
     metadata: {
       matchId: input.matchId,
     },
