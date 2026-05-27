@@ -3,7 +3,6 @@ name: Dispatch Match Reminders
 on:
   schedule:
     - cron: "*/10 * * * *"
-      timezone: "Europe/Madrid"
   workflow_dispatch:
 
 jobs:
