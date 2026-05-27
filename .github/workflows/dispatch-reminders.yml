@@ -1,0 +1,15 @@
+name: Dispatch Match Reminders
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call reminders endpoint
+        run: |
+          curl -fsS -X POST "https://www.bilbohammer.es/api/notifications/dispatch-reminders" \
+            -H "Authorization: Bearer ${{ secrets.NOTIFICATIONS_CRON_SECRET }}"
