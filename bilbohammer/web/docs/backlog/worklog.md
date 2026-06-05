@@ -2,6 +2,10 @@
 
 Registro cronologico breve de trabajo realizado o contexto consolidado.
 
+## 2026-06-05
+
+- Se mejora `BH-011` con botón `Conectar Telegram` en `Mi Perfil`: genera el código temporal, abre Telegram mediante deep link cuando está disponible y muestra el comando `/start` como alternativa copiable.
+
 ## 2026-06-04
 
 - Se implementa la primera fase de `BH-010`: subdominio competitivo nuevo en Prisma, migración `20260604120000_competitive_matches_base`, inscripciones de evento, reportes pendientes/aprobados, partidas canónicas, jugadores por partida y crónicas múltiples por evento mediante `EventChronicle`.

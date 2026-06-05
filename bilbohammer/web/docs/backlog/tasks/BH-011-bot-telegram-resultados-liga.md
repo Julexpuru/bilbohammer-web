@@ -48,6 +48,7 @@ No entra:
 - Variables: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` y `TELEGRAM_WEBHOOK_SECRET`.
 - Primera fase implementada:
   - `POST /api/me/telegram-link-token` genera un código temporal para una sesión web autenticada.
+  - El perfil de usuario muestra un botón `Conectar Telegram` que genera el enlace y evita usar la consola del navegador.
   - `/start <código>` vincula el `telegram_id` con el usuario mediante `Account(provider = "telegram")`.
   - `POST /api/integrations/telegram/webhook` valida `X-Telegram-Bot-Api-Secret-Token`.
   - `/resultado` acepta un formato multilínea explícito y crea `CompetitiveMatchReport` pendiente con `channel = TELEGRAM`.
@@ -68,7 +69,6 @@ notas: opcional
 - Riesgos: mensajes duplicados por reintentos de webhook, usuarios no vinculados, resultados enviados por la persona equivocada, cambios de nick de Telegram.
 - Dependencias: `BH-010` para modelo de partidas y endpoint interno de reporte.
 - Pendiente:
-  - Crear una UI cómoda para mostrar el código de vinculación al usuario.
   - Configurar BotFather y `setWebhook` en el entorno público.
   - Diseñar conversación guiada con botones si el formato multilinea resulta demasiado rígido.
   - Exponer panel web de revisión/corrección de reportes pendientes.
@@ -76,5 +76,6 @@ notas: opcional
 ## Historial
 
 - 2026-06-04: primera fase implementada con vinculación por código temporal, webhook seguro y comando `/resultado` que crea reportes pendientes mediante `createCompetitiveMatchReport`.
+- 2026-06-05: se añade botón `Conectar Telegram` en `Mi Perfil` para generar el enlace de vinculación sin consola del navegador.
 - 2026-06-04: se fija que Telegram reutilizará `src/lib/competitive-matches.ts` y creará reportes pendientes, no partidas aprobadas directamente.
 - 2026-06-04: tarea creada como desglose independiente de bots para liga.

@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
 import ChangePasswordModal from "./ChangePasswordModal";
@@ -12,10 +13,17 @@ export default function EditToolbar({
 }) {
   const [providers, setProviders] = useState<string[] | null>(null);
   const [openPwd, setOpenPwd] = useState(false);
-  const hasGoogle = useMemo(() => {
-    if (!providers) return false;
-    return providers.map((p) => p.toLowerCase()).includes("google");
-  }, [providers]);
+  const [telegramBusy, setTelegramBusy] = useState(false);
+  const [telegramError, setTelegramError] = useState<string | null>(null);
+  const [telegramLink, setTelegramLink] = useState<{
+    command: string;
+    deepLink: string | null;
+    expiresAt: string;
+  } | null>(null);
+
+  const normalizedProviders = useMemo(() => providers?.map((provider) => provider.toLowerCase()) ?? [], [providers]);
+  const hasGoogle = normalizedProviders.includes("google");
+  const hasTelegram = normalizedProviders.includes("telegram");
 
   useEffect(() => {
     let cancelled = false;
@@ -28,58 +36,143 @@ export default function EditToolbar({
         if (!cancelled) setProviders([]);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  return (
-    <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-      {/* SIEMPRE rojo en claro y oscuro */}
-      <button
-        onClick={() => setOpenPwd(true)}
-        disabled={editing}
-        className="px-3 py-1.5 rounded-md text-sm font-medium w-full sm:w-auto text-center
-                   border border-red-500/60
-                   bg-red-600 hover:bg-red-700
-                   text-white
-                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500
-                   disabled:opacity-60 disabled:cursor-not-allowed
-                   dark:bg-red-600 dark:hover:bg-red-700 dark:text-white dark:border-red-500/60"
-      >
-        Editar contraseña
-      </button>
+  async function handleTelegramConnect() {
+    setTelegramBusy(true);
+    setTelegramError(null);
+    try {
+      const response = await fetch("/api/me/telegram-link-token", { method: "POST" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error ?? "No se pudo generar el enlace de Telegram.");
+      }
+      setTelegramLink({
+        command: data.command,
+        deepLink: data.deepLink ?? null,
+        expiresAt: data.expiresAt,
+      });
+    } catch (error) {
+      setTelegramError(error instanceof Error ? error.message : "No se pudo generar el enlace de Telegram.");
+    } finally {
+      setTelegramBusy(false);
+    }
+  }
 
-      {!hasGoogle ? (
+  async function copyTelegramCommand() {
+    if (!telegramLink?.command) return;
+    try {
+      await navigator.clipboard.writeText(telegramLink.command);
+    } catch {
+      setTelegramError("No se pudo copiar el comando. Selecciónalo manualmente.");
+    }
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-2 sm:w-auto">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
         <button
-          data-testid="google-oauth-btn"
-          onClick={() => signIn("google", { callbackUrl: "/mi-perfil" })}
+          onClick={() => setOpenPwd(true)}
           disabled={editing}
-          title="Conectar cuenta de Google"
-          style={{ backgroundColor: "#fff" }}
-          className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-white dark:text-gray-900 w-full sm:w-auto"
+          className="w-full rounded-md border border-red-500/60 bg-red-600 px-3 py-1.5 text-center text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto dark:border-red-500/60 dark:bg-red-600 dark:text-white dark:hover:bg-red-700"
         >
-          <GoogleGlyph className="h-4 w-4" />
-          <span className="whitespace-nowrap">Conectar con Google</span>
+          Editar contraseña
         </button>
-      ) : (
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          title="Cuenta de Google conectada"
-          style={{ backgroundColor: "#fff" }}
-          className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm dark:bg-white dark:text-gray-900 disabled:opacity-90 disabled:cursor-default w-full sm:w-auto"
-        >
-          <CheckGlyph className="h-4 w-4" />
-          <span className="whitespace-nowrap">Conectada</span>
-        </button>
+
+        {!hasGoogle ? (
+          <button
+            data-testid="google-oauth-btn"
+            onClick={() => signIn("google", { callbackUrl: "/mi-perfil" })}
+            disabled={editing}
+            title="Conectar cuenta de Google"
+            style={{ backgroundColor: "#fff" }}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto dark:bg-white dark:text-gray-900"
+          >
+            <GoogleGlyph className="h-4 w-4" />
+            <span className="whitespace-nowrap">Conectar con Google</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Cuenta de Google conectada"
+            style={{ backgroundColor: "#fff" }}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm disabled:cursor-default disabled:opacity-90 sm:w-auto dark:bg-white dark:text-gray-900"
+          >
+            <CheckGlyph className="h-4 w-4" />
+            <span className="whitespace-nowrap">Google conectada</span>
+          </button>
+        )}
+
+        {!hasTelegram ? (
+          <button
+            type="button"
+            onClick={handleTelegramConnect}
+            disabled={editing || telegramBusy}
+            title="Conectar cuenta de Telegram"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-sky-400/50 bg-sky-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          >
+            <TelegramGlyph className="h-4 w-4" />
+            <span className="whitespace-nowrap">{telegramBusy ? "Generando..." : "Conectar Telegram"}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Cuenta de Telegram conectada"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-sky-400/50 bg-sky-500/20 px-3 py-1.5 text-sm font-medium text-sky-100 shadow-sm disabled:cursor-default disabled:opacity-90 sm:w-auto"
+          >
+            <CheckGlyph className="h-4 w-4" />
+            <span className="whitespace-nowrap">Telegram conectado</span>
+          </button>
+        )}
+      </div>
+
+      {telegramLink && !hasTelegram && (
+        <div className="max-w-xl rounded-xl border border-sky-400/30 bg-sky-950/40 p-3 text-sm text-sky-50 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {telegramLink.deepLink && (
+              <a
+                href={telegramLink.deepLink}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center rounded-md bg-sky-500 px-3 py-1.5 font-medium text-white hover:bg-sky-600"
+              >
+                Abrir Telegram
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={copyTelegramCommand}
+              className="inline-flex items-center justify-center rounded-md border border-sky-300/40 px-3 py-1.5 font-medium text-sky-50 hover:bg-sky-400/10"
+            >
+              Copiar comando
+            </button>
+          </div>
+          <code className="mt-2 block rounded-md bg-black/30 px-2 py-1 text-xs text-sky-100">{telegramLink.command}</code>
+          <p className="mt-2 text-xs text-sky-100/80">
+            El enlace caduca a las{" "}
+            {new Date(telegramLink.expiresAt).toLocaleTimeString("es-ES", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            .
+          </p>
+        </div>
       )}
+
+      {telegramError && <p className="text-sm text-red-300">{telegramError}</p>}
 
       <ChangePasswordModal open={openPwd} onClose={() => setOpenPwd(false)} />
     </div>
   );
 }
 
-// Inline glyphs
 function GoogleGlyph({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
@@ -96,6 +189,14 @@ function CheckGlyph({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 20 20" fill="none" aria-hidden="true">
       <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="2" />
       <path d="M6 10.5l2.5 2.5L14 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function TelegramGlyph({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M21.9 4.6 18.7 19.5c-.2 1-.8 1.2-1.6.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.6 13.3 1.9 11.8c-1-.3-1-1 .2-1.5L20.4 3.3c.8-.3 1.6.2 1.5 1.3Z" />
     </svg>
   );
 }
