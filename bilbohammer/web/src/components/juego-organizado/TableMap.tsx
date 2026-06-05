@@ -227,14 +227,16 @@ const ZONE_TEXTURES = {
   streaming: assetUrl("/assets/textures/streaming_zone.png"),
   sofas: assetUrl("/assets/textures/chilling_zone.png"),
 } as const;
-const MAP_TEXTURE_ENV = process.env.NEXT_PUBLIC_TABLE_MAP_TEXTURE?.trim() ?? "";
-const MAP_TEXTURE_ASSET = MAP_TEXTURE_ENV
-  ? /^https?:\/\//i.test(MAP_TEXTURE_ENV)
-    ? MAP_TEXTURE_ENV
-    : MAP_TEXTURE_ENV.startsWith("/")
-      ? MAP_TEXTURE_ENV
-      : `/${MAP_TEXTURE_ENV}`
-  : "";
+const DEFAULT_MAP_TEXTURE_ASSET = assetUrl("/assets/textures/wood-white-grey.jpg");
+
+function resolveMapTextureAsset(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return DEFAULT_MAP_TEXTURE_ASSET;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return assetUrl(trimmed);
+}
+
+const MAP_TEXTURE_ASSET = resolveMapTextureAsset(process.env.NEXT_PUBLIC_TABLE_MAP_TEXTURE);
 const MAP_TEXTURE_CROP_BOTTOM_PX = 34;
 const MAP_SURFACE_STYLE = MAP_TEXTURE_ASSET
   ? {
@@ -2623,13 +2625,13 @@ function TableCardContent({
 }) {
   const showSizeTag = !isZone && table.sizeTag && !isOrientationTag(table.sizeTag);
   const portrait = !isZone && table.height >= table.width * 1.22;
-  const showGameIcon = !compact && Boolean(gameInfo?.icon);
+  const showGameIcon = Boolean(gameInfo?.icon);
   const showGameLabel = Boolean(gameInfo) && !showGameIcon;
   const gameLines = portrait ? (compact ? 3 : 4) : compact ? 2 : 3;
-  const iconTargetWidth = compact ? 44 : 96;
-  const iconTargetHeight = compact ? 14 : 44;
-  const iconWidth = showGameIcon ? Math.max(28, Math.min(iconTargetWidth, table.width - 20)) : 0;
-  const iconHeight = showGameIcon ? Math.max(12, Math.min(iconTargetHeight, Math.floor(table.height * 0.58))) : 0;
+  const iconTargetWidth = compact ? 72 : 96;
+  const iconTargetHeight = compact ? 24 : 44;
+  const iconWidth = showGameIcon ? Math.max(compact ? 34 : 28, Math.min(iconTargetWidth, table.width - (compact ? 8 : 20))) : 0;
+  const iconHeight = showGameIcon ? Math.max(compact ? 18 : 12, Math.min(iconTargetHeight, Math.floor(table.height * (compact ? 0.72 : 0.58)))) : 0;
   const iconScale = gameInfo?.slug === "w40k" ? 1.45 : 1;
   const titleChipClass = "rounded bg-[#0b3a63] px-1.5 py-[1px] text-white shadow-sm";
   const chipClass = textured
@@ -2691,10 +2693,10 @@ function TableCardContent({
           {showGameIcon && (
             <div
               className={clsx(
-                "flex items-center justify-center overflow-hidden rounded px-1 py-[1px]",
+                "flex items-center justify-center overflow-hidden rounded py-[1px]",
                 textured ? (tone === "light" ? "bg-black/64" : "bg-white/90") : ""
               )}
-              style={{ width: iconWidth, height: iconHeight }}
+              style={{ width: iconWidth, height: iconHeight, paddingInline: compact ? 2 : 4 }}
             >
               <img
                 src={gameInfo.icon!}

@@ -79,6 +79,7 @@ Define las variables en `web/.env` (para Docker) o en el proveedor de hosting:
 - `VAPID_PRIVATE_KEY`: clave privada VAPID, solo servidor.
 - `VAPID_SUBJECT`: contacto del emisor push, previsto como `mailto:no-reply@bilbohammer.es`.
 - `NOTIFICATIONS_CRON_SECRET`: secreto para invocar `/api/notifications/dispatch-reminders` desde el cron de produccion.
+- Si Android/Chrome/Brave concede permiso pero falla al activar push con `AbortError` o `Registration failed - push service error`, y una demo externa de Web Push falla igual, el problema suele estar en el canal FCM del dispositivo/red. Probar cambio WiFi/datos, VPN, DNS privado, Google Play Services y la accion `Reparar` del panel de notificaciones.
 
 **Variables publicas (expuestas al navegador)**
 - `NEXT_PUBLIC_INSTAGRAM_PROFILE`

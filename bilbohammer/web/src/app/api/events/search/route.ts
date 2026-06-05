@@ -4,6 +4,7 @@ import { Prisma, EventStatus, EventType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { loadActiveGames, resolveGameIdsFromInput } from "@/lib/game-catalog";
 import { buildEventSlug } from "@/lib/events/slug";
+import { getComputedEventStatus } from "@/lib/events/status";
 import { htmlToPlainText } from "@/lib/text";
 
 const TAKE_DEFAULT = 12;
@@ -170,13 +171,7 @@ export async function GET(request: Request) {
       const plainDetails = htmlToPlainText(event.details);
       const { venueName, city } = normalizeLocation(event.location);
 
-      const now = Date.now();
-      const autoStatus =
-        event.status === EventStatus.CANCELLED || event.status === EventStatus.POSTPONED
-          ? event.status
-          : event.endsAt.getTime() < now
-            ? EventStatus.FINALIZED
-            : event.status;
+      const autoStatus = getComputedEventStatus(event);
 
       return {
         id: event.id,

@@ -24,6 +24,7 @@ export type EventFormInitialData = {
   bannerUrl: string | null;
   startsAt: string;
   endsAt: string;
+  registrationClosesAt: string | null;
   location: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -176,6 +177,7 @@ type EventFormState = {
   bannerUrl: string;
   startsAt: string;
   endsAt: string;
+  registrationClosesAt: string;
   location: string;
   latitude: string;
   longitude: string;
@@ -246,6 +248,8 @@ type ChronicleSearchResult = {
 const EVENT_STATUS_OPTIONS: { value: EventStatus; label: string }[] = [
   { value: "DRAFT", label: "Borrador" },
   { value: "PUBLISHED", label: "Publicado" },
+  { value: "PREPARATION", label: "Preparación" },
+  { value: "IN_PROGRESS", label: "En curso" },
   { value: "FINALIZED", label: "Finalizado" },
   { value: "POSTPONED", label: "Pospuesto" },
   { value: "CANCELLED", label: "Cancelado" },
@@ -415,7 +419,7 @@ function buildAlbumDraftFromEvent(state: Pick<EventFormState, "title" | "startsA
 const NUMBER_FIELDS_HELPER = {
   latitude: "Latitud debe estar entre -90 y 90.",
   longitude: "Longitud debe estar entre -180 y 180.",
-  capacityMax: "Aforo maximo debe ser un entero positivo.",
+  capacityMax: "Aforo máximo debe ser un entero positivo.",
   capacityCurrent: "Aforo actual debe ser un entero mayor o igual a 0.",
 } as const;
 
@@ -461,6 +465,7 @@ function buildInitialState(initialData?: EventFormInitialData): EventFormState {
       bannerUrl: "",
       startsAt: "",
       endsAt: "",
+      registrationClosesAt: "",
       location: "",
       latitude: "",
       longitude: "",
@@ -519,6 +524,7 @@ function buildInitialState(initialData?: EventFormInitialData): EventFormState {
     bannerUrl: initialData.bannerUrl ?? "",
     startsAt: toLocalDateTimeInput(initialData.startsAt),
     endsAt: toLocalDateTimeInput(initialData.endsAt),
+    registrationClosesAt: toLocalDateTimeInput(initialData.registrationClosesAt),
     location: initialData.location ?? "",
     latitude: initialData.latitude != null ? String(initialData.latitude) : "",
     longitude: initialData.longitude != null ? String(initialData.longitude) : "",
@@ -947,13 +953,13 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
           | { results?: AlbumSearchResult[]; error?: string }
           | null;
         if (!response.ok) {
-          throw new Error(data?.error ?? "No se pudo buscar albumes.");
+          throw new Error(data?.error ?? "No se pudo buscar álbumes.");
         }
         setAlbumResults(data?.results ?? []);
       } catch (error) {
         const aborted = error instanceof DOMException && error.name === "AbortError";
         if (!aborted) {
-          setAlbumError(error instanceof Error ? error.message : "Error buscando albumes.");
+          setAlbumError(error instanceof Error ? error.message : "Error buscando álbumes.");
           setAlbumResults([]);
         }
       } finally {
@@ -992,7 +998,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
           | { results?: AlbumSearchResult[]; error?: string }
           | null;
         if (!response.ok) {
-          throw new Error(data?.error ?? "No se pudo obtener el album seleccionado.");
+          throw new Error(data?.error ?? "No se pudo obtener el álbum seleccionado.");
         }
         const album = data?.results?.[0] ?? null;
         if (!cancelled) {
@@ -1004,7 +1010,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       } catch (error) {
         const aborted = error instanceof DOMException && error.name === "AbortError";
         if (!cancelled && !aborted) {
-          setAlbumError(error instanceof Error ? error.message : "Error cargando el album.");
+          setAlbumError(error instanceof Error ? error.message : "Error cargando el álbum.");
           setSelectedAlbum(null);
         }
       } finally {
@@ -1167,7 +1173,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     setAlbumCreateSuccess(null);
     const title = albumDraft.title.trim();
     if (!title) {
-      setAlbumCreateError('El titulo es obligatorio.');
+      setAlbumCreateError('El título es obligatorio.');
       return;
     }
     setAlbumCreateBusy(true);
@@ -1188,10 +1194,10 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       });
       const data = (await response.json().catch(() => null)) as { album?: AlbumSearchResult; error?: string } | null;
       if (!response.ok) {
-        throw new Error(data?.error ?? 'No se pudo crear el album.');
+        throw new Error(data?.error ?? 'No se pudo crear el álbum.');
       }
       if (!data?.album) {
-        throw new Error('Respuesta inesperada al crear el album.');
+        throw new Error('Respuesta inesperada al crear el álbum.');
       }
       setSelectedAlbum(data.album);
       setAlbumQuery(data.album.title);
@@ -1200,7 +1206,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       setAlbumCreatorOpen(false);
       setAlbumCreateSuccess('Album creado y vinculado correctamente.');
     } catch (error) {
-      setAlbumCreateError(error instanceof Error ? error.message : 'No se pudo crear el album.');
+      setAlbumCreateError(error instanceof Error ? error.message : 'No se pudo crear el álbum.');
     } finally {
       setAlbumCreateBusy(false);
     }
@@ -1511,7 +1517,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     const errors: Record<string, string> = {};
 
     if (!state.title.trim()) {
-      errors.title = "El titulo es obligatorio.";
+      errors.title = "El título es obligatorio.";
     }
     if (!state.startsAt) {
       errors.startsAt = "La fecha de inicio es obligatoria.";
@@ -1522,10 +1528,11 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
 
     let startsAtISO: string | null = null;
     let endsAtISO: string | null = null;
+    let registrationClosesAtISO: string | null = null;
     if (state.startsAt) {
       const startDate = new Date(state.startsAt);
       if (Number.isNaN(startDate.getTime())) {
-        errors.startsAt = "Fecha de inicio invalida.";
+        errors.startsAt = "Fecha de inicio inválida.";
       } else {
         startsAtISO = startDate.toISOString();
       }
@@ -1534,15 +1541,30 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     if (state.endsAt) {
       const endDate = new Date(state.endsAt);
       if (Number.isNaN(endDate.getTime())) {
-        errors.endsAt = "Fecha de fin invalida.";
+        errors.endsAt = "Fecha de fin inválida.";
       } else {
         endsAtISO = endDate.toISOString();
+      }
+    }
+
+    if (state.registrationClosesAt) {
+      const registrationCloseDate = new Date(state.registrationClosesAt);
+      if (Number.isNaN(registrationCloseDate.getTime())) {
+        errors.registrationClosesAt = "Fecha de cierre de inscripciones inválida.";
+      } else {
+        registrationClosesAtISO = registrationCloseDate.toISOString();
       }
     }
 
     if (startsAtISO && endsAtISO) {
       if (new Date(endsAtISO).getTime() <= new Date(startsAtISO).getTime()) {
         errors.endsAt = "La fecha de fin debe ser posterior a la de inicio.";
+      }
+    }
+
+    if (startsAtISO && registrationClosesAtISO) {
+      if (new Date(registrationClosesAtISO).getTime() >= new Date(startsAtISO).getTime()) {
+        errors.registrationClosesAt = "El cierre de inscripciones debe ser anterior al inicio.";
       }
     }
 
@@ -1558,7 +1580,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
     let capacityCurrent: number | null = null;
     if (state.hasCapacity) {
       if (!state.capacityMax.trim()) {
-        errors.capacityMax = "El aforo maximo es obligatorio.";
+        errors.capacityMax = "El aforo máximo es obligatorio.";
       } else {
         capacityMax = parseInteger(state.capacityMax);
         if (capacityMax == null) {
@@ -1580,7 +1602,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
         capacityCurrent != null &&
         capacityCurrent > capacityMax
       ) {
-        errors.capacityCurrent = "El aforo actual no puede superar el aforo maximo.";
+        errors.capacityCurrent = "El aforo actual no puede superar el aforo máximo.";
       }
     } else {
       capacityCurrent = 0;
@@ -1631,11 +1653,11 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       .filter((item): item is { userId: number; role: string | null } => Boolean(item));
 
     if (state.organizers.length && preparedOrganizers.length !== state.organizers.length) {
-      errors.organizers = "Verifica que todos los organizadores tengan un socio valido.";
+      errors.organizers = "Verifica que todos los organizadores tengan un socio válido.";
     }
 
     if (albumQuery.trim() && !state.albumId) {
-      errors.albumQuery = "Selecciona un album de la lista.";
+      errors.albumQuery = "Selecciona un álbum de la lista.";
     }
 
     const preparedOrganizations = state.organizations
@@ -1674,7 +1696,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       );
 
     if (state.organizations.length && preparedOrganizations.length !== state.organizations.length) {
-      errors.organizations = "Completa los datos de cada organizacion o elimina las vacias.";
+      errors.organizations = "Completa los datos de cada organización o elimina las vacías.";
     }
 
     if (state.attachments.some((item) => item.uploading)) {
@@ -1837,6 +1859,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       bannerUrl: state.bannerUrl.trim() || null,
       startsAt: startsAtISO,
       endsAt: endsAtISO,
+      registrationClosesAt: registrationClosesAtISO,
       location: state.location.trim() || null,
       latitude,
       longitude,
@@ -2087,7 +2110,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
             </select>
           </label>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <label className="grid gap-1">
             <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Inicio</span>
             <input
@@ -2098,6 +2121,20 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
             />
             {validationErrors.startsAt && (
               <span className="text-xs text-red-300">{validationErrors.startsAt}</span>
+            )}
+          </label>
+          <label className="grid gap-1">
+            <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+              Cierre de inscripciones
+            </span>
+            <input
+              type="datetime-local"
+              className="rounded-2xl border border-white/15 bg-black/30 px-3 py-2 text-sm focus:border-white/40 focus:outline-none"
+              value={state.registrationClosesAt}
+              onChange={(event) => updateField("registrationClosesAt", event.target.value)}
+            />
+            {validationErrors.registrationClosesAt && (
+              <span className="text-xs text-red-300">{validationErrors.registrationClosesAt}</span>
             )}
           </label>
           <label className="grid gap-1">
@@ -2119,7 +2156,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
         <header>
           <h2 className="text-lg font-semibold">Costes y aforo</h2>
           <p className="text-sm text-[var(--muted)]">
-            Define precios y limites para gestionar inscripciones.
+            Define precios y límites para gestionar inscripciones.
           </p>
         </header>
         <div className="space-y-3">
@@ -2182,7 +2219,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
           </label>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-1">
-              <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Aforo maximo</span>
+              <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Aforo máximo</span>
               <input
                 type="number"
                 min="1"
@@ -2387,7 +2424,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
               })
             }
           >
-            Añadir organizacion
+            Añadir organización
           </button>
         </div>
         {state.organizers.length > 0 ? (
@@ -2493,7 +2530,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                     />
                     {locked && (
                       <span className="text-xs text-[var(--muted)]">
-                        Esta organizacion se mantiene siempre registrada como anfitriona.
+                        Esta organización se mantiene siempre registrada como anfitriona.
                       </span>
                     )}
                   </label>
@@ -2519,7 +2556,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                     disabled={locked}
                     aria-disabled={locked}
                   >
-                    Quitar organizacion
+                    Quitar organización
                   </button>
                 </li>
               );
@@ -2977,7 +3014,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                         setChronicleQuery(event.target.value);
                         setChronicleError(null);
                       }}
-                      placeholder="Escribe el titulo o resumen..."
+                      placeholder="Escribe el título o resumen..."
                       disabled={chronicleActionBusy}
                     />
                   </label>
@@ -3253,10 +3290,10 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white">
-                      Crear album rapido
+                      Crear álbum rápido
                     </h3>
                     <p className="text-xs text-[var(--muted)]">
-                      Genera un album basico si no existe uno que puedas enlazar.
+                      Genera un álbum básico si no existe uno que puedas enlazar.
                     </p>
                   </div>
                   <button
@@ -3264,7 +3301,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                     className="rounded-full border border-white/20 px-3 py-1 text-xs text-white hover:border-white/40"
                     onClick={handleAlbumCreatorToggle}
                   >
-                    {albumCreatorOpen ? "Cancelar" : "Nuevo album"}
+                    {albumCreatorOpen ? "Cancelar" : "Nuevo álbum"}
                   </button>
                 </div>
                 {albumCreateSuccess && (
@@ -3281,7 +3318,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                           className="rounded-2xl border border-white/15 bg-black/30 px-3 py-2 text-sm focus:border-white/40 focus:outline-none"
                           value={albumDraft.title}
                           onChange={(event) => updateAlbumDraft("title", event.target.value)}
-                          placeholder="Titulo del album"
+                          placeholder="Título del álbum"
                         />
                       </label>
                       <label className="grid gap-1">
@@ -3352,7 +3389,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                         className="rounded-2xl border border-white/15 bg-black/30 px-3 py-2 text-sm focus:border-white/40 focus:outline-none"
                         value={albumDraft.description}
                         onChange={(event) => updateAlbumDraft("description", event.target.value)}
-                        placeholder="Notas sobre el album"
+                        placeholder="Notas sobre el álbum"
                       />
                     </label>
                     {albumCreateError && (
@@ -3382,13 +3419,13 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
               <div className="space-y-3">
                 <label className="grid gap-1">
                   <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-                    Buscar album
+                    Buscar álbum
                   </span>
                   <input
                     className="rounded-2xl border border-white/15 bg-black/30 px-3 py-2 text-sm focus:border-white/40 focus:outline-none"
                     value={albumQuery}
                     onChange={(event) => handleAlbumQueryChange(event.target.value)}
-                    placeholder="Escribe el titulo del album..."
+                    placeholder="Escribe el título del álbum..."
                   />
                 </label>
                 {validationErrors.albumQuery && (
@@ -3396,7 +3433,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                 )}
                 {albumError && <span className="text-xs text-red-300">{albumError}</span>}
                 {albumBusy && (
-                  <p className="text-xs text-[var(--muted)]">Buscando albumes coincidientes...</p>
+                  <p className="text-xs text-[var(--muted)]">Buscando álbumes coincidentes...</p>
                 )}
                 {selectedAlbum ? (
                   <div className="rounded-2xl border border-white/15 bg-black/30 p-4">
@@ -3412,7 +3449,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                           rel="noreferrer"
                           className="inline-flex items-center rounded-full border border-white/20 px-3 py-1 text-xs text-white transition hover:border-white/40 hover:text-white"
                         >
-                          Abrir album
+                          Abrir álbum
                         </Link>
                         <button
                           type="button"
@@ -3426,7 +3463,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                   </div>
                 ) : (
                   <p className="text-xs text-[var(--muted)]">
-                    Selecciona un album existente para enlazar las fotos del evento.
+                    Selecciona un álbum existente para enlazar las fotos del evento.
                   </p>
                 )}
                 {albumResults.length > 0 && (
@@ -3447,7 +3484,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                 )}
                 {!albumResults.length && albumQuery.trim() && !albumBusy && !selectedAlbum && (
                   <p className="text-xs text-[var(--muted)]">
-                    No se encontraron albumes con ese titulo.
+                    No se encontraron álbumes con ese título.
                   </p>
                 )}
               </div>

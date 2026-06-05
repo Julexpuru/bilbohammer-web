@@ -19,7 +19,7 @@ const SECURITY_HEADERS: Array<[string, string]> = [
 ];
 
 const CORS_METHODS = "GET,POST,PUT,PATCH,DELETE,OPTIONS";
-const CORS_HEADERS = "Origin, X-Requested-With, Content-Type, Accept, Authorization";
+const CORS_HEADERS = "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Telegram-Bot-Api-Secret-Token";
 
 const allowedOrigins = buildAllowedOrigins();
 const canonicalOrigin = normalizeOrigin(process.env.APP_BASE_URL ?? inferVercelUrl());
@@ -44,7 +44,11 @@ const BOT_RATE_LIMIT_ENABLED = parseBoolean(process.env.BOT_RATE_LIMIT_ENABLED, 
 const BOT_RATE_LIMIT_WINDOW_SECONDS = parsePositiveInteger(process.env.BOT_RATE_LIMIT_WINDOW_SECONDS, 60);
 const BOT_RATE_LIMIT_MAX_REQUESTS = parsePositiveInteger(process.env.BOT_RATE_LIMIT_MAX_REQUESTS, 180);
 const BOT_RATE_LIMIT_PATH_PREFIXES = parsePathPrefixes(process.env.BOT_RATE_LIMIT_PATH_PREFIXES, ["/"]);
-const BOT_RATE_LIMIT_EXEMPT_PATHS = parsePathPrefixes(process.env.BOT_RATE_LIMIT_EXEMPT_PATHS, ["/robots.txt", "/sitemap.xml"]);
+const BOT_RATE_LIMIT_EXEMPT_PATHS = parsePathPrefixes(process.env.BOT_RATE_LIMIT_EXEMPT_PATHS, [
+  "/robots.txt",
+  "/sitemap.xml",
+  "/api/integrations/telegram/webhook",
+]);
 const BOT_RATE_LIMIT_STORE = getBotRateLimitStore();
 const BOT_HINT_TOKENS = [
   "bot",

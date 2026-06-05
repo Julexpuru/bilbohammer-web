@@ -319,42 +319,25 @@ export default function NotificationsMenu({ className }: Props) {
     setSaving("push");
 
     try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setError("Permiso de notificaciones denegado por el navegador.");
-        return;
-      }
-
-      await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      const registration = await navigator.serviceWorker.ready;
-      await registration.update().catch(() => undefined);
-      const existing = await registration.pushManager.getSubscription();
-      const subscription =
-        existing ??
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(pushState.publicKey),
-        }));
-
-      const response = await fetch("/api/me/push-subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: subscription.toJSON() }),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(body.error || "No se pudo guardar la suscripcion push.");
-      }
-
-      setPushState((current) => ({ ...current, subscribed: true }));
-      await loadPushState();
+      await subscribeCurrentDevice();
     } catch (err: any) {
-      const message = String(err?.message || "");
-      setError(
-        message.toLowerCase().includes("push service")
-          ? "El navegador ha concedido permiso, pero no ha podido crear el canal push. En Brave/Android revisa que las notificaciones del sitio no esten bloqueadas y prueba a activar desde la app instalada o desde Chrome."
-          : message || "No se pudo activar push."
-      );
+      handlePushError(err);
+      await loadPushState().catch(() => undefined);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function repairPush() {
+    setError(null);
+    if (!pushState.supported || !pushState.configured || !pushState.publicKey) return;
+    setSaving("push");
+
+    try {
+      await resetLocalPushState();
+      await subscribeCurrentDevice();
+    } catch (err: any) {
+      handlePushError(err);
       await loadPushState().catch(() => undefined);
     } finally {
       setSaving(null);
@@ -381,6 +364,65 @@ export default function NotificationsMenu({ className }: Props) {
     } finally {
       setSaving(null);
     }
+  }
+
+  async function subscribeCurrentDevice() {
+    if (!pushState.publicKey) {
+      throw new Error("No hay clave publica VAPID disponible.");
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      setError("Permiso de notificaciones denegado por el navegador.");
+      return;
+    }
+
+    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    const registration = await navigator.serviceWorker.ready;
+    await registration.update().catch(() => undefined);
+    const existing = await registration.pushManager.getSubscription();
+    const subscription =
+      existing ??
+      (await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(pushState.publicKey),
+      }));
+
+    const response = await fetch("/api/me/push-subscription", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscription: subscription.toJSON() }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.error || "No se pudo guardar la suscripcion push.");
+    }
+
+    setPushState((current) => ({ ...current, permission: "granted", subscribed: true }));
+    await loadPushState();
+  }
+
+  async function resetLocalPushState() {
+    const registration = await navigator.serviceWorker.getRegistration("/");
+    const subscription = await registration?.pushManager.getSubscription();
+    if (subscription) {
+      await fetch("/api/me/push-subscription", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+      }).catch(() => undefined);
+      await subscription.unsubscribe().catch(() => undefined);
+    }
+    await registration?.unregister().catch(() => undefined);
+  }
+
+  function handlePushError(err: any) {
+    const message = String(err?.message || "");
+    setError(
+      message.toLowerCase().includes("push service") || err?.name === "AbortError"
+        ? "El navegador tiene permiso, pero Android no ha podido crear el canal push. Prueba cambiar entre WiFi/datos, desactivar VPN o DNS privado y pulsa Reparar."
+        : message || "No se pudo activar push."
+    );
   }
 
   return (
@@ -468,25 +510,39 @@ export default function NotificationsMenu({ className }: Props) {
                           : "No soportado por este navegador"}
                       </div>
                     </div>
-                    {pushState.subscribed ? (
-                      <button
-                        type="button"
-                        className="rounded-lg border border-[var(--hairline)] px-2.5 py-1 text-xs font-semibold text-[var(--text)]"
-                        disabled={saving === "push"}
-                        onClick={disablePush}
-                      >
-                        Desactivar
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="rounded-lg border border-[var(--hairline)] px-2.5 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
-                        disabled={!pushState.supported || !pushState.configured || saving === "push"}
-                        onClick={enablePush}
-                      >
-                        {saving === "push" ? "Activando..." : "Activar"}
-                      </button>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {pushState.subscribed ? (
+                        <button
+                          type="button"
+                          className="rounded-lg border border-[var(--hairline)] px-2.5 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
+                          disabled={saving === "push"}
+                          onClick={disablePush}
+                        >
+                          Desactivar
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="rounded-lg border border-[var(--hairline)] px-2.5 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
+                            disabled={!pushState.supported || !pushState.configured || saving === "push"}
+                            onClick={enablePush}
+                          >
+                            {saving === "push" ? "Activando..." : "Activar"}
+                          </button>
+                          {pushState.permission === "granted" && (
+                            <button
+                              type="button"
+                              className="rounded-lg border border-[var(--accent-600)]/50 px-2.5 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
+                              disabled={!pushState.supported || !pushState.configured || saving === "push"}
+                              onClick={repairPush}
+                            >
+                              Reparar
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {NOTIFICATION_PREFERENCE_DEFINITIONS.map((definition) => (

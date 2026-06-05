@@ -24,6 +24,7 @@ Use this file for work inside `bilbohammer/web`.
 - Prefer server-side validation with Zod or explicit checks in API routes.
 - Do not introduce local filesystem uploads for new features; use the R2 upload flow.
 - Preserve existing UI language and club tone unless the task explicitly changes design direction.
+- Write any new Spanish user-facing or documentation text in UTF-8 with proper accents and ñ. If encoding prevents that, stop and report the encoding problem instead of writing degraded text.
 - Avoid broad refactors while implementing feature work.
 
 ## Commands

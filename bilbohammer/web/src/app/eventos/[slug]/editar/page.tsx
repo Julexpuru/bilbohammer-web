@@ -42,6 +42,7 @@ async function mapEventToInitialData(event: LoadedEvent): Promise<EventFormIniti
     bannerUrl: event.bannerUrl ?? null,
     startsAt: event.startsAt.toISOString(),
     endsAt: event.endsAt.toISOString(),
+    registrationClosesAt: event.registrationClosesAt?.toISOString() ?? null,
     location: event.location ?? null,
     latitude: event.latitude,
     longitude: event.longitude,

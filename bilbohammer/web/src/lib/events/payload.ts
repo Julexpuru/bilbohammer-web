@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { EventHighlightType, EventStatus, EventType, Prisma, PrismaClient } from "@prisma/client";
 import { loadActiveGames, resolveGameFromInput, type GameCatalogItem } from "@/lib/game-catalog";
@@ -51,6 +51,7 @@ export type ParsedEventPayload = {
     bannerUrl?: string | null;
     startsAt: Date;
     endsAt: Date;
+    registrationClosesAt?: Date | null;
     location?: string | null;
     latitude?: number | null;
     longitude?: number | null;
@@ -116,6 +117,18 @@ function parseDate(value: unknown, field: string): Date {
   return date;
 }
 
+function parseOptionalDate(value: unknown, field: string): Date | null {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") {
+    throw new Error(`El campo ${field} debe ser una fecha válida.`);
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`El campo ${field} debe ser una fecha válida.`);
+  }
+  return date;
+}
+
 function parseString(value: unknown): string | null {
   if (value == null) return null;
   if (typeof value !== "string") return null;
@@ -156,6 +169,10 @@ export async function parseEventPayload(raw: RawPayload): Promise<ParsedEventPay
   const endsAt = parseDate(raw.endsAt, "endsAt");
   if (startsAt >= endsAt) {
     throw new Error("La fecha de inicio debe ser anterior a la fecha de fin.");
+  }
+  const registrationClosesAt = parseOptionalDate(raw.registrationClosesAt, "registrationClosesAt");
+  if (registrationClosesAt && registrationClosesAt >= startsAt) {
+    throw new Error("El cierre de inscripciones debe ser anterior al inicio del evento.");
   }
 
   const bannerUrl = parseString(raw.bannerUrl);
@@ -389,6 +406,7 @@ export async function parseEventPayload(raw: RawPayload): Promise<ParsedEventPay
       bannerUrl,
       startsAt,
       endsAt,
+      registrationClosesAt,
       location,
       latitude: latitude ?? null,
       longitude: longitude ?? null,
@@ -450,3 +468,4 @@ export async function computeInternalFlag(
     (user.roles ?? []).some((role) => role === "SOCIO" || role === "JUNTA" || role === "ADMIN")
   );
 }
+

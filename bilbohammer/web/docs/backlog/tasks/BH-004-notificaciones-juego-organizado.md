@@ -1,6 +1,6 @@
 # BH-004 - Cerrar sistema de notificaciones de juego organizado
 
-Estado: in_progress
+Estado: done
 Tipo: feature
 Prioridad: P1
 Area: juego-organizado
@@ -69,6 +69,7 @@ No entra:
 - Existe una lista cerrada de eventos que notifican.
 - El usuario puede activar o desactivar al menos `push` y `email` por tipo de evento segun el alcance de cada fase.
 - El usuario dispone de una vista interna minima para revisar notificaciones y su estado basico.
+- El usuario puede marcar como leidas y ocultar/borrar notificaciones visibles para que el centro no crezca indefinidamente.
 - Los eventos criticos del flujo de propuestas y partidas quedan cubiertos.
 - El backlog y el plan de integracion separan explicitamente las fases 1 a 4 de las integraciones futuras con mensajeria externa.
 
@@ -76,7 +77,7 @@ No entra:
 
 - Archivos probables: rutas API de `juego-organizado`, componentes de `mis-partidas`, posibles modelos de datos y UI de preferencias.
 - Riesgos: exceso de ruido, estados duplicados o notificaciones inconsistentes.
-- Dependencias: definir UX minima, persistencia y estrategia de entrega asincrona.
+- Dependencias activas: ninguna para considerar cerrado el bloque funcional principal.
 - Variables necesarias para push web:
   - `VAPID_PUBLIC_KEY`
   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
@@ -85,15 +86,17 @@ No entra:
   - `NOTIFICATIONS_CRON_SECRET`
 - En produccion, `VAPID_SUBJECT` debe usar un contacto controlado por el proyecto. Valor previsto: `mailto:no-reply@bilbohammer.es`.
 - `VAPID_PUBLIC_KEY` y `NEXT_PUBLIC_VAPID_PUBLIC_KEY` deben tener el mismo valor publico; `VAPID_PRIVATE_KEY` no debe exponerse al cliente.
+- La validacion real en movil ha mostrado que Android/Chrome/Brave pueden conceder permiso de notificaciones y aun asi fallar en `PushManager.subscribe()` con `AbortError` o `Registration failed - push service error` si el canal FCM del dispositivo/red esta bloqueado o atascado.
+- Ese fallo no se puede resolver solo desde la web cuando tambien ocurre en demos externas de Web Push. La UI debe tratarlo como incidencia del entorno y ofrecer recuperacion guiada: reintento, limpieza de suscripcion local/servidor y mensaje contextual para probar cambio WiFi/datos, VPN, DNS privado o reinicio del navegador.
 - Estado observado en repo: ya existen eventos funcionales claros sobre los que notificar, como propuesta enviada, propuesta aceptada o rechazada, partida cancelada y cambios en el ciclo de vida de ofertas y partidas.
-- Lo que sigue faltando no es el dominio base, sino la capa de notificacion en si: persistencia, entrega, lectura y preferencias.
+- La capa funcional de notificacion ya se considera implementada en su alcance principal: persistencia, entrega, lectura, preferencias, correo opcional, recordatorios, avisos compatibles y push web.
 - Puntos de enganche ya identificados en el repo:
   - creacion de propuesta en `src/app/api/juego-organizado/slots/[id]/join/route.ts`.
   - aceptacion y rechazo en `src/lib/organized-slot-proposal-actions.ts`.
   - disponibilidad recurrente y horario habitual en `src/app/api/juego-organizado/recurring-availability/route.ts` y `src/components/juego-organizado/MyAvailabilityPlanner.tsx`.
 - El modelo `Notification` actual parece representar avisos globales simples, no notificaciones por usuario ni por canal, asi que previsiblemente hara falta un modelo nuevo o una ampliacion importante del esquema.
 - Ya existe base para correo saliente mediante `nodemailer`, por lo que `email` es tecnicamente viable desde el stack actual.
-- No se aprecia base ya montada para `push web`: no hay `service worker`, `manifest` ni suscripciones en el proyecto actual, asi que esta capacidad debe introducirse como nueva.
+- Ya existe base de `push web` con service worker, manifest, suscripciones por dispositivo, VAPID y recuperacion manual de suscripcion.
 - Recomendacion de arquitectura: los flujos de negocio no deberian enviar push o correo directamente dentro de la transaccion principal; deberian registrar un evento o notificacion pendiente y dejar la entrega a una capa asincrona con reintentos e idempotencia.
 
 ## Viabilidad y enfoque
@@ -129,3 +132,5 @@ No entra:
 - 2026-05-27: la tarea pasa a `in_progress` con una primera iteracion funcional de fase 1 ya implementada: persistencia por usuario, preferencias basicas, centro interno en navegacion, email opcional para propuestas y enganche en propuesta enviada, aceptada, rechazada y descartada por aceptacion ajena.
 - 2026-05-27: se amplia la implementacion con recordatorios de partida, avisos por ofertas compatibles, soporte PWA basico, service worker, suscripciones push por dispositivo, entrega push via `web-push` y endpoint cron para disparar recordatorios. Las migraciones de notificaciones se aplican correctamente en la BD Docker local.
 - 2026-05-27: se generan y configuran claves VAPID para entorno local, se documentan las variables necesarias en `.env.example` y se valida que el contenedor Docker de `web` ya las recibe. Queda pendiente validacion manual de permisos push reales en navegador/dispositivo.
+- 2026-05-27: tras pruebas en produccion se corrigen puntos de estabilizacion: estado push por dispositivo real, panel movil dentro del viewport, notificacion al cancelar partidas confirmadas, borrado/ocultacion de notificaciones, vista de ajustes separada y accion `Reparar` para resincronizar service worker y suscripcion push cuando Android/FCM queda en estado atascado.
+- 2026-05-27: la tarea pasa a `done` bajo el criterio de que el bloque funcional principal de notificaciones queda completo; cualquier correccion menor nueva se registrara como incidencia concreta o tarea separada.

@@ -28,6 +28,8 @@ enum PostType {
 enum EventStatus {
   DRAFT
   PUBLISHED
+  PREPARATION
+  IN_PROGRESS
   FINALIZED
   POSTPONED
   CANCELLED
@@ -117,6 +119,44 @@ enum UserNotificationDeliveryStatus {
   SKIPPED
 }
 
+enum EventRegistrationStatus {
+  INSCRITO
+  PAGADO
+  CANCELLED
+}
+
+enum EventRegistrationSource {
+  WEB
+  ADMIN
+  TELEGRAM
+  IMPORT
+}
+
+enum CompetitiveMatchKind {
+  LEAGUE
+  CASUAL
+}
+
+enum CompetitiveMatchOutcome {
+  WIN
+  DRAW
+  LOSS
+}
+
+enum CompetitiveMatchReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum CompetitiveMatchReportChannel {
+  WEB
+  TELEGRAM
+  ADMIN
+  IMPORT
+}
+
 model NewsArticle {
   id              String   @id @default(cuid())
   slug            String   @unique
@@ -134,7 +174,8 @@ model NewsArticle {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  chronicleEvents Event[] @relation("EventChronicle")
+  chronicleEvents Event[]          @relation("EventPrimaryChronicle")
+  eventChronicles EventChronicle[]
 
   @@index([primaryCategory])
   @@index([date])
@@ -168,34 +209,42 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  accounts                 Account[]
-  sessions                 Session[]
-  posts                    Post[]
-  games                    UserGame[]
-  faccionesW40K            FaccionesW40K[]
-  faccionesAoS             FaccionesAoS[]
-  faccionesTOW             FaccionesTOW[]
-  galleryImages            GalleryImage[]
-  albumCollaborations      GalleryAlbumCollaborator[]
-  eventOrganizers          EventOrganizer[]
-  eventHighlights          EventHighlight[]           @relation("EventHighlightPlayer")
-  eventRankings            EventRankingEntry[]        @relation("EventRankingPlayer")
-  coordinatedGames         GameInfo[]                 @relation("GameInfoContact")
-  managedChangeLogs        UserChangeLog[]            @relation("UserChangeLogAdmin")
-  receivedChangeLogs       UserChangeLog[]            @relation("UserChangeLogTarget")
-  createdInvites           UserInvite[]               @relation("UserInviteCreator")
-  claimedInvites           UserInvite[]               @relation("UserInviteTarget")
-  availabilitySlots        AvailabilitySlot[]         @relation("AvailabilitySlotCreator")
-  sentSlotProposals        SlotProposal[]             @relation("SlotProposalRequester")
-  recurringAvailability    RecurringAvailability[]
-  matchParticipations      MatchParticipant[]
-  createdMatches           Match[]                    @relation("MatchCreator")
-  createdTableReservations TableReservation[]         @relation("TableReservationCreator")
-  createdTableBlocks       TableBlock[]               @relation("TableBlockCreator")
-  receivedNotifications    UserNotification[]         @relation("UserNotificationRecipient")
-  actedNotifications       UserNotification[]         @relation("UserNotificationActor")
-  notificationPreference   UserNotificationPreference?
-  pushSubscriptions        UserPushSubscription[]
+  accounts                    Account[]
+  sessions                    Session[]
+  posts                       Post[]
+  games                       UserGame[]
+  faccionesW40K               FaccionesW40K[]
+  faccionesAoS                FaccionesAoS[]
+  faccionesTOW                FaccionesTOW[]
+  galleryImages               GalleryImage[]
+  albumCollaborations         GalleryAlbumCollaborator[]
+  eventOrganizers             EventOrganizer[]
+  eventHighlights             EventHighlight[]               @relation("EventHighlightPlayer")
+  eventRankings               EventRankingEntry[]            @relation("EventRankingPlayer")
+  coordinatedGames            GameInfo[]                     @relation("GameInfoContact")
+  managedChangeLogs           UserChangeLog[]                @relation("UserChangeLogAdmin")
+  receivedChangeLogs          UserChangeLog[]                @relation("UserChangeLogTarget")
+  createdInvites              UserInvite[]                   @relation("UserInviteCreator")
+  claimedInvites              UserInvite[]                   @relation("UserInviteTarget")
+  availabilitySlots           AvailabilitySlot[]             @relation("AvailabilitySlotCreator")
+  sentSlotProposals           SlotProposal[]                 @relation("SlotProposalRequester")
+  recurringAvailability       RecurringAvailability[]
+  matchParticipations         MatchParticipant[]
+  createdMatches              Match[]                        @relation("MatchCreator")
+  createdTableReservations    TableReservation[]             @relation("TableReservationCreator")
+  createdTableBlocks          TableBlock[]                   @relation("TableBlockCreator")
+  receivedNotifications       UserNotification[]             @relation("UserNotificationRecipient")
+  actedNotifications          UserNotification[]             @relation("UserNotificationActor")
+  notificationPreference      UserNotificationPreference?
+  pushSubscriptions           UserPushSubscription[]
+  eventRegistrations          EventRegistration[]
+  reviewedRegistrations       EventRegistration[]            @relation("EventRegistrationReviewer")
+  createdCompetitiveMatches   CompetitiveMatch[]             @relation("CompetitiveMatchCreator")
+  validatedCompetitiveMatches CompetitiveMatch[]             @relation("CompetitiveMatchValidator")
+  competitiveMatchPlayers     CompetitiveMatchPlayer[]
+  submittedCompetitiveReports CompetitiveMatchReport[]       @relation("CompetitiveMatchReportSubmitter")
+  reviewedCompetitiveReports  CompetitiveMatchReport[]       @relation("CompetitiveMatchReportReviewer")
+  competitiveReportPlayers    CompetitiveMatchReportPlayer[]
 }
 
 model Account {
@@ -231,14 +280,16 @@ model Game {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  users             UserGame[]
-  events            Event[]
-  info              GameInfo?
-  tableLayouts      TableLayout[]
-  clubTables        ClubTable[]
-  availabilitySlots AvailabilitySlot[]
-  slotProposals     SlotProposal[]
-  matches           Match[]
+  users              UserGame[]
+  events             Event[]
+  info               GameInfo?
+  tableLayouts       TableLayout[]
+  clubTables         ClubTable[]
+  availabilitySlots  AvailabilitySlot[]
+  slotProposals      SlotProposal[]
+  matches            Match[]
+  competitiveMatches CompetitiveMatch[]
+  competitiveReports CompetitiveMatchReport[]
 }
 
 model UserGame {
@@ -323,6 +374,7 @@ model Event {
   bannerUrl             String?
   startsAt              DateTime
   endsAt                DateTime
+  registrationClosesAt  DateTime?
   location              String?
   latitude              Float?
   longitude             Float?
@@ -356,20 +408,24 @@ model Event {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
-  posts            Post[]
-  organizers       EventOrganizer[]
-  organizations    EventOrganization[]
-  tags             EventTag[]
-  attachments      EventAttachment[]
-  links            EventLink[]
-  highlights       EventHighlight[]
-  rankings         EventRankingEntry[]
-  galleryImages    GalleryImage[]
-  album            GalleryAlbum?       @relation("EventAlbum", fields: [albumId], references: [id], onDelete: SetNull)
-  game             Game?               @relation(fields: [gameId], references: [id], onDelete: SetNull)
-  chronicleArticle NewsArticle?        @relation("EventChronicle", fields: [chronicleArticleId], references: [id], onDelete: SetNull)
-  matches          Match[]
-  tableBlocks      TableBlock[]
+  posts              Post[]
+  organizers         EventOrganizer[]
+  organizations      EventOrganization[]
+  tags               EventTag[]
+  attachments        EventAttachment[]
+  links              EventLink[]
+  highlights         EventHighlight[]
+  rankings           EventRankingEntry[]
+  galleryImages      GalleryImage[]
+  album              GalleryAlbum?            @relation("EventAlbum", fields: [albumId], references: [id], onDelete: SetNull)
+  game               Game?                    @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  chronicleArticle   NewsArticle?             @relation("EventPrimaryChronicle", fields: [chronicleArticleId], references: [id], onDelete: SetNull)
+  chronicleLinks     EventChronicle[]
+  registrations      EventRegistration[]
+  matches            Match[]
+  competitiveMatches CompetitiveMatch[]
+  competitiveReports CompetitiveMatchReport[]
+  tableBlocks        TableBlock[]
 }
 
 model Notification {
@@ -457,8 +513,8 @@ model UserPushSubscription {
   userAgent String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  lastSeenAt DateTime @default(now())
-  revokedAt DateTime?
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -911,6 +967,144 @@ model EventRankingEntry {
   player User? @relation("EventRankingPlayer", fields: [playerId], references: [id], onDelete: SetNull)
 
   @@unique([eventId, position])
+}
+
+model EventRegistration {
+  id           String                  @id @default(cuid())
+  eventId      String
+  userId       Int?
+  playerName   String
+  factionLabel String?
+  status       EventRegistrationStatus @default(INSCRITO)
+  source       EventRegistrationSource @default(WEB)
+  listData     Json?
+  notes        String?                 @db.Text
+  registeredAt DateTime                @default(now())
+  reviewedAt   DateTime?
+  reviewedById Int?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  event      Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  reviewedBy User? @relation("EventRegistrationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, userId])
+  @@index([eventId, status])
+  @@index([userId])
+}
+
+model CompetitiveMatch {
+  id             String               @id @default(cuid())
+  eventId        String?
+  gameId         String?
+  kind           CompetitiveMatchKind @default(CASUAL)
+  playedAt       DateTime
+  roundNumber    Int?
+  sourceReportId String?              @unique
+  notes          String?              @db.Text
+  createdById    Int?
+  validatedById  Int?
+  validatedAt    DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  event        Event?                   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  game         Game?                    @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  sourceReport CompetitiveMatchReport?  @relation("ApprovedCompetitiveMatchReport", fields: [sourceReportId], references: [id], onDelete: SetNull)
+  createdBy    User?                    @relation("CompetitiveMatchCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  validatedBy  User?                    @relation("CompetitiveMatchValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  players      CompetitiveMatchPlayer[]
+
+  @@index([eventId, kind, playedAt])
+  @@index([gameId, playedAt])
+  @@index([playedAt])
+}
+
+model CompetitiveMatchPlayer {
+  id               String                  @id @default(cuid())
+  matchId          String
+  userId           Int?
+  participantOrder Int
+  displayName      String
+  factionLabel     String
+  outcome          CompetitiveMatchOutcome
+  score            Int
+  createdAt        DateTime                @default(now())
+
+  match CompetitiveMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([matchId, participantOrder])
+  @@index([userId])
+  @@index([matchId, outcome])
+}
+
+model CompetitiveMatchReport {
+  id                  String                        @id @default(cuid())
+  eventId             String?
+  gameId              String?
+  kind                CompetitiveMatchKind          @default(CASUAL)
+  playedAt            DateTime
+  roundNumber         Int?
+  channel             CompetitiveMatchReportChannel @default(WEB)
+  status              CompetitiveMatchReportStatus  @default(PENDING)
+  submittedById       Int?
+  externalSubmitterId String?
+  externalMessageId   String?
+  notes               String?                       @db.Text
+  rejectionReason     String?                       @db.Text
+  reviewedById        Int?
+  reviewedAt          DateTime?
+  approvedMatch       CompetitiveMatch?             @relation("ApprovedCompetitiveMatchReport")
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @updatedAt
+
+  event       Event?                         @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  game        Game?                          @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  submittedBy User?                          @relation("CompetitiveMatchReportSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedBy  User?                          @relation("CompetitiveMatchReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  players     CompetitiveMatchReportPlayer[]
+
+  @@unique([channel, externalMessageId])
+  @@index([eventId, status])
+  @@index([status, createdAt])
+  @@index([submittedById])
+}
+
+model CompetitiveMatchReportPlayer {
+  id               String                  @id @default(cuid())
+  reportId         String
+  userId           Int?
+  participantOrder Int
+  displayName      String
+  factionLabel     String
+  outcome          CompetitiveMatchOutcome
+  score            Int
+  createdAt        DateTime                @default(now())
+
+  report CompetitiveMatchReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([reportId, participantOrder])
+  @@index([userId])
+}
+
+model EventChronicle {
+  id        String   @id @default(cuid())
+  eventId   String
+  articleId String
+  label     String?
+  position  Int      @default(0)
+  featured  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  event   Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  article NewsArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, articleId])
+  @@index([eventId, position])
+  @@index([articleId])
 }
 
 model SiteContent {

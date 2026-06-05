@@ -1,0 +1,5 @@
+ALTER TYPE "EventStatus" ADD VALUE 'PREPARATION';
+ALTER TYPE "EventStatus" ADD VALUE 'IN_PROGRESS';
+
+ALTER TABLE "Event"
+ADD COLUMN "registrationClosesAt" TIMESTAMP(3);

@@ -19,6 +19,7 @@ This file is the entry point for Codex sessions in this repository. Keep it shor
 - For manual edits, use `apply_patch`.
 - Use `rg` / `rg --files` for search.
 - Keep generated artifacts out of commits unless explicitly intended.
+- Any new Spanish user-facing or documentation text must be written in UTF-8 with proper accents and ñ. If encoding prevents that, stop and report the encoding problem instead of writing degraded text.
 
 ## Script Boundary
 

@@ -2,12 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import EventStatusBadge from "@/components/events/EventStatusBadge";
+import EventRegistrationsPanel from "@/components/events/EventRegistrationsPanel";
 import EventShareButtons from "@/components/events/EventShareButtons";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { userCanEditEvent } from "@/lib/roles";
+import { extractRoles, userCanEditEvent } from "@/lib/roles";
+import { canAcceptRegistrations, resolveSessionUserId } from "@/lib/event-registrations";
 import { findArticleById } from "@/lib/novedades-repository";
 import { buildEventSlug, extractEventIdFromSlug } from "@/lib/events/slug";
+import { getComputedEventStatus } from "@/lib/events/status";
 
 type Params = {
   slug: string;
@@ -38,7 +41,7 @@ const highlightLabels: Record<string, string> = {
   FIRST: "Primer puesto",
   SECOND: "Segundo puesto",
   THIRD: "Tercer puesto",
-  AWARD: "Mencion especial",
+  AWARD: "Mención especial",
 };
 
 const BILBO_ORGANIZATION_NAME = "Bilbohammer";
@@ -112,6 +115,12 @@ export default async function EventDetailPage({
       links: true,
       highlights: true,
       rankings: { orderBy: { position: "asc" } },
+      registrations: {
+        include: {
+          user: { select: { id: true, name: true, nick: true, email: true } },
+        },
+        orderBy: [{ status: "asc" }, { registeredAt: "asc" }, { playerName: "asc" }],
+      },
       galleryImages: true,
       album: { include: { images: true } },
     },
@@ -122,18 +131,16 @@ export default async function EventDetailPage({
   }
 
   const canManage = await userCanEditEvent(session, event.id);
+  const currentUserId = resolveSessionUserId(session);
+  const currentRoles = extractRoles(session);
+  const currentUserCanRegisterMembersOnly =
+    !event.isMembersOnly || currentRoles.some((role) => role === "SOCIO" || role === "JUNTA" || role === "ADMIN");
 
   const chronicleArticle = event.chronicleArticleId
     ? await findArticleById(event.chronicleArticleId)
     : null;
 
-  const now = Date.now();
-  const computedStatus =
-    event.status === "CANCELLED" || event.status === "POSTPONED"
-      ? event.status
-      : event.endsAt.getTime() < now
-        ? "FINALIZED"
-        : event.status;
+  const computedStatus = getComputedEventStatus(event);
 
   const rangeLabel = formatDateRange(event.startsAt, event.endsAt);
 
@@ -159,6 +166,7 @@ export default async function EventDetailPage({
   const visibleLinks = event.links.filter((item) => item.visible);
   const visibleHighlights = event.highlights.filter((item) => item.visible);
   const visibleRankings = event.rankings.filter((item) => item.visible);
+  const activeRegistrations = event.registrations.filter((item) => item.status !== "CANCELLED");
 
   const directImages = event.galleryImages
     .map((record) => {
@@ -181,7 +189,7 @@ export default async function EventDetailPage({
       return {
         id: record.id,
         src,
-        alt: record.altText ?? record.title ?? `Album ${event.album?.title ?? ""}`,
+        alt: record.altText ?? record.title ?? `Álbum ${event.album?.title ?? ""}`,
         width: record.width ?? 1280,
         height: record.height ?? 720,
       };
@@ -295,7 +303,9 @@ export default async function EventDetailPage({
   }
   if (hasCapacityInfo && event.capacityMax != null) {
     const lines = [`Aforo: ${event.capacityMax}`];
-    if ((event.capacityCurrent ?? 0) > 0) {
+    if (activeRegistrations.length > 0) {
+      lines.push(`Inscritos: ${activeRegistrations.length}`);
+    } else if ((event.capacityCurrent ?? 0) > 0) {
       lines.push(`Reservas: ${event.capacityCurrent}`);
     }
     heroInfoItems.push({ key: "capacity", label: "Capacidad", lines });
@@ -364,6 +374,8 @@ export default async function EventDetailPage({
     );
 
   const showShareButtons = event.status !== "DRAFT" && event.status !== "CANCELLED";
+  const canRegisterForEvent = canAcceptRegistrations(event) && currentUserCanRegisterMembersOnly;
+  const showRegistrationsPanel = canManage || event.registrations.length > 0 || canRegisterForEvent;
 
   return (
     <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
@@ -441,6 +453,26 @@ export default async function EventDetailPage({
           </div>
         </div>
       </header>
+
+      {showRegistrationsPanel && (
+        <EventRegistrationsPanel
+          eventId={event.id}
+          currentUserId={currentUserId}
+          canManage={canManage}
+          canRegister={canRegisterForEvent}
+          capacityMax={event.capacityMax}
+          registrations={event.registrations.map((registration) => ({
+            id: registration.id,
+            eventId: registration.eventId,
+            userId: registration.userId,
+            playerName: registration.playerName,
+            factionLabel: registration.factionLabel,
+            status: registration.status,
+            notes: registration.notes,
+            registeredAt: registration.registeredAt.toISOString(),
+          }))}
+        />
+      )}
 
       {availableTabs.length > 0 && (
         <nav className="flex flex-wrap gap-2">
@@ -638,7 +670,7 @@ export default async function EventDetailPage({
                 rel="noreferrer"
                 className="inline-flex w-fit items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white transition hover:bg-white/10"
               >
-                Abrir album
+                Abrir álbum
               </Link>
             )}
             {galleryMedia.length > 0 ? (

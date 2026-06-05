@@ -4,8 +4,16 @@ import clsx from "clsx";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   PUBLISHED: {
-    label: "Published",
+    label: "Publicado",
     className: "border-emerald-500/40 bg-emerald-500/15 text-emerald-200",
+  },
+  PREPARATION: {
+    label: "Preparación",
+    className: "border-amber-500/40 bg-amber-500/15 text-amber-100",
+  },
+  IN_PROGRESS: {
+    label: "En curso",
+    className: "border-sky-500/40 bg-sky-500/15 text-sky-200",
   },
   ONGOING: {
     label: "En curso",
@@ -22,6 +30,10 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   CANCELLED: {
     label: "Cancelado",
     className: "border-rose-500/45 bg-rose-500/20 text-rose-200",
+  },
+  POSTPONED: {
+    label: "Pospuesto",
+    className: "border-violet-500/40 bg-violet-500/15 text-violet-100",
   },
 };
 
