@@ -2,9 +2,16 @@
 
 Registro cronologico breve de trabajo realizado o contexto consolidado.
 
+## 2026-06-16
+
+- Se implementa el flujo guiado de `BH-011`: sesiones persistidas en `TelegramBotSession`, soporte de botones/callbacks de Telegram, selección de liga/evento como primer paso, pachangas solo dentro de un marco con inscripción, validación de usuarios inscritos, facciones obligatorias para ambos jugadores, puntos como enteros no negativos sin asumir WTC y confirmación antes de crear `CompetitiveMatchReport`.
+- Se completa la primera pasada de usabilidad del flujo guiado de `BH-011`: cancelación consistente, botón `Empezar de nuevo` y edición desde el resumen final para liga, rival, facciones, resultado, puntos y fecha.
+
 ## 2026-06-05
 
 - Se mejora `BH-011` con botón `Conectar Telegram` en `Mi Perfil`: genera el código temporal, abre Telegram mediante deep link cuando está disponible y muestra el comando `/start` como alternativa copiable.
+- Se registran pendientes de `BH-011` para pulir el bot: flujo guiado de `/resultado`, textos finales, validaciones de liga/rival/duplicados y aclaración de que cada jugador vincula su propio Telegram.
+- Se crea `BH-013 - Gestión web de reportes de partidas competitivas` para la bandeja de revisión, corrección, aprobación y rechazo de reportes pendientes.
 
 ## 2026-06-04
 

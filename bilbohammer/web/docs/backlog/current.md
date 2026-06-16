@@ -4,7 +4,7 @@ Estado operativo actual del backlog.
 
 ## Foco actual
 
-- `BH-011 - bot de Telegram para reportar partidas` pasa a ser el frente activo inmediato: primera fase de webhook, vinculación de cuenta y envío de reportes pendientes.
+- `BH-011 - bot de Telegram para reportar partidas` pasa a ser el frente activo inmediato: flujo guiado ya implementado, pendiente de pruebas reales y ajuste de textos/presentación.
 - `BH-010 - gestión integral de liga 40K desde eventos` queda mayoritariamente completada en primera fase: modelo competitivo, inscripciones con cierre, preparación previa, reportes revisables, partidas aprobadas y proyecciones calculadas. Visualización y refinado de tablas se retomarán después de pulir el envío de partidas.
 - El frente principal de `juego organizado` se considera cerrado en alcance funcional principal.
 - Bajo la fotografia funcional actual asumida, `BH-005` y `BH-006` pueden darse por cerradas: mesas y su integracion con partidas ya no son el frente principal.
@@ -13,7 +13,7 @@ Estado operativo actual del backlog.
 
 ## Proximas candidatas
 
-- Completar UI web de revisión/corrección de reportes pendientes de partidas competitivas.
+- `BH-013`: completar UI web de revisión/corrección/aprobación de reportes pendientes de partidas competitivas cuando el flujo del bot esté pulido.
 - `BH-008`: habilitar vista publica por QR de cada mesa con informacion base y calendario del dia.
 - `BH-001`: corregir el copy desactualizado del panel admin.
 - `BH-002`: definir el alcance funcional de gestion documental.

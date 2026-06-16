@@ -245,6 +245,7 @@ model User {
   submittedCompetitiveReports CompetitiveMatchReport[]       @relation("CompetitiveMatchReportSubmitter")
   reviewedCompetitiveReports  CompetitiveMatchReport[]       @relation("CompetitiveMatchReportReviewer")
   competitiveReportPlayers    CompetitiveMatchReportPlayer[]
+  telegramBotSessions         TelegramBotSession[]
 }
 
 model Account {
@@ -1088,6 +1089,24 @@ model CompetitiveMatchReportPlayer {
 
   @@unique([reportId, participantOrder])
   @@index([userId])
+}
+
+model TelegramBotSession {
+  id             String   @id @default(cuid())
+  telegramUserId String
+  chatId         String
+  userId         Int
+  step           String
+  payload        Json
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([telegramUserId, chatId])
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model EventChronicle {

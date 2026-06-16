@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
+  answerTelegramCallbackQuery,
   handleTelegramUpdate,
   sendTelegramMessage,
   validateTelegramWebhookSecret,
@@ -25,9 +26,11 @@ export async function POST(request: Request) {
 
   try {
     const result = await handleTelegramUpdate(update);
-    const chatId = update.message?.chat.id;
-    if (chatId != null && result.text) {
-      await sendTelegramMessage(chatId, result.text);
+    if (result.callbackQueryId) {
+      await answerTelegramCallbackQuery(result.callbackQueryId);
+    }
+    for (const message of result.messages) {
+      await sendTelegramMessage(message);
     }
     return NextResponse.json({ ok: true });
   } catch (error) {
