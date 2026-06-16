@@ -156,10 +156,10 @@ function ReportCard({
     <article className="space-y-5 rounded-3xl border border-white/10 bg-black/20 p-5 shadow-lg">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+          <p className="break-words text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
             {describeLeague(report, fallbackEventTitle)}
           </p>
-          <h2 className="text-xl font-semibold text-white">
+          <h2 className="break-words text-xl font-semibold text-white">
             {describePlayer(firstPlayer)} vs {describePlayer(secondPlayer)}
           </h2>
           <p className="text-sm text-[var(--muted)]">
@@ -190,7 +190,7 @@ function ReportCard({
         </div>
         <div className="space-y-1">
           <dt className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Facciones</dt>
-          <dd className="text-sm text-white">
+          <dd className="break-words text-sm text-white">
             {describeFaction(firstPlayer)} vs {describeFaction(secondPlayer)}
           </dd>
         </div>
@@ -204,7 +204,7 @@ function ReportCard({
         </div>
         <div className="space-y-1">
           <dt className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Trazabilidad</dt>
-          <dd className="text-sm text-white">{describeSubmitter(report)}</dd>
+          <dd className="break-all text-sm text-white">{describeSubmitter(report)}</dd>
         </div>
       </dl>
 
@@ -219,25 +219,13 @@ function ReportCard({
           {report.notes && (
             <div className="space-y-1">
               <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Notas</p>
-              <p className="text-sm text-white/90">{report.notes}</p>
+              <p className="break-words text-sm text-white/90">{report.notes}</p>
             </div>
           )}
         </div>
       )}
 
-      <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)]">
-        <form action={approveCompetitiveReportAction} className="flex items-start">
-          <input type="hidden" name="eventId" value={eventId} />
-          <input type="hidden" name="reportId" value={report.id} />
-          <button
-            type="submit"
-            className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400"
-          >
-            Aprobar
-          </button>
-        </form>
-
-        <form action={rejectCompetitiveReportAction} className="space-y-3 rounded-2xl border border-white/10 p-4">
+      <form action={rejectCompetitiveReportAction} className="space-y-3 rounded-2xl border border-white/10 p-4">
           <input type="hidden" name="eventId" value={eventId} />
           <input type="hidden" name="reportId" value={report.id} />
           <div className="space-y-2">
@@ -253,14 +241,22 @@ function ReportCard({
               placeholder="Explica brevemente qué falta o qué dato es incorrecto."
             />
           </div>
-          <button
-            type="submit"
-            className="rounded-full border border-red-400/40 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/10"
-          >
-            Rechazar
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              className="rounded-full border border-red-400/40 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/10"
+            >
+              Rechazar
+            </button>
+            <button
+              type="submit"
+              formAction={approveCompetitiveReportAction}
+              className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400"
+            >
+              Aprobar
+            </button>
+          </div>
         </form>
-      </div>
     </article>
   );
 }
