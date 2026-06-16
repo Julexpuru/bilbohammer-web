@@ -283,15 +283,29 @@ export async function rejectCompetitiveMatchReport(
   rejectionReason: string,
   db: CompetitiveDb = prisma,
 ) {
-  return db.competitiveMatchReport.update({
-    where: { id: reportId },
-    data: {
-      status: CompetitiveMatchReportStatus.REJECTED,
-      reviewedById: reviewerId,
-      reviewedAt: new Date(),
-      rejectionReason: normalizeNullableString(rejectionReason),
-    },
-    include: { players: { orderBy: { participantOrder: "asc" } } },
+  return db.$transaction(async (tx) => {
+    const report = await tx.competitiveMatchReport.findUnique({
+      where: { id: reportId },
+      select: { id: true, status: true },
+    });
+
+    if (!report) {
+      throw new Error("Reporte no encontrado.");
+    }
+    if (report.status !== CompetitiveMatchReportStatus.PENDING) {
+      throw new Error("Solo se pueden rechazar reportes pendientes.");
+    }
+
+    return tx.competitiveMatchReport.update({
+      where: { id: report.id },
+      data: {
+        status: CompetitiveMatchReportStatus.REJECTED,
+        reviewedById: reviewerId,
+        reviewedAt: new Date(),
+        rejectionReason: normalizeNullableString(rejectionReason),
+      },
+      include: { players: { orderBy: { participantOrder: "asc" } } },
+    });
   });
 }
 
@@ -304,6 +318,7 @@ export async function listPendingCompetitiveMatchReports(eventId?: string, db: C
     include: {
       players: { orderBy: { participantOrder: "asc" } },
       event: { select: { id: true, title: true } },
+      game: { select: { id: true, name: true, slug: true } },
       submittedBy: { select: { id: true, name: true, nick: true, email: true } },
     },
     orderBy: { createdAt: "asc" },

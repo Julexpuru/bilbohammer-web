@@ -4,6 +4,8 @@ Registro cronologico breve de trabajo realizado o contexto consolidado.
 
 ## 2026-06-16
 
+- Se inicia `BH-013` con una primera bandeja web de revisión por evento para reportes competitivos pendientes: acceso limitado a admin/organizadores, listado de contexto clave y acciones de aprobar o rechazar usando el servicio común; la edición previa a aprobar queda documentada para una iteración posterior.
+
 - Se ajusta el bot de `BH-011` para validar facciones contra el catálogo compartido de `src/lib/games.ts` en `w40k`, `aos` y `tow`: el flujo guiado muestra lista numerada y el modo rápido exige nombres canónicos.
 
 - Se implementa el flujo guiado de `BH-011`: sesiones persistidas en `TelegramBotSession`, soporte de botones/callbacks de Telegram, selección de liga/evento como primer paso, pachangas solo dentro de un marco con inscripción, validación de usuarios inscritos, facciones obligatorias para ambos jugadores, puntos como enteros no negativos sin asumir WTC y confirmación antes de crear `CompetitiveMatchReport`.

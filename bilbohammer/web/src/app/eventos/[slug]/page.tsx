@@ -362,15 +362,22 @@ export default async function EventDetailPage({
 
   const canonicalSlug = buildEventSlug(event.id, event.title);
   const baseHref = `/eventos/${canonicalSlug}`;
-  const manageButton =
-    canManage &&
-    (
+  const manageButtons =
+    canManage && (
+      <div className="flex flex-wrap justify-end gap-2">
+        <Link
+          href={`/eventos/${canonicalSlug}/reportes`}
+          className="rounded-full border border-amber-300/30 bg-amber-500/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-amber-100 transition hover:bg-amber-500/20"
+        >
+          Revisar reportes
+        </Link>
         <Link
           href={`/eventos/${canonicalSlug}/editar`}
-        className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-white/10"
-      >
-        Editar evento
-      </Link>
+          className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-white/10"
+        >
+          Editar evento
+        </Link>
+      </div>
     );
 
   const showShareButtons = event.status !== "DRAFT" && event.status !== "CANCELLED";
@@ -433,7 +440,7 @@ export default async function EventDetailPage({
               )}
             </div>
             <div className="space-y-4">
-              {manageButton && <div className="flex justify-end">{manageButton}</div>}
+              {manageButtons}
               <div className="relative aspect-square w-full max-w-xs overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-lg">
                 {event.bannerUrl ? (
                   <Image

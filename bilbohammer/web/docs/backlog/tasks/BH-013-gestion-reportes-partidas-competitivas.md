@@ -1,12 +1,12 @@
 # BH-013 - Gestión web de reportes de partidas competitivas
 
-Estado: todo
+Estado: in_progress
 Tipo: feature
 Prioridad: P2
 Area: eventos
 Owner: shared
 Origen: desglose de BH-010/BH-011
-Ultima actualizacion: 2026-06-05
+Ultima actualizacion: 2026-06-16
 
 ## Contexto
 
@@ -42,7 +42,9 @@ No entra:
 - Encajar la UI dentro de la página del evento o una sección de gestión ligada al evento.
 - Validar permisos con las mismas reglas de organizador/admin usadas en eventos.
 - Coordinar con `BH-011`: el bot crea reportes pendientes, esta tarea los gestiona.
+- Primera fase cerrada con bandeja mínima de solo lectura + aprobar/rechazar; la edición correctiva previa a aprobar queda diferida a una siguiente iteración si hace falta tocar demasiado dominio o UX.
 
 ## Historial
 
 - 2026-06-05: tarea creada al aclarar que la organización necesita una bandeja web separada para revisar, corregir, aprobar o rechazar los reportes que entren desde Telegram.
+- 2026-06-16: se implementa la primera fase segura en web: página por evento para listar pendientes, acceso por admin/organizador y acciones de aprobar o rechazar reutilizando el servicio común; la edición detallada se aplaza.
