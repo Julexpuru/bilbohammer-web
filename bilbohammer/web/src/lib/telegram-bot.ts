@@ -11,6 +11,7 @@ import {
 
 import { createCompetitiveMatchReport } from "@/lib/competitive-matches";
 import { extractEventIdFromSlug } from "@/lib/events/slug";
+import { FACTIONS, fallbackGameName } from "@/lib/games";
 import { prisma } from "@/lib/prisma";
 
 type TelegramUser = {
@@ -75,6 +76,9 @@ type SessionPayload = {
   eventId?: string;
   eventTitle?: string;
   gameId?: string | null;
+  gameSlug?: string | null;
+  gameName?: string | null;
+  gameLegacyEnumKey?: string | null;
   kind?: CompetitiveMatchKind;
   playerRegistrationId?: string;
   playerUserId?: number | null;
@@ -101,6 +105,9 @@ type LeagueOption = {
   id: string;
   title: string;
   gameId: string | null;
+  gameSlug: string | null;
+  gameName: string | null;
+  gameLegacyEnumKey: string | null;
   startsAt: Date;
   endsAt: Date;
   registration: {
@@ -137,6 +144,7 @@ const TELEGRAM_LINK_IDENTIFIER_PREFIX = "telegram-link:";
 const TELEGRAM_LINK_TTL_MINUTES = 15;
 const SESSION_TTL_MINUTES = 30;
 const ACTIVE_REGISTRATION_STATUSES = [EventRegistrationStatus.INSCRITO, EventRegistrationStatus.PAGADO];
+type FactionGameKey = keyof typeof FACTIONS;
 
 const HELP_TEXT = [
   "Puedes usar estos comandos:",
@@ -191,6 +199,76 @@ function displayUserName(user: TelegramUser) {
 
 function playerLabel(player: { playerName: string; factionLabel: string | null }) {
   return player.factionLabel ? `${player.playerName} (${player.factionLabel})` : player.playerName;
+}
+
+function resolveFactionGameKey(payload: Pick<SessionPayload, "gameSlug" | "gameLegacyEnumKey">): FactionGameKey | null {
+  const candidates = [payload.gameSlug, payload.gameLegacyEnumKey]
+    .map((value) => normalizeText(value)?.toLowerCase())
+    .filter((value): value is string => Boolean(value));
+
+  for (const candidate of candidates) {
+    if (candidate === "w40k") return "w40k";
+    if (candidate === "aos") return "aos";
+    if (candidate === "tow") return "tow";
+  }
+
+  return null;
+}
+
+function factionCatalogForPayload(payload: Pick<SessionPayload, "gameSlug" | "gameLegacyEnumKey">) {
+  const key = resolveFactionGameKey(payload);
+  return key ? FACTIONS[key] : null;
+}
+
+function gameNameForPayload(payload: Pick<SessionPayload, "gameSlug" | "gameName">) {
+  return payload.gameName ?? (payload.gameSlug ? fallbackGameName(payload.gameSlug) : "este juego");
+}
+
+function formatFactionCatalog(payload: Pick<SessionPayload, "gameSlug" | "gameLegacyEnumKey">) {
+  const catalog = factionCatalogForPayload(payload);
+  if (!catalog) return null;
+
+  return catalog.map((faction, index) => `${index + 1}. ${faction.name}`).join("\n");
+}
+
+function parseFactionFromUserText(text: string, payload: Pick<SessionPayload, "gameSlug" | "gameLegacyEnumKey">) {
+  const value = normalizeText(text);
+  if (!value) return null;
+
+  const catalog = factionCatalogForPayload(payload);
+  if (!catalog) return value;
+
+  if (/^\d+$/.test(value)) {
+    const selected = catalog[Number(value) - 1];
+    return selected?.name ?? null;
+  }
+
+  return catalog.find((faction) => faction.name === value)?.name ?? null;
+}
+
+function canonicalFactionFromStoredValue(value: string | null | undefined, payload: Pick<SessionPayload, "gameSlug" | "gameLegacyEnumKey">) {
+  const normalized = normalizeText(value);
+  if (!normalized) return null;
+
+  const catalog = factionCatalogForPayload(payload);
+  if (!catalog) return normalized;
+
+  return catalog.find((faction) => faction.name === normalized || faction.id === normalized)?.name ?? null;
+}
+
+function factionValidationMessage(
+  payload: Pick<SessionPayload, "gameSlug" | "gameName" | "gameLegacyEnumKey">,
+  label: "tu facción/lista" | "la facción/lista del rival",
+) {
+  const catalogText = formatFactionCatalog(payload);
+  if (!catalogText) return `Necesito ${label} para guardar la partida.`;
+
+  return [
+    `Elige ${label} para ${gameNameForPayload(payload)}.`,
+    "Responde con el número o con el nombre exacto de la lista:",
+    "",
+    catalogText,
+  ].join("\n");
 }
 
 function keyboard(rows: Array<Array<{ text: string; data: string }>>): TelegramInlineKeyboard {
@@ -592,19 +670,26 @@ async function handleCallbackQuery(callback: TelegramCallbackQuery): Promise<Tel
       rivalRegistrationId: rival.id,
       rivalUserId: rival.userId,
       rivalName: rival.playerName,
-      rivalFaction: rival.factionLabel ?? undefined,
     };
+    const rivalFaction = canonicalFactionFromStoredValue(rival.factionLabel, nextPayload);
+    if (rivalFaction) nextPayload.rivalFaction = rivalFaction;
     return { ...(await continueAfterRivalSelected(session.id, chatId, nextPayload)), callbackQueryId: callback.id };
   }
 
   if (data.startsWith("tg:pf:")) {
-    const faction = data.slice("tg:pf:".length);
+    const faction = canonicalFactionFromStoredValue(data.slice("tg:pf:".length), payload);
+    if (!faction) {
+      return { ...singleMessage(chatId, factionValidationMessage(payload, "tu facción/lista"), cancelKeyboard()), callbackQueryId: callback.id };
+    }
     const nextPayload = { ...payload, playerFaction: faction };
     return { ...(await continueAfterPlayerFaction(session.id, chatId, nextPayload)), callbackQueryId: callback.id };
   }
 
   if (data.startsWith("tg:rf:")) {
-    const faction = data.slice("tg:rf:".length);
+    const faction = canonicalFactionFromStoredValue(data.slice("tg:rf:".length), payload);
+    if (!faction) {
+      return { ...singleMessage(chatId, factionValidationMessage(payload, "la facción/lista del rival"), cancelKeyboard()), callbackQueryId: callback.id };
+    }
     const nextPayload = { ...payload, rivalFaction: faction };
     return { ...(await continueAfterRivalFaction(session.id, chatId, nextPayload)), callbackQueryId: callback.id };
   }
@@ -648,20 +733,21 @@ async function handleSessionText(
       rivalRegistrationId: rival.id,
       rivalUserId: rival.userId,
       rivalName: rival.playerName,
-      rivalFaction: rival.factionLabel ?? undefined,
     };
+    const rivalFaction = canonicalFactionFromStoredValue(rival.factionLabel, nextPayload);
+    if (rivalFaction) nextPayload.rivalFaction = rivalFaction;
     return continueAfterRivalSelected(session.id, chatId, nextPayload);
   }
 
   if (session.step === "PLAYER_FACTION") {
-    const faction = normalizeText(text);
-    if (!faction) return singleMessage(chatId, "Necesito tu facción/lista para guardar la partida.", cancelKeyboard());
+    const faction = parseFactionFromUserText(text, payload);
+    if (!faction) return singleMessage(chatId, factionValidationMessage(payload, "tu facción/lista"), cancelKeyboard());
     return continueAfterPlayerFaction(session.id, chatId, { ...payload, playerFaction: faction });
   }
 
   if (session.step === "RIVAL_FACTION") {
-    const faction = normalizeText(text);
-    if (!faction) return singleMessage(chatId, "Necesito la facción/lista del rival para guardar la partida.", cancelKeyboard());
+    const faction = parseFactionFromUserText(text, payload);
+    if (!faction) return singleMessage(chatId, factionValidationMessage(payload, "la facción/lista del rival"), cancelKeyboard());
     return continueAfterRivalFaction(session.id, chatId, { ...payload, rivalFaction: faction });
   }
 
@@ -706,13 +792,14 @@ async function continueAfterRivalSelected(sessionId: string, chatId: number | st
       where: { id: payload.playerRegistrationId },
       select: { factionLabel: true },
     });
-    if (registration?.factionLabel) {
+    const registeredFaction = canonicalFactionFromStoredValue(registration?.factionLabel, payload);
+    if (registeredFaction) {
       await updateSession(sessionId, "PLAYER_FACTION", payload);
       return singleMessage(
         chatId,
-        `Tu facción/lista registrada es ${registration.factionLabel}. Puedes usarla o escribir otra.`,
+        factionValidationMessage(payload, "tu facción/lista"),
         keyboard([
-          [{ text: `Usar ${registration.factionLabel}`.slice(0, 60), data: `tg:pf:${registration.factionLabel.slice(0, 45)}` }],
+          [{ text: `Usar ${registeredFaction}`.slice(0, 60), data: `tg:pf:${registeredFaction.slice(0, 45)}` }],
           [{ text: "Cancelar", data: "tg:cancel" }],
         ])
       );
@@ -720,6 +807,9 @@ async function continueAfterRivalSelected(sessionId: string, chatId: number | st
   }
 
   await updateSession(sessionId, "PLAYER_FACTION", payload);
+  if (factionCatalogForPayload(payload)) {
+    return singleMessage(chatId, factionValidationMessage(payload, "tu facción/lista"), cancelKeyboard());
+  }
   return singleMessage(chatId, "Indica tu facción/lista para esta partida.", cancelKeyboard());
 }
 
@@ -734,15 +824,19 @@ async function continueAfterPlayerFaction(sessionId: string, chatId: number | st
       where: { id: payload.rivalRegistrationId },
       select: { factionLabel: true },
     });
-    if (registration?.factionLabel) {
+    const registeredFaction = canonicalFactionFromStoredValue(registration?.factionLabel, payload);
+    if (registeredFaction) {
       return singleMessage(
         chatId,
-        `La facción/lista registrada del rival es ${registration.factionLabel}. Puedes usarla o escribir otra.`,
+        factionValidationMessage(payload, "la facción/lista del rival"),
         keyboard([
-          [{ text: `Usar ${registration.factionLabel}`.slice(0, 60), data: `tg:rf:${registration.factionLabel.slice(0, 45)}` }],
+          [{ text: `Usar ${registeredFaction}`.slice(0, 60), data: `tg:rf:${registeredFaction.slice(0, 45)}` }],
           [{ text: "Cancelar", data: "tg:cancel" }],
         ])
       );
+    }
+    if (factionCatalogForPayload(payload)) {
+      return singleMessage(chatId, factionValidationMessage(payload, "la facción/lista del rival"), cancelKeyboard());
     }
   }
 
@@ -947,7 +1041,16 @@ async function listLeagueOptionsForUser(userId: number): Promise<LeagueOption[]>
       },
     },
     include: {
-      event: { select: { id: true, title: true, gameId: true, startsAt: true, endsAt: true } },
+      event: {
+        select: {
+          id: true,
+          title: true,
+          gameId: true,
+          startsAt: true,
+          endsAt: true,
+          game: { select: { slug: true, name: true, legacyEnumKey: true } },
+        },
+      },
     },
     orderBy: [{ event: { startsAt: "asc" } }, { registeredAt: "asc" }],
   });
@@ -956,6 +1059,9 @@ async function listLeagueOptionsForUser(userId: number): Promise<LeagueOption[]>
     id: registration.event.id,
     title: registration.event.title,
     gameId: registration.event.gameId,
+    gameSlug: registration.event.game?.slug ?? null,
+    gameName: registration.event.game?.name ?? null,
+    gameLegacyEnumKey: registration.event.game?.legacyEnumKey ?? null,
     startsAt: registration.event.startsAt,
     endsAt: registration.event.endsAt,
     registration: {
@@ -972,15 +1078,20 @@ async function findLeagueOptionForUser(userId: number, eventId: string) {
 }
 
 function payloadFromLeague(league: LeagueOption): SessionPayload {
-  return {
+  const payload: SessionPayload = {
     eventId: league.id,
     eventTitle: league.title,
     gameId: league.gameId,
+    gameSlug: league.gameSlug,
+    gameName: league.gameName,
+    gameLegacyEnumKey: league.gameLegacyEnumKey,
     playerRegistrationId: league.registration.id,
     playerUserId: league.registration.userId,
     playerName: league.registration.playerName,
-    playerFaction: league.registration.factionLabel ?? undefined,
   };
+  const faction = canonicalFactionFromStoredValue(league.registration.factionLabel, payload);
+  if (faction) payload.playerFaction = faction;
+  return payload;
 }
 
 async function listRivalRegistrations(eventId: string | undefined, playerUserId: number | null): Promise<RegistrationOption[]> {
@@ -1088,7 +1199,12 @@ async function handleQuickResultCommand(
 
   const event = await prisma.event.findUnique({
     where: { id: extractEventIdFromSlug(parsed.eventRef) },
-    select: { id: true, title: true, gameId: true },
+    select: {
+      id: true,
+      title: true,
+      gameId: true,
+      game: { select: { slug: true, name: true, legacyEnumKey: true } },
+    },
   });
 
   if (!event) {
@@ -1104,6 +1220,15 @@ async function handleQuickResultCommand(
   });
   if (!registration) {
     return singleMessage(message.chat.id, "Solo puedes reportar partidas en ligas o eventos donde estés inscrito o pagado.");
+  }
+
+  const factionError = validateQuickResultFactions(parsed, {
+    gameSlug: event.game?.slug ?? null,
+    gameName: event.game?.name ?? null,
+    gameLegacyEnumKey: event.game?.legacyEnumKey ?? null,
+  });
+  if (factionError) {
+    return singleMessage(message.chat.id, factionError);
   }
 
   const externalMessageId = `${message.chat.id}:${message.message_id}`;
@@ -1163,6 +1288,29 @@ function parseResultCommand(text: string): ParsedResultCommand {
     notes: normalizeText(fields.get("notas")),
     players: [firstPlayer, secondPlayer],
   };
+}
+
+function validateQuickResultFactions(
+  parsed: ParsedResultCommand,
+  payload: Pick<SessionPayload, "gameSlug" | "gameName" | "gameLegacyEnumKey">,
+) {
+  const catalog = factionCatalogForPayload(payload);
+  if (!catalog) return null;
+
+  for (const player of parsed.players) {
+    const faction = catalog.find((entry) => entry.name === player.factionLabel);
+    if (!faction) {
+      return [
+        `La facción de ${player.displayName} debe coincidir con el catálogo de ${gameNameForPayload(payload)}.`,
+        "Usa uno de estos nombres exactos:",
+        "",
+        formatFactionCatalog(payload) ?? "",
+      ].join("\n");
+    }
+    player.factionLabel = faction.name;
+  }
+
+  return null;
 }
 
 function parseKeyValueLines(body: string) {

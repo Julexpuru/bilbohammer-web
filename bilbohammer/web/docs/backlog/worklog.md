@@ -4,6 +4,8 @@ Registro cronologico breve de trabajo realizado o contexto consolidado.
 
 ## 2026-06-16
 
+- Se ajusta el bot de `BH-011` para validar facciones contra el catálogo compartido de `src/lib/games.ts` en `w40k`, `aos` y `tow`: el flujo guiado muestra lista numerada y el modo rápido exige nombres canónicos.
+
 - Se implementa el flujo guiado de `BH-011`: sesiones persistidas en `TelegramBotSession`, soporte de botones/callbacks de Telegram, selección de liga/evento como primer paso, pachangas solo dentro de un marco con inscripción, validación de usuarios inscritos, facciones obligatorias para ambos jugadores, puntos como enteros no negativos sin asumir WTC y confirmación antes de crear `CompetitiveMatchReport`.
 - Se completa la primera pasada de usabilidad del flujo guiado de `BH-011`: cancelación consistente, botón `Empezar de nuevo` y edición desde el resumen final para liga, rival, facciones, resultado, puntos y fecha.
 

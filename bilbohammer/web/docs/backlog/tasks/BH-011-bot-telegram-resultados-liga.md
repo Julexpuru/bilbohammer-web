@@ -60,6 +60,7 @@ No entra:
   - Tras elegir marco, el bot pregunta si la partida cuenta para clasificación de liga o es pachanga registrada.
   - Rival, usuario que reporta y rival deben estar inscritos o pagados en el mismo evento.
   - Se piden facción/lista del usuario y del rival; si existe facción en la inscripción, se ofrece como opción rápida.
+  - Para juegos con catálogo de facciones (`w40k`, `aos`, `tow`), el bot enseña el listado del juego y solo acepta número de la lista o nombre canónico exacto. El modo rápido también valida contra ese catálogo. Para juegos sin catálogo se mantiene entrada libre como fallback.
   - Los puntos se validan como enteros no negativos, sin forzar escala WTC ni suma 20 porque el sistema de puntuación depende de la liga.
   - El bot muestra resumen y exige confirmación antes de crear el reporte pendiente.
   - El resumen permite confirmar, cancelar, empezar de nuevo y editar liga, rival, facciones, resultado, puntos o fecha.
@@ -94,5 +95,6 @@ notas: opcional
 - 2026-06-05: quedan pendientes el flujo guiado de `/resultado`, textos finales del bot, validaciones de inscritos/rivales y coordinación con bandeja web de reportes.
 - 2026-06-16: se implementa flujo guiado con sesiones persistidas, botones de Telegram, selección de liga/evento primero, validación de inscritos, facciones obligatorias para ambos jugadores, puntos sin asumir formato WTC y confirmación antes de guardar.
 - 2026-06-16: se añade edición desde el resumen final, botón `Empezar de nuevo` y cancelación consistente en el flujo guiado.
+- 2026-06-16: se añade validación de facciones por catálogo de juego en Telegram, reutilizando el origen de `src/lib/games.ts` para `w40k`, `aos` y `tow`.
 - 2026-06-04: se fija que Telegram reutilizará `src/lib/competitive-matches.ts` y creará reportes pendientes, no partidas aprobadas directamente.
 - 2026-06-04: tarea creada como desglose independiente de bots para liga.
