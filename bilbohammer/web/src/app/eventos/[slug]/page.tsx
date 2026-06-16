@@ -145,7 +145,7 @@ export default async function EventDetailPage({
   const rangeLabel = formatDateRange(event.startsAt, event.endsAt);
 
   const organizers = event.organizers.map((entry) => {
-    const display = entry.user?.nick ?? entry.user?.name ?? `Usuario ${entry.userId}`;
+    const display = entry.user?.nick?.trim() || entry.user?.name?.trim() || `Usuario ${entry.userId}`;
     return entry.role ? `${display} (${entry.role})` : display;
   });
   if (organizers.length > 0) {
@@ -362,9 +362,16 @@ export default async function EventDetailPage({
 
   const canonicalSlug = buildEventSlug(event.id, event.title);
   const baseHref = `/eventos/${canonicalSlug}`;
-  const manageButtons =
-    canManage && (
-      <div className="flex flex-wrap justify-end gap-2">
+  const manageButtons = (
+    <div className="flex flex-wrap justify-end gap-2">
+      <Link
+        href={`/eventos/${canonicalSlug}/competitivo`}
+        className="rounded-full border border-sky-300/30 bg-sky-500/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-sky-100 transition hover:bg-sky-500/20"
+      >
+        Datos competitivos
+      </Link>
+      {canManage && (
+        <>
         <Link
           href={`/eventos/${canonicalSlug}/reportes`}
           className="rounded-full border border-amber-300/30 bg-amber-500/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-amber-100 transition hover:bg-amber-500/20"
@@ -377,8 +384,10 @@ export default async function EventDetailPage({
         >
           Editar evento
         </Link>
-      </div>
-    );
+        </>
+      )}
+    </div>
+  );
 
   const showShareButtons = event.status !== "DRAFT" && event.status !== "CANCELLED";
   const canRegisterForEvent = canAcceptRegistrations(event) && currentUserCanRegisterMembersOnly;

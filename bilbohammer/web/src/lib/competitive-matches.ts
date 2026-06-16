@@ -37,6 +37,16 @@ type MatchWithPlayers = Prisma.CompetitiveMatchGetPayload<{
   include: { players: true };
 }>;
 
+export type ApprovedCompetitiveMatchRow = Prisma.CompetitiveMatchGetPayload<{
+  include: {
+    players: { orderBy: { participantOrder: "asc" } };
+    event: { select: { id: true; title: true } };
+    game: { select: { id: true; name: true; slug: true } };
+    createdBy: { select: { id: true; name: true; nick: true; email: true } };
+    validatedBy: { select: { id: true; name: true; nick: true; email: true } };
+  };
+}>;
+
 export type LeagueStandingRow = {
   position: number;
   playerKey: string;
@@ -322,6 +332,27 @@ export async function listPendingCompetitiveMatchReports(eventId?: string, db: C
       submittedBy: { select: { id: true, name: true, nick: true, email: true } },
     },
     orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function listApprovedCompetitiveMatches(
+  filters: { eventId?: string; gameId?: string; kind?: CompetitiveMatchKind } = {},
+  db: CompetitiveDb = prisma,
+): Promise<ApprovedCompetitiveMatchRow[]> {
+  return db.competitiveMatch.findMany({
+    where: {
+      eventId: filters.eventId,
+      gameId: filters.gameId,
+      kind: filters.kind,
+    },
+    include: {
+      players: { orderBy: { participantOrder: "asc" } },
+      event: { select: { id: true, title: true } },
+      game: { select: { id: true, name: true, slug: true } },
+      createdBy: { select: { id: true, name: true, nick: true, email: true } },
+      validatedBy: { select: { id: true, name: true, nick: true, email: true } },
+    },
+    orderBy: [{ playedAt: "asc" }, { createdAt: "asc" }],
   });
 }
 

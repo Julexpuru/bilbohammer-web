@@ -4,6 +4,8 @@ Registro cronologico breve de trabajo realizado o contexto consolidado.
 
 ## 2026-06-16
 
+- Se amplía `BH-010` con la primera vista web tipo hoja en `/eventos/[slug]/competitivo`: botón desde el evento, pestañas para `Tabla Liga`, `Tabla Paladín` y `Partidas`, tablas responsivas con búsqueda/ordenación mediante TanStack Table y datos calculados desde partidas aprobadas.
+
 - Se inicia `BH-013` con una primera bandeja web de revisión por evento para reportes competitivos pendientes: acceso limitado a admin/organizadores, listado de contexto clave y acciones de aprobar o rechazar usando el servicio común; la edición previa a aprobar queda documentada para una iteración posterior.
 
 - Se ajusta el bot de `BH-011` para validar facciones contra el catálogo compartido de `src/lib/games.ts` en `w40k`, `aos` y `tow`: el flujo guiado muestra lista numerada y el modo rápido exige nombres canónicos.

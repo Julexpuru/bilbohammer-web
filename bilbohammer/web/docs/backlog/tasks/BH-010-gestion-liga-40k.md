@@ -6,7 +6,7 @@ Prioridad: P2
 Area: eventos
 Owner: shared
 Origen: planteamiento usuario
-Ultima actualizacion: 2026-06-04
+Ultima actualizacion: 2026-06-16
 
 ## Contexto
 
@@ -60,6 +60,8 @@ No entra en esta tarea inicial:
 - La diferencia funcional de `Partidas` queda reflejada con `CompetitiveMatchKind`: `LEAGUE` equivale a partidas que puntúan en Liga; `CASUAL` cubre pachangas u otras partidas que pueden alimentar Paladín.
 - `Tabla Liga` y `Tabla Paladín` deberían implementarse como consultas o proyecciones calculadas, no como tablas editadas a mano.
 - Primera capa de dominio en `src/lib/competitive-matches.ts`: alta de reporte, aprobación a partida canónica, rechazo, listado de reportes pendientes, clasificación de Liga y proyección Paladín desde partidas aprobadas.
+- Primera vista tipo hoja implementada en `/eventos/[slug]/competitivo`: pestañas `Tabla Liga`, `Tabla Paladín` y `Partidas`, acceso inicial para organizadores/admin y tablas calculadas desde partidas aprobadas.
+- Para validar diseño con datos sintéticos más adelante, la importación desde Excel o generadores debe entrar como reportes pendientes o fixtures controlados, no como escritura directa sobre clasificaciones calculadas.
 - La formula de Elo/IFR importada del Apps Script queda fijada con `ELO_INICIAL = 1500`, `K = 32`, lambda IFR `5`, deduplicacion de partidas por pareja de jugadores y fecha, `IFR = media suavizada de ratings de rivales pre-actualizacion`, y `Elo Ajustado = Elo + IFR - 1500`.
 - Flujo mínimo de inscripciones implementado:
   - La página pública del evento muestra participantes y plazas activas.
@@ -83,6 +85,7 @@ No entra en esta tarea inicial:
 
 ## Historial
 
+- 2026-06-16: se crea la primera vista web de hojas competitivas por evento, con tablas navegables para Liga, Paladín y partidas aprobadas.
 - 2026-06-04: primera fase implementada con migración Prisma `20260604120000_competitive_matches_base` y servicio común `src/lib/competitive-matches.ts`; se decide subdominio competitivo nuevo en vez de extender `Match`.
 - 2026-06-04: se incorporan al modelo los estados de inscripción `INSCRITO`, `PAGADO` y `CANCELLED`, y se replica la fórmula de Elo/IFR del Apps Script en la proyección Paladín.
 - 2026-06-04: se aclara que `P. de Clasificación` y `PpP` de Paladín salen de la suma/media de puntos de batalla por partida, no de victoria 3/empate 1/derrota 0.
