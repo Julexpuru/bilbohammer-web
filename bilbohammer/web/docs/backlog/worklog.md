@@ -2,6 +2,18 @@
 
 Registro cronologico breve de trabajo realizado o contexto consolidado.
 
+## 2026-06-18
+
+- Se añaden notificaciones competitivas a `BH-014`: organizadores/admins reciben aviso de reportes pendientes y el jugador que envió el reporte recibe aviso al aprobarse o rechazarse, usando las preferencias existentes.
+- Se añaden a `BH-014` enlaces cruzados desde jugadores en clasificaciones/partidas hacia `Partidas` filtrada por jugador y un límite básico anti-spam de reportes por usuario/evento en el servicio competitivo común.
+- Se amplía `BH-014` con estado y auditoría de partidas competitivas aprobadas: corrección/anulación desde el detalle, historial básico, y exclusión de partidas anuladas en clasificaciones, duplicados y exportaciones.
+- Se amplía `BH-014` con unicidad de nombres de participantes por evento, filtros específicos en la hoja `Partidas`, métricas de líderes/última actualización, ayuda de criterios de cálculo y exportación CSV pública de hojas competitivas.
+- Se añade a `BH-014` la vinculación de participantes manuales a usuarios registrados por correo desde la gestión de participantes, propagando `userId` a reportes y partidas competitivas del evento para evitar clasificaciones partidas.
+- Se inicia la implementación de `BH-014`: formulario web de envío de resultados para jugadores inscritos, creación de `CompetitiveMatchReport` pendiente, aviso/bloqueo de duplicados de liga en envío/revisión y bloqueo definitivo al aprobar si ya existe una partida de liga entre los mismos jugadores en el evento.
+- Se amplía `BH-014` con corrección de reportes pendientes desde revisión y página pública de detalle de partida aprobada con trazabilidad básica.
+- Se crea `BH-014 - Página competitiva de liga` para capturar la siguiente fase: envío web, corrección de reportes, detalle/corrección de partidas aprobadas, duplicados de liga, filtros, exportación, auditoría, notificaciones y mejora móvil posterior a la funcionalidad.
+- Se refina el criterio de `BH-010`: la liga estándar se centra en `Tabla Liga`; `Tabla Paladín`, pachangas y rendimiento general quedan como extensiones particulares del evento actual, no como requisito base de todas las ligas.
+
 ## 2026-06-16
 
 - Se amplía `BH-010` con la primera vista web tipo hoja en `/eventos/[slug]/competitivo`: botón desde el evento, pestañas para `Tabla Liga`, `Tabla Paladín` y `Partidas`, tablas responsivas con búsqueda/ordenación mediante TanStack Table y datos calculados desde partidas aprobadas.

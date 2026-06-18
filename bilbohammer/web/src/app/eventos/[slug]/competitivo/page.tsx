@@ -1,3 +1,4 @@
+import { CompetitiveMatchKind } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -20,12 +21,23 @@ type Params = {
 
 type SearchParams = {
   hoja?: string;
+  jugador?: string;
+  faccion?: string;
+  tipo?: string;
+  ronda?: string;
+  fecha?: string;
 };
 
 type SheetId = "liga" | "paladin" | "partidas";
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "medium",
+  timeZone: "Europe/Madrid",
+});
+
+const dateTimeFormatter = new Intl.DateTimeFormat("es-ES", {
+  dateStyle: "medium",
+  timeStyle: "short",
   timeZone: "Europe/Madrid",
 });
 
@@ -62,6 +74,7 @@ const paladinColumns: CompetitiveTableColumn[] = [
 ];
 
 const matchColumns: CompetitiveTableColumn[] = [
+  { id: "detail", label: "Detalle" },
   { id: "playedAt", label: "Fecha" },
   { id: "roundNumber", label: "Ronda", numeric: true },
   { id: "kind", label: "Tipo" },
@@ -110,18 +123,61 @@ function kindLabel(kind: ApprovedCompetitiveMatchRow["kind"]) {
   return kind === "LEAGUE" ? "Liga" : "Pachanga";
 }
 
-function toMatchRow(match: ApprovedCompetitiveMatchRow): CompetitiveTableRow {
+function normalizeFilter(value: string | undefined) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function filterMatches(matches: ApprovedCompetitiveMatchRow[], searchParams?: SearchParams) {
+  const player = normalizeFilter(searchParams?.jugador);
+  const faction = normalizeFilter(searchParams?.faccion);
+  const roundRaw = searchParams?.ronda?.trim() ?? "";
+  const date = searchParams?.fecha?.trim() ?? "";
+  const roundNumber = roundRaw ? Number(roundRaw) : null;
+  const kind = searchParams?.tipo;
+
+  return matches.filter((match) => {
+    if (kind === CompetitiveMatchKind.LEAGUE || kind === CompetitiveMatchKind.CASUAL) {
+      if (match.kind !== kind) return false;
+    }
+    if (roundRaw && (!Number.isInteger(roundNumber) || match.roundNumber !== roundNumber)) return false;
+    if (date && match.playedAt.toISOString().slice(0, 10) !== date) return false;
+    if (player && !match.players.some((item) => normalizeFilter(item.displayName).includes(player))) return false;
+    if (faction && !match.players.some((item) => normalizeFilter(item.factionLabel).includes(faction))) return false;
+    return true;
+  });
+}
+
+function exportHref(eventId: string, sheet: SheetId, searchParams?: SearchParams) {
+  const params = new URLSearchParams({ hoja: sheet });
+  if (sheet === "partidas") {
+    for (const key of ["jugador", "faccion", "tipo", "ronda", "fecha"] as const) {
+      const value = searchParams?.[key]?.trim();
+      if (value) params.set(key, value);
+    }
+  }
+  return `/api/events/${eventId}/competitive/export?${params.toString()}`;
+}
+
+function playerMatchesHref(baseHref: string, displayName: string) {
+  const params = new URLSearchParams({ hoja: "partidas", jugador: displayName });
+  return `${baseHref}?${params.toString()}`;
+}
+
+function toMatchRow(match: ApprovedCompetitiveMatchRow, baseHref: string): CompetitiveTableRow {
   const [first, second] = match.players;
+  const firstName = displayPlayer(first);
+  const secondName = displayPlayer(second);
   return {
     id: match.id,
+    detail: { label: "Ver", href: `${baseHref}/partidas/${match.id}` },
     playedAt: formatDate(match.playedAt),
     roundNumber: match.roundNumber ?? null,
     kind: kindLabel(match.kind),
-    player: displayPlayer(first),
+    player: firstName ? { label: firstName, href: playerMatchesHref(baseHref, firstName) } : "",
     playerFaction: first?.factionLabel ?? null,
     result: displayOutcome(match),
     score: first && second ? `${first.score} - ${second.score}` : first ? String(first.score) : null,
-    opponent: displayPlayer(second),
+    opponent: secondName ? { label: secondName, href: playerMatchesHref(baseHref, secondName) } : "",
     opponentFaction: second?.factionLabel ?? null,
     validatedBy: displayUser(match.validatedBy),
     notes: match.notes,
@@ -137,6 +193,19 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
     <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
       <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">{label}</p>
       <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function CriteriaHelp() {
+  return (
+    <div className="group relative inline-flex">
+      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-xs font-bold text-white">
+        ?
+      </span>
+      <div className="pointer-events-none absolute right-0 top-8 z-10 hidden w-72 rounded-2xl border border-white/10 bg-zinc-950 p-4 text-xs leading-relaxed text-white shadow-xl group-hover:block">
+        Liga: victoria 3, empate 1, derrota 0. Paladín: puntos de batalla, puntos por partida, Elo e IFR calculados desde partidas aprobadas.
+      </div>
     </div>
   );
 }
@@ -171,7 +240,7 @@ export default async function EventCompetitiveSheetsPage({
   const leagueTableRows: CompetitiveTableRow[] = leagueRows.map((row) => ({
     id: row.playerKey,
     position: row.position,
-    displayName: row.displayName,
+    displayName: { label: row.displayName, href: playerMatchesHref(baseHref, row.displayName) },
     leaguePoints: row.leaguePoints,
     played: row.played,
     won: row.won,
@@ -183,7 +252,7 @@ export default async function EventCompetitiveSheetsPage({
   const paladinTableRows: CompetitiveTableRow[] = paladinRows.map((row) => ({
     id: row.playerKey,
     rank: row.rank,
-    displayName: row.displayName,
+    displayName: { label: row.displayName, href: playerMatchesHref(baseHref, row.displayName) },
     classificationPoints: row.classificationPoints,
     pointsPerGame: formatNumber(row.pointsPerGame, 3),
     played: row.played,
@@ -194,8 +263,14 @@ export default async function EventCompetitiveSheetsPage({
     elo: formatNumber(row.elo),
     adjustedElo: formatNumber(row.adjustedElo),
   }));
-  const matchTableRows = matches.map(toMatchRow);
+  const filteredMatches = filterMatches(matches, searchParams);
+  const matchTableRows = filteredMatches.map((match) => toMatchRow(match, baseHref));
   const uniquePlayers = new Set(matches.flatMap((match) => match.players.map((player) => player.userId ?? player.displayName))).size;
+  const leagueLeader = leagueRows[0]?.displayName ?? "-";
+  const paladinLeader = paladinRows[0]?.displayName ?? "-";
+  const lastUpdated = matches.length
+    ? dateTimeFormatter.format(new Date(Math.max(...matches.map((match) => match.updatedAt.getTime()))))
+    : "-";
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 py-8">
@@ -217,20 +292,46 @@ export default async function EventCompetitiveSheetsPage({
               {event.title}. Las tablas se calculan desde las partidas aprobadas; no se editan a mano.
             </p>
           </div>
-          <Link
-            href={`/eventos/${eventSlug}`}
-            className="w-fit rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-          >
-            Volver al evento
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`${baseHref}/enviar`}
+              className="w-fit rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400"
+            >
+              Enviar resultado
+            </Link>
+            <Link
+              href={exportHref(event.id, sheet, searchParams)}
+              className="w-fit rounded-full border border-emerald-300/40 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/10"
+            >
+              Descargar CSV
+            </Link>
+            <Link
+              href={`/eventos/${eventSlug}`}
+              className="w-fit rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              Volver al evento
+            </Link>
+          </div>
         </div>
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Partidas aprobadas" value={matches.length} />
         <StatCard label="Partidas de liga" value={matches.filter((match) => match.kind === "LEAGUE").length} />
+        <StatCard label="Líder Liga" value={leagueLeader} />
+        <StatCard label="Líder Paladín" value={paladinLeader} />
         <StatCard label="Pachangas" value={matches.filter((match) => match.kind === "CASUAL").length} />
         <StatCard label="Jugadores" value={uniquePlayers} />
+        <StatCard label="Última actualización" value={lastUpdated} />
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Criterios</p>
+              <p className="mt-2 text-sm font-semibold text-white">Ver ayuda</p>
+            </div>
+            <CriteriaHelp />
+          </div>
+        </div>
       </section>
 
       <nav className="flex flex-wrap gap-2">
@@ -256,6 +357,58 @@ export default async function EventCompetitiveSheetsPage({
       </nav>
 
       <section className="rounded-3xl border border-white/10 bg-black/20 p-4 shadow-lg sm:p-6">
+        {sheet === "partidas" && (
+          <form action={baseHref} className="mb-6 grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 lg:grid-cols-[repeat(5,minmax(0,1fr))_auto_auto]">
+            <input type="hidden" name="hoja" value="partidas" />
+            <input
+              name="jugador"
+              defaultValue={searchParams?.jugador ?? ""}
+              placeholder="Jugador"
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+            />
+            <input
+              name="faccion"
+              defaultValue={searchParams?.faccion ?? ""}
+              placeholder="Facción"
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+            />
+            <select
+              name="tipo"
+              defaultValue={searchParams?.tipo ?? ""}
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+            >
+              <option value="">Liga y pachanga</option>
+              <option value={CompetitiveMatchKind.LEAGUE}>Solo liga</option>
+              <option value={CompetitiveMatchKind.CASUAL}>Solo pachanga</option>
+            </select>
+            <input
+              name="ronda"
+              type="number"
+              min={0}
+              defaultValue={searchParams?.ronda ?? ""}
+              placeholder="Ronda"
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+            />
+            <input
+              name="fecha"
+              type="date"
+              defaultValue={searchParams?.fecha ?? ""}
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+            />
+            <button
+              type="submit"
+              className="rounded-xl bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-black"
+            >
+              Filtrar
+            </button>
+            <Link
+              href={`${baseHref}?hoja=partidas`}
+              className="rounded-xl border border-white/20 px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-white hover:bg-white/10"
+            >
+              Limpiar
+            </Link>
+          </form>
+        )}
         {sheet === "liga" && (
           <CompetitiveDataTable
             columns={leagueColumns}

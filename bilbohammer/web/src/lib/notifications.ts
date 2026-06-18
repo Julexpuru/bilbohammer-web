@@ -7,6 +7,7 @@ import {
   type Match,
   type User,
   type UserNotificationPreference,
+  Rol,
   UserNotificationChannel,
   UserNotificationDeliveryStatus,
   UserNotificationType,
@@ -16,6 +17,7 @@ import { formatClubDateTime } from "@/lib/date-format";
 import { absoluteSiteUrl } from "@/lib/site-url";
 import { isMailConfigured, sendMail } from "@/lib/mailer";
 import { getSlotPreferenceGameIds } from "@/lib/organized-slot-metadata";
+import { buildEventSlug } from "@/lib/events/slug";
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   NOTIFICATION_PREFERENCE_DEFINITIONS,
@@ -75,6 +77,11 @@ type ReminderMatch = Match & {
 type CompatibleSlot = AvailabilitySlot & {
   game: { id: string; name: string } | null;
   creator: Pick<User, "id" | "email" | "name" | "nick">;
+};
+
+type CompetitiveReportNotificationInput = {
+  reportId: string;
+  actorUserId?: number | null;
 };
 
 const BOOLEAN_PREFERENCE_FIELDS = NOTIFICATION_PREFERENCE_DEFINITIONS.flatMap((definition) => [
@@ -773,4 +780,96 @@ export async function notifyCompatibleSlotCreated(slotId: string) {
   }
 
   return { created, candidates: recurring.length };
+}
+
+export async function notifyCompetitiveReportPending(input: CompetitiveReportNotificationInput) {
+  const report = await prisma.competitiveMatchReport.findUnique({
+    where: { id: input.reportId },
+    include: {
+      event: {
+        select: {
+          id: true,
+          title: true,
+          organizers: { select: { userId: true } },
+        },
+      },
+      players: { orderBy: { participantOrder: "asc" } },
+      submittedBy: { select: { id: true, nick: true, name: true, email: true } },
+    },
+  });
+
+  if (!report?.event) return { created: 0, recipients: 0 };
+
+  const admins = await prisma.user.findMany({
+    where: {
+      isActive: true,
+      roles: { hasSome: [Rol.ADMIN, Rol.JUNTA] },
+    },
+    select: { id: true },
+  });
+  const recipients = new Set<number>([
+    ...report.event.organizers.map((organizer) => organizer.userId),
+    ...admins.map((admin) => admin.id),
+  ]);
+  if (input.actorUserId != null) recipients.delete(input.actorUserId);
+
+  const eventSlug = buildEventSlug(report.event.id, report.event.title);
+  const playerLabels = report.players.map((player) => player.displayName).filter(Boolean).join(" vs ");
+  const actorName = report.submittedBy ? getUserDisplayName(report.submittedBy) : "Un jugador";
+  let created = 0;
+
+  for (const recipientUserId of recipients) {
+    const notification = await createUserNotification({
+      recipientUserId,
+      actorUserId: input.actorUserId ?? report.submittedById,
+      type: UserNotificationType.COMPETITIVE_REPORT_PENDING,
+      title: "Reporte competitivo pendiente",
+      body: `${actorName} ha enviado un resultado pendiente en ${report.event.title}${playerLabels ? `: ${playerLabels}` : "."}`,
+      linkUrl: `/eventos/${eventSlug}/reportes`,
+      dedupeKey: `competitive-report-pending:${report.id}:${recipientUserId}`,
+      metadata: {
+        reportId: report.id,
+        eventId: report.event.id,
+      },
+    });
+    if (notification) created += 1;
+  }
+
+  return { created, recipients: recipients.size };
+}
+
+export async function notifyCompetitiveReportReviewed(input: CompetitiveReportNotificationInput & { approved: boolean }) {
+  const report = await prisma.competitiveMatchReport.findUnique({
+    where: { id: input.reportId },
+    include: {
+      event: { select: { id: true, title: true } },
+      players: { orderBy: { participantOrder: "asc" } },
+      approvedMatch: { select: { id: true } },
+    },
+  });
+
+  if (!report?.event || !report.submittedById) return null;
+
+  const eventSlug = buildEventSlug(report.event.id, report.event.title);
+  const playerLabels = report.players.map((player) => player.displayName).filter(Boolean).join(" vs ");
+  const approved = input.approved;
+
+  return createUserNotification({
+    recipientUserId: report.submittedById,
+    actorUserId: input.actorUserId ?? report.reviewedById,
+    type: approved ? UserNotificationType.COMPETITIVE_REPORT_APPROVED : UserNotificationType.COMPETITIVE_REPORT_REJECTED,
+    title: approved ? "Resultado aprobado" : "Resultado rechazado",
+    body: approved
+      ? `Tu resultado en ${report.event.title}${playerLabels ? ` (${playerLabels})` : ""} ha sido aprobado.`
+      : `Tu resultado en ${report.event.title}${playerLabels ? ` (${playerLabels})` : ""} ha sido rechazado${report.rejectionReason ? `: ${report.rejectionReason}` : "."}`,
+    linkUrl: approved && report.approvedMatch
+      ? `/eventos/${eventSlug}/competitivo/partidas/${report.approvedMatch.id}`
+      : `/eventos/${eventSlug}/competitivo`,
+    dedupeKey: `competitive-report-${approved ? "approved" : "rejected"}:${report.id}:${report.submittedById}`,
+    metadata: {
+      reportId: report.id,
+      eventId: report.event.id,
+      approvedMatchId: report.approvedMatch?.id ?? null,
+    },
+  });
 }

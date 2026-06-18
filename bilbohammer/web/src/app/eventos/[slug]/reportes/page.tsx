@@ -1,8 +1,10 @@
+import { EventRegistrationStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import {
+  findExistingLeagueMatchForPlayers,
   listPendingCompetitiveMatchReports,
   type CreateCompetitiveMatchReportInput,
 } from "@/lib/competitive-matches";
@@ -13,6 +15,7 @@ import { userCanEditEvent } from "@/lib/roles";
 import {
   approveCompetitiveReportAction,
   rejectCompetitiveReportAction,
+  updateCompetitiveReportAction,
 } from "./actions";
 
 type Params = {
@@ -26,6 +29,12 @@ type SearchParams = {
 
 type PendingCompetitiveReport = Awaited<ReturnType<typeof listPendingCompetitiveMatchReports>>[number];
 type ReportPlayer = PendingCompetitiveReport["players"][number];
+type RegistrationOption = {
+  id: string;
+  userId: number | null;
+  playerName: string;
+  factionLabel: string | null;
+};
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "medium",
@@ -56,6 +65,10 @@ export const dynamic = "force-dynamic";
 
 function formatDate(value: Date) {
   return dateTimeFormatter.format(value);
+}
+
+function formatDateInput(value: Date) {
+  return value.toISOString().slice(0, 10);
 }
 
 function describePlayer(player: ReportPlayer | undefined) {
@@ -138,19 +151,43 @@ function FeedbackBanner({ searchParams }: { searchParams?: SearchParams }) {
     );
   }
 
+  if (searchParams?.feedback === "updated") {
+    return (
+      <div className="rounded-2xl border border-sky-400/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+        Reporte corregido.
+      </div>
+    );
+  }
+
   return null;
+}
+
+function resolveRegistrationId(player: ReportPlayer | undefined, registrations: RegistrationOption[]) {
+  if (!player) return "";
+  const byUser = player.userId != null ? registrations.find((registration) => registration.userId === player.userId) : null;
+  if (byUser) return byUser.id;
+  const byName = registrations.find(
+    (registration) => registration.playerName.trim().toLowerCase() === player.displayName.trim().toLowerCase(),
+  );
+  return byName?.id ?? "";
 }
 
 function ReportCard({
   eventId,
   fallbackEventTitle,
+  hasLeagueDuplicate,
   report,
+  registrations,
 }: {
   eventId: string;
   fallbackEventTitle: string;
+  hasLeagueDuplicate: boolean;
   report: PendingCompetitiveReport;
+  registrations: RegistrationOption[];
 }) {
   const [firstPlayer, secondPlayer] = report.players;
+  const firstRegistrationId = resolveRegistrationId(firstPlayer, registrations);
+  const secondRegistrationId = resolveRegistrationId(secondPlayer, registrations);
 
   return (
     <article className="space-y-5 rounded-3xl border border-white/10 bg-black/20 p-5 shadow-lg">
@@ -225,6 +262,164 @@ function ReportCard({
         </div>
       )}
 
+      {hasLeagueDuplicate && (
+        <div className="rounded-2xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          Ya existe una partida de liga aprobada entre estos jugadores en este evento. Para aprobar este reporte primero habrá que cambiarlo a pachanga.
+        </div>
+      )}
+
+      <details className="rounded-2xl border border-white/10 bg-black/10 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-white">Corregir reporte</summary>
+        <form action={updateCompetitiveReportAction} className="mt-4 space-y-4">
+          <input type="hidden" name="eventId" value={eventId} />
+          <input type="hidden" name="reportId" value={report.id} />
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <label htmlFor={`kind-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
+                Tipo
+              </label>
+              <select
+                id={`kind-${report.id}`}
+                name="kind"
+                defaultValue={report.kind}
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+              >
+                <option value="LEAGUE">Liga</option>
+                <option value="CASUAL">Pachanga</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor={`playedAt-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
+                Fecha
+              </label>
+              <input
+                id={`playedAt-${report.id}`}
+                name="playedAt"
+                type="date"
+                defaultValue={formatDateInput(report.playedAt)}
+                required
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor={`roundNumber-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
+                Ronda
+              </label>
+              <input
+                id={`roundNumber-${report.id}`}
+                name="roundNumber"
+                type="number"
+                min={0}
+                defaultValue={report.roundNumber ?? ""}
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-3 rounded-2xl border border-white/10 p-3">
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Jugador</p>
+              <select
+                name="firstRegistrationId"
+                defaultValue={firstRegistrationId}
+                required
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+              >
+                <option value="">Selecciona jugador</option>
+                {registrations.map((registration) => (
+                  <option key={registration.id} value={registration.id}>
+                    {registration.playerName}
+                  </option>
+                ))}
+              </select>
+              <input
+                name="firstFaction"
+                defaultValue={firstPlayer?.factionLabel ?? ""}
+                required
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                placeholder="Facción"
+              />
+              <input
+                name="firstScore"
+                type="number"
+                min={0}
+                defaultValue={firstPlayer?.score ?? ""}
+                required
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                placeholder="Puntos"
+              />
+              <select
+                name="firstOutcome"
+                defaultValue={firstPlayer?.outcome ?? "WIN"}
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+              >
+                <option value="WIN">Victoria</option>
+                <option value="DRAW">Empate</option>
+                <option value="LOSS">Derrota</option>
+              </select>
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-white/10 p-3">
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Rival</p>
+              <select
+                name="secondRegistrationId"
+                defaultValue={secondRegistrationId}
+                required
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+              >
+                <option value="">Selecciona rival</option>
+                {registrations.map((registration) => (
+                  <option key={registration.id} value={registration.id}>
+                    {registration.playerName}
+                  </option>
+                ))}
+              </select>
+              <input
+                name="secondFaction"
+                defaultValue={secondPlayer?.factionLabel ?? ""}
+                required
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                placeholder="Facción"
+              />
+              <input
+                name="secondScore"
+                type="number"
+                min={0}
+                defaultValue={secondPlayer?.score ?? ""}
+                required
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                placeholder="Puntos"
+              />
+              <p className="text-xs leading-relaxed text-[var(--muted)]">
+                El resultado del rival se calcula automáticamente como opuesto al del jugador.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor={`notes-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
+              Notas
+            </label>
+            <textarea
+              id={`notes-${report.id}`}
+              name="notes"
+              rows={3}
+              maxLength={1000}
+              defaultValue={report.notes ?? ""}
+              className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="rounded-full border border-sky-300/40 px-4 py-2 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/10"
+          >
+            Guardar corrección
+          </button>
+        </form>
+      </details>
+
       <form action={rejectCompetitiveReportAction} className="space-y-3 rounded-2xl border border-white/10 p-4">
           <input type="hidden" name="eventId" value={eventId} />
           <input type="hidden" name="reportId" value={report.id} />
@@ -251,9 +446,10 @@ function ReportCard({
             <button
               type="submit"
               formAction={approveCompetitiveReportAction}
+              disabled={hasLeagueDuplicate}
               className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400"
             >
-              Aprobar
+              {hasLeagueDuplicate ? "Aprobación bloqueada" : "Aprobar"}
             </button>
           </div>
         </form>
@@ -285,6 +481,30 @@ export default async function EventCompetitiveReportsPage({
   }
 
   const reports = await listPendingCompetitiveMatchReports(event.id);
+  const registrations = await prisma.eventRegistration.findMany({
+    where: {
+      eventId: event.id,
+      status: { in: [EventRegistrationStatus.INSCRITO, EventRegistrationStatus.PAGADO] },
+    },
+    select: {
+      id: true,
+      userId: true,
+      playerName: true,
+      factionLabel: true,
+    },
+    orderBy: [{ playerName: "asc" }],
+  });
+  const duplicateReportIds = new Set(
+    (
+      await Promise.all(
+        reports.map(async (report) => {
+          if (report.kind !== "LEAGUE") return null;
+          const duplicate = await findExistingLeagueMatchForPlayers(event.id, report.players);
+          return duplicate ? report.id : null;
+        }),
+      )
+    ).filter((reportId): reportId is string => Boolean(reportId)),
+  );
   const eventHref = `/eventos/${buildEventSlug(event.id, event.title)}`;
 
   return (
@@ -329,6 +549,8 @@ export default async function EventCompetitiveReportsPage({
               key={report.id}
               eventId={event.id}
               fallbackEventTitle={event.title}
+              hasLeagueDuplicate={duplicateReportIds.has(report.id)}
+              registrations={registrations}
               report={report}
             />
           ))}

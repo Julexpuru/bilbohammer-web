@@ -106,6 +106,9 @@ enum UserNotificationType {
   MATCH_REMINDER
   MATCH_CANCELLED
   COMPATIBLE_SLOT_CREATED
+  COMPETITIVE_REPORT_PENDING
+  COMPETITIVE_REPORT_APPROVED
+  COMPETITIVE_REPORT_REJECTED
 }
 
 enum UserNotificationChannel {
@@ -155,6 +158,16 @@ enum CompetitiveMatchReportChannel {
   TELEGRAM
   ADMIN
   IMPORT
+}
+
+enum CompetitiveMatchStatus {
+  APPROVED
+  VOIDED
+}
+
+enum CompetitiveMatchAuditAction {
+  UPDATED
+  VOIDED
 }
 
 model NewsArticle {
@@ -241,7 +254,9 @@ model User {
   reviewedRegistrations       EventRegistration[]            @relation("EventRegistrationReviewer")
   createdCompetitiveMatches   CompetitiveMatch[]             @relation("CompetitiveMatchCreator")
   validatedCompetitiveMatches CompetitiveMatch[]             @relation("CompetitiveMatchValidator")
+  voidedCompetitiveMatches    CompetitiveMatch[]             @relation("CompetitiveMatchVoider")
   competitiveMatchPlayers     CompetitiveMatchPlayer[]
+  competitiveMatchAuditLogs   CompetitiveMatchAuditLog[]      @relation("CompetitiveMatchAuditActor")
   submittedCompetitiveReports CompetitiveMatchReport[]       @relation("CompetitiveMatchReportSubmitter")
   reviewedCompetitiveReports  CompetitiveMatchReport[]       @relation("CompetitiveMatchReportReviewer")
   competitiveReportPlayers    CompetitiveMatchReportPlayer[]
@@ -499,6 +514,15 @@ model UserNotificationPreference {
   compatibleSlotInApp     Boolean  @default(true)
   compatibleSlotEmail     Boolean  @default(false)
   compatibleSlotPush      Boolean  @default(true)
+  competitivePendingInApp  Boolean  @default(true)
+  competitivePendingEmail  Boolean  @default(false)
+  competitivePendingPush   Boolean  @default(true)
+  competitiveApprovedInApp Boolean  @default(true)
+  competitiveApprovedEmail Boolean  @default(false)
+  competitiveApprovedPush  Boolean  @default(true)
+  competitiveRejectedInApp Boolean  @default(true)
+  competitiveRejectedEmail Boolean  @default(false)
+  competitiveRejectedPush  Boolean  @default(true)
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
@@ -1000,6 +1024,7 @@ model CompetitiveMatch {
   eventId        String?
   gameId         String?
   kind           CompetitiveMatchKind @default(CASUAL)
+  status         CompetitiveMatchStatus @default(APPROVED)
   playedAt       DateTime
   roundNumber    Int?
   sourceReportId String?              @unique
@@ -1007,6 +1032,9 @@ model CompetitiveMatch {
   createdById    Int?
   validatedById  Int?
   validatedAt    DateTime?
+  voidedById     Int?
+  voidedAt       DateTime?
+  voidReason     String?              @db.Text
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
@@ -1015,9 +1043,12 @@ model CompetitiveMatch {
   sourceReport CompetitiveMatchReport?  @relation("ApprovedCompetitiveMatchReport", fields: [sourceReportId], references: [id], onDelete: SetNull)
   createdBy    User?                    @relation("CompetitiveMatchCreator", fields: [createdById], references: [id], onDelete: SetNull)
   validatedBy  User?                    @relation("CompetitiveMatchValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  voidedBy     User?                    @relation("CompetitiveMatchVoider", fields: [voidedById], references: [id], onDelete: SetNull)
   players      CompetitiveMatchPlayer[]
+  auditLogs    CompetitiveMatchAuditLog[]
 
   @@index([eventId, kind, playedAt])
+  @@index([eventId, status])
   @@index([gameId, playedAt])
   @@index([playedAt])
 }
@@ -1039,6 +1070,23 @@ model CompetitiveMatchPlayer {
   @@unique([matchId, participantOrder])
   @@index([userId])
   @@index([matchId, outcome])
+}
+
+model CompetitiveMatchAuditLog {
+  id           String                      @id @default(cuid())
+  matchId      String
+  actorId      Int?
+  action       CompetitiveMatchAuditAction
+  reason       String?                     @db.Text
+  previousData Json?
+  nextData     Json?
+  createdAt    DateTime                    @default(now())
+
+  match CompetitiveMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  actor User?            @relation("CompetitiveMatchAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([matchId, createdAt])
+  @@index([actorId])
 }
 
 model CompetitiveMatchReport {

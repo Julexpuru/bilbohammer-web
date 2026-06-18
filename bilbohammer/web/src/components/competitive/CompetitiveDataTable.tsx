@@ -10,7 +10,12 @@ import {
 } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 
-export type CompetitiveTableValue = string | number | boolean | null;
+export type CompetitiveTableLinkValue = {
+  label: string;
+  href: string;
+};
+
+export type CompetitiveTableValue = string | number | boolean | CompetitiveTableLinkValue | null;
 
 export type CompetitiveTableRow = {
   id: string;
@@ -34,7 +39,19 @@ type Props = {
 function renderValue(value: CompetitiveTableValue) {
   if (value === null || value === "") return "-";
   if (typeof value === "boolean") return value ? "Sí" : "No";
+  if (typeof value === "object") return value.label;
   return String(value);
+}
+
+function renderCellValue(value: CompetitiveTableValue) {
+  if (value && typeof value === "object") {
+    return (
+      <a className="font-semibold text-sky-100 underline-offset-4 hover:underline" href={value.href}>
+        {value.label}
+      </a>
+    );
+  }
+  return renderValue(value);
 }
 
 function valueMatchesSearch(value: CompetitiveTableValue, query: string) {
@@ -66,7 +83,7 @@ export default function CompetitiveDataTable({
         id: column.id,
         accessorKey: column.id,
         header: column.label,
-        cell: (info) => renderValue(info.getValue() as CompetitiveTableValue),
+        cell: (info) => renderCellValue(info.getValue() as CompetitiveTableValue),
         meta: { numeric: column.numeric, hideOnMobile: column.hideOnMobile },
       })),
     [columns],

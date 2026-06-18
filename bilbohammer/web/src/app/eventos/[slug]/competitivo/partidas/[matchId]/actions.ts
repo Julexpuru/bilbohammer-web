@@ -1,35 +1,18 @@
 "use server";
 
-import {
-  CompetitiveMatchKind,
-  CompetitiveMatchOutcome,
-  CompetitiveMatchReportStatus,
-} from "@prisma/client";
+import { CompetitiveMatchKind, CompetitiveMatchOutcome, EventRegistrationStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import {
-  approveCompetitiveMatchReport,
-  rejectCompetitiveMatchReport,
-  updatePendingCompetitiveMatchReport,
+  updateApprovedCompetitiveMatch,
+  voidApprovedCompetitiveMatch,
 } from "@/lib/competitive-matches";
 import { resolveSessionUserId } from "@/lib/event-registrations";
 import { buildEventSlug } from "@/lib/events/slug";
 import { prisma } from "@/lib/prisma";
 import { userCanEditEvent } from "@/lib/roles";
-
-type ReviewContext = {
-  event: {
-    id: string;
-    title: string;
-  };
-  path: string;
-};
-
-function buildReviewPath(event: { id: string; title: string }) {
-  return `/eventos/${buildEventSlug(event.id, event.title)}/reportes`;
-}
 
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -67,73 +50,34 @@ function parsePlayedAt(value: string) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-async function loadReviewContext(eventId: string, reportId: string): Promise<ReviewContext> {
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    select: { id: true, title: true },
-  });
-
-  if (!event) {
-    throw new Error("Evento no encontrado.");
-  }
-
+async function loadActionContext(eventId: string, matchId: string) {
   const session = await auth();
-  const canEdit = await userCanEditEvent(session, event.id);
-  if (!canEdit) {
+  const actorId = resolveSessionUserId(session);
+  if (!(await userCanEditEvent(session, eventId))) {
     throw new Error("No autorizado.");
   }
 
-  const report = await prisma.competitiveMatchReport.findUnique({
-    where: { id: reportId },
-    select: { id: true, eventId: true, status: true },
+  const match = await prisma.competitiveMatch.findFirst({
+    where: { id: matchId, eventId },
+    include: { event: { select: { id: true, title: true } } },
   });
 
-  if (!report || report.eventId !== event.id) {
-    throw new Error("Reporte no encontrado.");
-  }
-  if (report.status !== CompetitiveMatchReportStatus.PENDING) {
-    throw new Error("Solo se pueden revisar reportes pendientes.");
+  if (!match || !match.event) {
+    throw new Error("Partida no encontrada.");
   }
 
-  return {
-    event,
-    path: buildReviewPath(event),
-  };
+  const path = `/eventos/${buildEventSlug(match.event.id, match.event.title)}/competitivo/partidas/${match.id}`;
+  return { actorId, match, path };
 }
 
-export async function approveCompetitiveReportAction(formData: FormData) {
+export async function updateApprovedCompetitiveMatchAction(formData: FormData) {
   const eventId = readString(formData, "eventId");
-  const reportId = readString(formData, "reportId");
-
+  const matchId = readString(formData, "matchId");
   let path = "/eventos";
   const params = new URLSearchParams();
 
   try {
-    const session = await auth();
-    const reviewerId = resolveSessionUserId(session);
-    const context = await loadReviewContext(eventId, reportId);
-    path = context.path;
-
-    await approveCompetitiveMatchReport(reportId, reviewerId);
-    revalidatePath(path);
-    params.set("feedback", "approved");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "No se pudo aprobar el reporte.";
-    params.set("error", message);
-  }
-
-  redirect(params.size > 0 ? `${path}?${params.toString()}` : path);
-}
-
-export async function updateCompetitiveReportAction(formData: FormData) {
-  const eventId = readString(formData, "eventId");
-  const reportId = readString(formData, "reportId");
-
-  let path = "/eventos";
-  const params = new URLSearchParams();
-
-  try {
-    const context = await loadReviewContext(eventId, reportId);
+    const context = await loadActionContext(eventId, matchId);
     path = context.path;
 
     const playedAt = parsePlayedAt(readString(formData, "playedAt"));
@@ -148,7 +92,11 @@ export async function updateCompetitiveReportAction(formData: FormData) {
     }
 
     const registrations = await prisma.eventRegistration.findMany({
-      where: { eventId, id: { in: [firstRegistrationId, secondRegistrationId] } },
+      where: {
+        eventId,
+        id: { in: [firstRegistrationId, secondRegistrationId] },
+        status: { in: [EventRegistrationStatus.INSCRITO, EventRegistrationStatus.PAGADO] },
+      },
       select: { id: true, userId: true, playerName: true },
     });
     const firstRegistration = registrations.find((registration) => registration.id === firstRegistrationId);
@@ -171,11 +119,12 @@ export async function updateCompetitiveReportAction(formData: FormData) {
 
     const firstOutcome = parseOutcome(readString(formData, "firstOutcome"));
 
-    await updatePendingCompetitiveMatchReport(reportId, {
+    await updateApprovedCompetitiveMatch(matchId, context.actorId, {
       kind: parseKind(readString(formData, "kind")),
       playedAt,
       roundNumber: readInteger(formData, "roundNumber"),
       notes: readString(formData, "notes").slice(0, 1000),
+      reason: readString(formData, "reason").slice(0, 1000),
       players: [
         {
           userId: firstRegistration.userId,
@@ -195,36 +144,34 @@ export async function updateCompetitiveReportAction(formData: FormData) {
     });
 
     revalidatePath(path);
+    revalidatePath(`/eventos/${buildEventSlug(context.match.event!.id, context.match.event!.title)}/competitivo`);
     params.set("feedback", "updated");
   } catch (error) {
-    const message = error instanceof Error ? error.message : "No se pudo corregir el reporte.";
+    const message = error instanceof Error ? error.message : "No se pudo corregir la partida.";
     params.set("error", message);
   }
 
-  redirect(params.size > 0 ? `${path}?${params.toString()}` : path);
+  redirect(`${path}?${params.toString()}`);
 }
 
-export async function rejectCompetitiveReportAction(formData: FormData) {
+export async function voidApprovedCompetitiveMatchAction(formData: FormData) {
   const eventId = readString(formData, "eventId");
-  const reportId = readString(formData, "reportId");
-  const rejectionReason = readString(formData, "rejectionReason").slice(0, 500);
-
+  const matchId = readString(formData, "matchId");
   let path = "/eventos";
   const params = new URLSearchParams();
 
   try {
-    const session = await auth();
-    const reviewerId = resolveSessionUserId(session);
-    const context = await loadReviewContext(eventId, reportId);
+    const context = await loadActionContext(eventId, matchId);
     path = context.path;
+    await voidApprovedCompetitiveMatch(matchId, context.actorId, readString(formData, "reason").slice(0, 1000));
 
-    await rejectCompetitiveMatchReport(reportId, reviewerId, rejectionReason);
     revalidatePath(path);
-    params.set("feedback", "rejected");
+    revalidatePath(`/eventos/${buildEventSlug(context.match.event!.id, context.match.event!.title)}/competitivo`);
+    params.set("feedback", "voided");
   } catch (error) {
-    const message = error instanceof Error ? error.message : "No se pudo rechazar el reporte.";
+    const message = error instanceof Error ? error.message : "No se pudo anular la partida.";
     params.set("error", message);
   }
 
-  redirect(params.size > 0 ? `${path}?${params.toString()}` : path);
+  redirect(`${path}?${params.toString()}`);
 }

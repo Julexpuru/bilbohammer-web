@@ -15,6 +15,12 @@ type Registration = {
   status: RegistrationStatus;
   notes: string | null;
   registeredAt: string;
+  user?: {
+    id: number;
+    name: string | null;
+    nick: string | null;
+    email: string;
+  } | null;
 };
 
 type MemberSearchResult = {
@@ -85,6 +91,7 @@ export default function EventRegistrationsPanel({
   const [newFaction, setNewFaction] = React.useState("");
   const [newStatus, setNewStatus] = React.useState<RegistrationStatus>("INSCRITO");
   const [drafts, setDrafts] = React.useState<Record<string, Registration>>({});
+  const [linkEmails, setLinkEmails] = React.useState<Record<string, string>>({});
 
   const orderedRegistrations = React.useMemo(
     () =>
@@ -232,6 +239,27 @@ export default function EventRegistrationsPanel({
     );
   }
 
+  async function handleLinkRegistration(registrationId: string) {
+    const email = linkEmails[registrationId]?.trim() ?? "";
+    if (!email) {
+      setError("Indica el correo del usuario registrado.");
+      return;
+    }
+
+    const ok = await submitRequest(
+      `/api/events/${eventId}/registrations/${registrationId}/link-user`,
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      },
+      `link-${registrationId}`,
+    );
+
+    if (ok) {
+      setLinkEmails((prev) => ({ ...prev, [registrationId]: "" }));
+    }
+  }
+
   function updateDraft(registrationId: string, patch: Partial<Registration>) {
     setDrafts((prev) => ({
       ...prev,
@@ -290,7 +318,8 @@ export default function EventRegistrationsPanel({
             return (
               <div key={registration.id} className="rounded-2xl border border-white/10 bg-black/10 p-4">
                 {canManage ? (
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_150px_auto_auto]">
+                  <div className="space-y-3">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_150px_auto_auto]">
                     <input
                       value={draft.playerName}
                       onChange={(event) => updateDraft(registration.id, { playerName: event.target.value })}
@@ -327,6 +356,35 @@ export default function EventRegistrationsPanel({
                     >
                       Eliminar
                     </button>
+                    </div>
+                    {registration.userId == null ? (
+                      <div className="grid gap-2 rounded-xl border border-amber-400/20 bg-amber-500/10 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                        <input
+                          type="email"
+                          value={linkEmails[registration.id] ?? ""}
+                          onChange={(event) =>
+                            setLinkEmails((prev) => ({ ...prev, [registration.id]: event.target.value }))
+                          }
+                          placeholder="Correo del usuario si se registra más adelante"
+                          className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleLinkRegistration(registration.id)}
+                          disabled={busy === `link-${registration.id}` || !(linkEmails[registration.id] ?? "").trim()}
+                          className="rounded-xl border border-amber-300/40 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-100 hover:bg-amber-500/10 disabled:opacity-60"
+                        >
+                          Vincular
+                        </button>
+                        <p className="text-xs leading-relaxed text-amber-100/80 sm:col-span-2">
+                          Participante manual. Al vincularlo se asignarán también sus reportes y partidas competitivas de este evento que coincidan por nombre.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[var(--muted)]">
+                        Vinculado a {registration.user?.nick ?? registration.user?.name ?? registration.user?.email ?? `usuario ${registration.userId}`}.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

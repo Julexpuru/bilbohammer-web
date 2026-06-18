@@ -1,13 +1,19 @@
 import {
+  CompetitiveMatchAuditAction,
   CompetitiveMatchKind,
   CompetitiveMatchOutcome,
   CompetitiveMatchReportChannel,
   CompetitiveMatchReportStatus,
+  CompetitiveMatchStatus,
   Prisma,
   PrismaClient,
 } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import {
+  notifyCompetitiveReportPending,
+  notifyCompetitiveReportReviewed,
+} from "@/lib/notifications";
 
 type CompetitiveDb = PrismaClient;
 
@@ -33,9 +39,23 @@ export type CreateCompetitiveMatchReportInput = {
   players: CompetitivePlayerInput[];
 };
 
+export type UpdateCompetitiveMatchReportInput = {
+  kind: CompetitiveMatchKind;
+  playedAt: Date;
+  roundNumber?: number | null;
+  notes?: string | null;
+  players: CompetitivePlayerInput[];
+};
+
+export type UpdateApprovedCompetitiveMatchInput = UpdateCompetitiveMatchReportInput & {
+  reason?: string | null;
+};
+
 type MatchWithPlayers = Prisma.CompetitiveMatchGetPayload<{
   include: { players: true };
 }>;
+
+type CompetitiveReadDb = PrismaClient | Prisma.TransactionClient;
 
 export type ApprovedCompetitiveMatchRow = Prisma.CompetitiveMatchGetPayload<{
   include: {
@@ -45,6 +65,14 @@ export type ApprovedCompetitiveMatchRow = Prisma.CompetitiveMatchGetPayload<{
     createdBy: { select: { id: true; name: true; nick: true; email: true } };
     validatedBy: { select: { id: true; name: true; nick: true; email: true } };
   };
+}>;
+
+export type LeagueDuplicateMatch = Prisma.CompetitiveMatchGetPayload<{
+  include: { players: { orderBy: { participantOrder: "asc" } } };
+}>;
+
+type AuditedMatch = Prisma.CompetitiveMatchGetPayload<{
+  include: { players: { orderBy: { participantOrder: "asc" } } };
 }>;
 
 export type LeagueStandingRow = {
@@ -83,6 +111,9 @@ type PaladinAccumulator = Omit<
 > & {
   rivalRatings: number[];
 };
+
+const REPORT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const REPORT_RATE_LIMIT_MAX = 5;
 
 function assertValidDate(value: Date) {
   if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
@@ -160,6 +191,16 @@ function playerKey(player: { userId: number | null; displayName: string }) {
   return player.userId ? `user:${player.userId}` : `name:${player.displayName.trim().toLowerCase()}`;
 }
 
+function sameTwoPlayerPair(
+  leftPlayers: { userId: number | null; displayName: string }[],
+  rightPlayers: { userId: number | null; displayName: string }[],
+) {
+  if (leftPlayers.length !== 2 || rightPlayers.length !== 2) return false;
+  const left = leftPlayers.map(playerKey).sort();
+  const right = rightPlayers.map(playerKey).sort();
+  return left[0] === right[0] && left[1] === right[1];
+}
+
 function roundMetric(value: number, decimals = 3) {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
@@ -195,6 +236,45 @@ function deduplicatePaladinMatches(matches: MatchWithPlayers[]) {
   return deduplicated;
 }
 
+function serializeMatchForAudit(match: AuditedMatch) {
+  return {
+    id: match.id,
+    eventId: match.eventId,
+    gameId: match.gameId,
+    kind: match.kind,
+    status: match.status,
+    playedAt: match.playedAt.toISOString(),
+    roundNumber: match.roundNumber,
+    notes: match.notes,
+    voidedById: match.voidedById,
+    voidedAt: match.voidedAt?.toISOString() ?? null,
+    voidReason: match.voidReason,
+    players: match.players.map((player) => ({
+      userId: player.userId,
+      participantOrder: player.participantOrder,
+      displayName: player.displayName,
+      factionLabel: player.factionLabel,
+      outcome: player.outcome,
+      score: player.score,
+    })),
+  };
+}
+
+async function assertReportRateLimit(input: CreateCompetitiveMatchReportInput, db: CompetitiveDb) {
+  if (!input.submittedById) return;
+  const since = new Date(Date.now() - REPORT_RATE_LIMIT_WINDOW_MS);
+  const recentCount = await db.competitiveMatchReport.count({
+    where: {
+      submittedById: input.submittedById,
+      eventId: input.eventId ?? undefined,
+      createdAt: { gte: since },
+    },
+  });
+  if (recentCount >= REPORT_RATE_LIMIT_MAX) {
+    throw new Error("Has enviado demasiados reportes en poco tiempo. Espera unos minutos antes de volver a intentarlo.");
+  }
+}
+
 export async function createCompetitiveMatchReport(
   input: CreateCompetitiveMatchReportInput,
   db: CompetitiveDb = prisma,
@@ -209,8 +289,9 @@ export async function createCompetitiveMatchReport(
   assertNonNegativeInteger(input.roundNumber, "roundNumber");
   const players = normalizePlayers(input.players);
   validateOutcomeConsistency(players);
+  await assertReportRateLimit(input, db);
 
-  return db.competitiveMatchReport.create({
+  const report = await db.competitiveMatchReport.create({
     data: {
       eventId: input.eventId ?? null,
       gameId: input.gameId ?? null,
@@ -228,6 +309,75 @@ export async function createCompetitiveMatchReport(
     },
     include: { players: true },
   });
+
+  if (db === prisma) {
+    await notifyCompetitiveReportPending({ reportId: report.id, actorUserId: input.submittedById ?? null });
+  }
+
+  return report;
+}
+
+export async function findExistingLeagueMatchForPlayers(
+  eventId: string | null | undefined,
+  players: { userId: number | null; displayName: string }[],
+  db: CompetitiveReadDb = prisma,
+  excludeMatchId?: string | null,
+): Promise<LeagueDuplicateMatch | null> {
+  if (!eventId || players.length !== 2) return null;
+
+  const matches = await db.competitiveMatch.findMany({
+    where: {
+      id: excludeMatchId ? { not: excludeMatchId } : undefined,
+      eventId,
+      kind: CompetitiveMatchKind.LEAGUE,
+      status: CompetitiveMatchStatus.APPROVED,
+    },
+    include: { players: { orderBy: { participantOrder: "asc" } } },
+    orderBy: [{ playedAt: "asc" }, { createdAt: "asc" }],
+  });
+
+  return matches.find((match) => sameTwoPlayerPair(match.players, players)) ?? null;
+}
+
+export async function updatePendingCompetitiveMatchReport(
+  reportId: string,
+  input: UpdateCompetitiveMatchReportInput,
+  db: CompetitiveDb = prisma,
+) {
+  assertValidDate(input.playedAt);
+  assertNonNegativeInteger(input.roundNumber, "roundNumber");
+  const players = normalizePlayers(input.players);
+  validateOutcomeConsistency(players);
+
+  return db.$transaction(async (tx) => {
+    const report = await tx.competitiveMatchReport.findUnique({
+      where: { id: reportId },
+      select: { id: true, status: true },
+    });
+
+    if (!report) {
+      throw new Error("Reporte no encontrado.");
+    }
+    if (report.status !== CompetitiveMatchReportStatus.PENDING) {
+      throw new Error("Solo se pueden corregir reportes pendientes.");
+    }
+
+    await tx.competitiveMatchReportPlayer.deleteMany({ where: { reportId: report.id } });
+
+    return tx.competitiveMatchReport.update({
+      where: { id: report.id },
+      data: {
+        kind: input.kind,
+        playedAt: input.playedAt,
+        roundNumber: input.roundNumber ?? null,
+        notes: normalizeNullableString(input.notes),
+        players: {
+          create: players,
+        },
+      },
+      include: { players: { orderBy: { participantOrder: "asc" } } },
+    });
+  });
 }
 
 export async function approveCompetitiveMatchReport(
@@ -235,7 +385,7 @@ export async function approveCompetitiveMatchReport(
   reviewerId: number | null,
   db: CompetitiveDb = prisma,
 ) {
-  return db.$transaction(async (tx) => {
+  const match = await db.$transaction(async (tx) => {
     const report = await tx.competitiveMatchReport.findUnique({
       where: { id: reportId },
       include: { players: { orderBy: { participantOrder: "asc" } } },
@@ -246,6 +396,14 @@ export async function approveCompetitiveMatchReport(
     }
     if (report.status !== CompetitiveMatchReportStatus.PENDING) {
       throw new Error("Solo se pueden aprobar reportes pendientes.");
+    }
+    if (report.kind === CompetitiveMatchKind.LEAGUE) {
+      const duplicate = await findExistingLeagueMatchForPlayers(report.eventId, report.players, tx);
+      if (duplicate) {
+        throw new Error(
+          "Ya existe una partida de liga aprobada entre estos jugadores en este evento. Cambia el reporte a pachanga antes de aprobarlo.",
+        );
+      }
     }
 
     const match = await tx.competitiveMatch.create({
@@ -285,6 +443,12 @@ export async function approveCompetitiveMatchReport(
 
     return match;
   });
+
+  if (db === prisma) {
+    await notifyCompetitiveReportReviewed({ reportId, actorUserId: reviewerId, approved: true });
+  }
+
+  return match;
 }
 
 export async function rejectCompetitiveMatchReport(
@@ -293,7 +457,7 @@ export async function rejectCompetitiveMatchReport(
   rejectionReason: string,
   db: CompetitiveDb = prisma,
 ) {
-  return db.$transaction(async (tx) => {
+  const report = await db.$transaction(async (tx) => {
     const report = await tx.competitiveMatchReport.findUnique({
       where: { id: reportId },
       select: { id: true, status: true },
@@ -316,6 +480,120 @@ export async function rejectCompetitiveMatchReport(
       },
       include: { players: { orderBy: { participantOrder: "asc" } } },
     });
+  });
+
+  if (db === prisma) {
+    await notifyCompetitiveReportReviewed({ reportId, actorUserId: reviewerId, approved: false });
+  }
+
+  return report;
+}
+
+export async function updateApprovedCompetitiveMatch(
+  matchId: string,
+  actorId: number | null,
+  input: UpdateApprovedCompetitiveMatchInput,
+  db: CompetitiveDb = prisma,
+) {
+  assertValidDate(input.playedAt);
+  assertNonNegativeInteger(input.roundNumber, "roundNumber");
+  const players = normalizePlayers(input.players);
+  validateOutcomeConsistency(players);
+
+  return db.$transaction(async (tx) => {
+    const match = await tx.competitiveMatch.findUnique({
+      where: { id: matchId },
+      include: { players: { orderBy: { participantOrder: "asc" } } },
+    });
+
+    if (!match) {
+      throw new Error("Partida no encontrada.");
+    }
+    if (match.status !== CompetitiveMatchStatus.APPROVED) {
+      throw new Error("Solo se pueden corregir partidas aprobadas activas.");
+    }
+    if (input.kind === CompetitiveMatchKind.LEAGUE) {
+      const duplicate = await findExistingLeagueMatchForPlayers(match.eventId, players, tx, match.id);
+      if (duplicate) {
+        throw new Error(
+          "Ya existe otra partida de liga aprobada entre estos jugadores en este evento. Cambia la partida a pachanga o corrige la otra partida.",
+        );
+      }
+    }
+
+    const previousData = serializeMatchForAudit(match);
+    await tx.competitiveMatchPlayer.deleteMany({ where: { matchId: match.id } });
+
+    const updated = await tx.competitiveMatch.update({
+      where: { id: match.id },
+      data: {
+        kind: input.kind,
+        playedAt: input.playedAt,
+        roundNumber: input.roundNumber ?? null,
+        notes: normalizeNullableString(input.notes),
+        players: { create: players },
+      },
+      include: { players: { orderBy: { participantOrder: "asc" } } },
+    });
+
+    await tx.competitiveMatchAuditLog.create({
+      data: {
+        matchId: match.id,
+        actorId,
+        action: CompetitiveMatchAuditAction.UPDATED,
+        reason: normalizeNullableString(input.reason),
+        previousData,
+        nextData: serializeMatchForAudit(updated),
+      },
+    });
+
+    return updated;
+  });
+}
+
+export async function voidApprovedCompetitiveMatch(
+  matchId: string,
+  actorId: number | null,
+  reason: string,
+  db: CompetitiveDb = prisma,
+) {
+  return db.$transaction(async (tx) => {
+    const match = await tx.competitiveMatch.findUnique({
+      where: { id: matchId },
+      include: { players: { orderBy: { participantOrder: "asc" } } },
+    });
+
+    if (!match) {
+      throw new Error("Partida no encontrada.");
+    }
+    if (match.status !== CompetitiveMatchStatus.APPROVED) {
+      throw new Error("Solo se pueden anular partidas aprobadas activas.");
+    }
+
+    const previousData = serializeMatchForAudit(match);
+    const updated = await tx.competitiveMatch.update({
+      where: { id: match.id },
+      data: {
+        status: CompetitiveMatchStatus.VOIDED,
+        voidedById: actorId,
+        voidedAt: new Date(),
+        voidReason: normalizeNullableString(reason),
+      },
+      include: { players: { orderBy: { participantOrder: "asc" } } },
+    });
+
+    await tx.competitiveMatchAuditLog.create({
+      data: {
+        matchId: match.id,
+        actorId,
+        action: CompetitiveMatchAuditAction.VOIDED,
+        reason: normalizeNullableString(reason),
+        previousData,
+        nextData: serializeMatchForAudit(updated),
+      },
+    });
+
+    return updated;
   });
 }
 
@@ -344,6 +622,7 @@ export async function listApprovedCompetitiveMatches(
       eventId: filters.eventId,
       gameId: filters.gameId,
       kind: filters.kind,
+      status: CompetitiveMatchStatus.APPROVED,
     },
     include: {
       players: { orderBy: { participantOrder: "asc" } },
@@ -365,6 +644,7 @@ export async function listLeagueStandings(
     where: {
       eventId,
       kind: CompetitiveMatchKind.LEAGUE,
+      status: CompetitiveMatchStatus.APPROVED,
     },
     include: { players: true },
     orderBy: [{ playedAt: "asc" }, { createdAt: "asc" }],
@@ -430,6 +710,7 @@ export async function listPaladinStandings(
     where: {
       eventId: filters.eventId,
       gameId: filters.gameId,
+      status: CompetitiveMatchStatus.APPROVED,
     },
     include: { players: true },
     orderBy: [{ playedAt: "asc" }, { createdAt: "asc" }],

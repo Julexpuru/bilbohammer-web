@@ -486,6 +486,14 @@ export default async function EventDetailPage({
             status: registration.status,
             notes: registration.notes,
             registeredAt: registration.registeredAt.toISOString(),
+            user: registration.user
+              ? {
+                  id: registration.user.id,
+                  name: registration.user.name,
+                  nick: registration.user.nick,
+                  email: registration.user.email,
+                }
+              : null,
           }))}
         />
       )}

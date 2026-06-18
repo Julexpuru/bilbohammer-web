@@ -6,7 +6,7 @@ Prioridad: P2
 Area: eventos
 Owner: shared
 Origen: planteamiento usuario
-Ultima actualizacion: 2026-06-16
+Ultima actualizacion: 2026-06-18
 
 ## Contexto
 
@@ -62,6 +62,8 @@ No entra en esta tarea inicial:
 - Primera capa de dominio en `src/lib/competitive-matches.ts`: alta de reporte, aprobación a partida canónica, rechazo, listado de reportes pendientes, clasificación de Liga y proyección Paladín desde partidas aprobadas.
 - Primera vista tipo hoja implementada en `/eventos/[slug]/competitivo`: pestañas `Tabla Liga`, `Tabla Paladín` y `Partidas`, acceso inicial para organizadores/admin y tablas calculadas desde partidas aprobadas.
 - Para validar diseño con datos sintéticos más adelante, la importación desde Excel o generadores debe entrar como reportes pendientes o fixtures controlados, no como escritura directa sobre clasificaciones calculadas.
+- La siguiente evolución operativa se separa en `BH-014 - Página competitiva de liga`: envío web, correcciones, detalle de partidas, duplicados de liga, filtros, exportación, auditoría y notificaciones.
+- Criterio funcional refinado: la liga estándar genera `Tabla Liga` desde sus partidas aprobadas. `Tabla Paladín`, pachangas y rendimiento general son extensiones particulares del caso actual, no requisitos obligatorios para todas las ligas.
 - La formula de Elo/IFR importada del Apps Script queda fijada con `ELO_INICIAL = 1500`, `K = 32`, lambda IFR `5`, deduplicacion de partidas por pareja de jugadores y fecha, `IFR = media suavizada de ratings de rivales pre-actualizacion`, y `Elo Ajustado = Elo + IFR - 1500`.
 - Flujo mínimo de inscripciones implementado:
   - La página pública del evento muestra participantes y plazas activas.
@@ -84,6 +86,8 @@ No entra en esta tarea inicial:
 - Dependencias: decisión funcional sobre reglas de liga, estados de inscripción, aprobación de resultados, identidad de jugadores y criterios exactos de cálculo Paladín.
 
 ## Historial
+
+- 2026-06-18: se refina el alcance futuro: prioridad en ligas, Paladín/pachangas como extensión especial y nueva tarea `BH-014` para completar la página competitiva.
 
 - 2026-06-16: se crea la primera vista web de hojas competitivas por evento, con tablas navegables para Liga, Paladín y partidas aprobadas.
 - 2026-06-04: primera fase implementada con migración Prisma `20260604120000_competitive_matches_base` y servicio común `src/lib/competitive-matches.ts`; se decide subdominio competitivo nuevo en vez de extender `Match`.

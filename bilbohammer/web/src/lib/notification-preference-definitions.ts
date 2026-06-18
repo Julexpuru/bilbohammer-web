@@ -55,6 +55,30 @@ export const NOTIFICATION_PREFERENCE_DEFINITIONS = [
     emailField: "compatibleSlotEmail",
     pushField: "compatibleSlotPush",
   },
+  {
+    eventType: "COMPETITIVE_REPORT_PENDING",
+    label: "Reporte competitivo pendiente",
+    description: "Cuando llega un reporte competitivo pendiente para revisar en un evento que gestiono.",
+    inAppField: "competitivePendingInApp",
+    emailField: "competitivePendingEmail",
+    pushField: "competitivePendingPush",
+  },
+  {
+    eventType: "COMPETITIVE_REPORT_APPROVED",
+    label: "Reporte competitivo aprobado",
+    description: "Cuando la organización aprueba un resultado competitivo que he enviado.",
+    inAppField: "competitiveApprovedInApp",
+    emailField: "competitiveApprovedEmail",
+    pushField: "competitiveApprovedPush",
+  },
+  {
+    eventType: "COMPETITIVE_REPORT_REJECTED",
+    label: "Reporte competitivo rechazado",
+    description: "Cuando la organización rechaza un resultado competitivo que he enviado.",
+    inAppField: "competitiveRejectedInApp",
+    emailField: "competitiveRejectedEmail",
+    pushField: "competitiveRejectedPush",
+  },
 ] as const;
 
 export type NotificationPreferenceDefinition = (typeof NOTIFICATION_PREFERENCE_DEFINITIONS)[number];
@@ -90,4 +114,13 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferenceState = {
   compatibleSlotInApp: true,
   compatibleSlotEmail: false,
   compatibleSlotPush: true,
+  competitivePendingInApp: true,
+  competitivePendingEmail: false,
+  competitivePendingPush: true,
+  competitiveApprovedInApp: true,
+  competitiveApprovedEmail: false,
+  competitiveApprovedPush: true,
+  competitiveRejectedInApp: true,
+  competitiveRejectedEmail: false,
+  competitiveRejectedPush: true,
 };

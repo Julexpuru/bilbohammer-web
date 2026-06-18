@@ -25,6 +25,21 @@ function parsePayload(raw: unknown): EventRegistrationPayload {
   return raw && typeof raw === "object" ? (raw as EventRegistrationPayload) : {};
 }
 
+async function findNameConflict(eventId: string, playerName: string, targetUserId: number | null) {
+  return prisma.eventRegistration.findFirst({
+    where: {
+      eventId,
+      playerName: { equals: playerName, mode: "insensitive" },
+      ...(targetUserId != null
+        ? {
+            OR: [{ userId: null }, { userId: { not: targetUserId } }],
+          }
+        : {}),
+    },
+    select: { id: true },
+  });
+}
+
 export async function GET(_: Request, { params }: RouteParams) {
   const session = await auth();
   const canManage = await userCanEditEvent(session, params.id);
@@ -86,6 +101,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     (targetUserId != null ? await getUserRegistrationName(targetUserId) : null);
   if (!playerName) {
     return NextResponse.json({ error: "No se pudo resolver el nombre del participante." }, { status: 400 });
+  }
+  const nameConflict = await findNameConflict(params.id, playerName, targetUserId);
+  if (nameConflict) {
+    return NextResponse.json({ error: "Ya existe un participante con ese nombre en este evento." }, { status: 409 });
   }
 
   const activeCount = await countActiveRegistrations(params.id);

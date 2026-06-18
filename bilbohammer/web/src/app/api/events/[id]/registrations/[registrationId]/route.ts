@@ -28,6 +28,17 @@ async function findRegistration(eventId: string, registrationId: string) {
   });
 }
 
+async function findNameConflict(eventId: string, registrationId: string, playerName: string) {
+  return prisma.eventRegistration.findFirst({
+    where: {
+      eventId,
+      id: { not: registrationId },
+      playerName: { equals: playerName, mode: "insensitive" },
+    },
+    select: { id: true },
+  });
+}
+
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await auth();
   const sessionUserId = resolveSessionUserId(session);
@@ -56,12 +67,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const status = canManage
     ? parseEventRegistrationStatus(payload.status) ?? existing.status
     : EventRegistrationStatus.CANCELLED;
+  const playerName = normalizeRegistrationText(payload.playerName) ?? existing.playerName;
+  if (canManage && (await findNameConflict(params.id, existing.id, playerName))) {
+    return NextResponse.json({ error: "Ya existe un participante con ese nombre en este evento." }, { status: 409 });
+  }
 
   const registration = await prisma.eventRegistration.update({
     where: { id: existing.id },
     data: canManage
       ? {
-          playerName: normalizeRegistrationText(payload.playerName) ?? existing.playerName,
+          playerName,
           factionLabel: normalizeRegistrationText(payload.factionLabel),
           status,
           notes: normalizeRegistrationText(payload.notes, 500),

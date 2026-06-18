@@ -6,7 +6,7 @@ Prioridad: P2
 Area: eventos
 Owner: shared
 Origen: desglose de BH-010/BH-011
-Ultima actualizacion: 2026-06-16
+Ultima actualizacion: 2026-06-18
 
 ## Contexto
 
@@ -44,7 +44,12 @@ No entra:
 - Coordinar con `BH-011`: el bot crea reportes pendientes, esta tarea los gestiona.
 - Primera fase cerrada con bandeja mínima de solo lectura + aprobar/rechazar; la edición correctiva previa a aprobar queda diferida a una siguiente iteración si hace falta tocar demasiado dominio o UX.
 
+- La corrección de reportes queda ligada a `BH-014`: antes de aprobar debe poder cambiarse tipo, fecha, rival, facciones, resultado, puntos y notas.
+- Regla refinada de duplicados: no puede aprobarse como partida de liga una partida entre los mismos jugadores dentro del mismo evento si ya existe otra partida de liga previa entre ambos. En revisión debe avisarse y la corrección preventiva es cambiar el reporte a pachanga (`CASUAL`) si procede.
+
 ## Historial
+
+- 2026-06-18: se precisa que la edición de reportes y la regla estricta de duplicados de liga se implementarán en `BH-014`.
 
 - 2026-06-05: tarea creada al aclarar que la organización necesita una bandeja web separada para revisar, corregir, aprobar o rechazar los reportes que entren desde Telegram.
 - 2026-06-16: se implementa la primera fase segura en web: página por evento para listar pendientes, acceso por admin/organizador y acciones de aprobar o rechazar reutilizando el servicio común; la edición detallada se aplaza.
