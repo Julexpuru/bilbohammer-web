@@ -28,6 +28,7 @@ Entra:
 - Enlaces cruzados: jugador de clasificación a sus partidas; partida de vuelta al contexto de clasificación.
 - Métricas resumen: líder de Liga, líder Paladín cuando aplique, total de partidas y última actualización.
 - Tooltip de ayuda con icono de pregunta para criterios de cálculo: victoria 3, empate 1, derrota 0; Paladín por puntos de batalla, PpP, Elo/IFR.
+- Tabla Paladín ordenada por `Clasif`, con vista normal simplificada y vista técnica para organizador/admin con fórmula, IFR y Elo.
 - Exportación de `Tabla Liga`, `Tabla Paladín` cuando aplique y `Partidas` a `.xlsx` o `.csv`.
 - Datos sintéticos para validar diseño mediante fixture CSV externo e importación controlada a reportes pendientes, no mediante escritura directa de clasificaciones ni generador en la página pública.
 - Auditoría clara de quién envió, revisó, corrigió o anuló cada dato.
@@ -54,6 +55,7 @@ No entra de momento:
 - Las tablas se pueden exportar a formato reutilizable.
 - Un organizador/admin puede vincular una inscripción manual a un usuario activo por correo sin partir clasificaciones ya existentes.
 - Existe un CSV sintético de referencia y un importador operativo que crea reportes pendientes para validar diseño/cálculos.
+- La Tabla Paladín usa `Clasif` como métrica de ordenación y permite a organizador/admin ver y editar la fórmula aplicada con auditoría por evento.
 
 ## Notas tecnicas
 
@@ -70,6 +72,8 @@ No entra de momento:
 
 ## Historial
 
+- 2026-06-19: se persiste la fórmula Paladín por evento con auditoría; al guardarla se revalida la página y la tabla se recalcula en la siguiente lectura/exportación desde partidas aprobadas.
+- 2026-06-19: se corrige el retorno de acciones de revisión para conservar la bandeja de reportes y se ajusta Paladín: `Clasif` pasa a ser la métrica de ordenación, IFR/Elo se ocultan en vista normal y quedan visibles en modo técnico para organizador/admin junto a la fórmula.
 - 2026-06-19: se añade importador operativo de CSV a reportes competitivos pendientes con modo dry-run por defecto y opción de crear inscripciones manuales faltantes.
 - 2026-06-19: se cierra el alcance funcional actual con fixture CSV de reportes sintéticos, reducción de ruido en tarjetas móviles de `Partidas` y pruebas unitarias de cálculo competitivo con Vitest. Se descarta exponer un generador sintético en la página web para evitar confusión operativa.
 - 2026-06-18: se añaden notificaciones competitivas: aviso a organizadores/admins cuando entra un reporte pendiente y aviso al jugador cuando su reporte se aprueba o rechaza, reutilizando preferencias in-app/email/push.

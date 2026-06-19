@@ -256,7 +256,7 @@ model User {
   validatedCompetitiveMatches CompetitiveMatch[]             @relation("CompetitiveMatchValidator")
   voidedCompetitiveMatches    CompetitiveMatch[]             @relation("CompetitiveMatchVoider")
   competitiveMatchPlayers     CompetitiveMatchPlayer[]
-  competitiveMatchAuditLogs   CompetitiveMatchAuditLog[]      @relation("CompetitiveMatchAuditActor")
+  competitiveMatchAuditLogs   CompetitiveMatchAuditLog[]     @relation("CompetitiveMatchAuditActor")
   submittedCompetitiveReports CompetitiveMatchReport[]       @relation("CompetitiveMatchReportSubmitter")
   reviewedCompetitiveReports  CompetitiveMatchReport[]       @relation("CompetitiveMatchReportReviewer")
   competitiveReportPlayers    CompetitiveMatchReportPlayer[]
@@ -424,24 +424,26 @@ model Event {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
-  posts              Post[]
-  organizers         EventOrganizer[]
-  organizations      EventOrganization[]
-  tags               EventTag[]
-  attachments        EventAttachment[]
-  links              EventLink[]
-  highlights         EventHighlight[]
-  rankings           EventRankingEntry[]
-  galleryImages      GalleryImage[]
-  album              GalleryAlbum?            @relation("EventAlbum", fields: [albumId], references: [id], onDelete: SetNull)
-  game               Game?                    @relation(fields: [gameId], references: [id], onDelete: SetNull)
-  chronicleArticle   NewsArticle?             @relation("EventPrimaryChronicle", fields: [chronicleArticleId], references: [id], onDelete: SetNull)
-  chronicleLinks     EventChronicle[]
-  registrations      EventRegistration[]
-  matches            Match[]
-  competitiveMatches CompetitiveMatch[]
-  competitiveReports CompetitiveMatchReport[]
-  tableBlocks        TableBlock[]
+  posts                        Post[]
+  organizers                   EventOrganizer[]
+  organizations                EventOrganization[]
+  tags                         EventTag[]
+  attachments                  EventAttachment[]
+  links                        EventLink[]
+  highlights                   EventHighlight[]
+  rankings                     EventRankingEntry[]
+  galleryImages                GalleryImage[]
+  album                        GalleryAlbum?                      @relation("EventAlbum", fields: [albumId], references: [id], onDelete: SetNull)
+  game                         Game?                              @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  chronicleArticle             NewsArticle?                       @relation("EventPrimaryChronicle", fields: [chronicleArticleId], references: [id], onDelete: SetNull)
+  chronicleLinks               EventChronicle[]
+  registrations                EventRegistration[]
+  matches                      Match[]
+  competitiveMatches           CompetitiveMatch[]
+  competitiveReports           CompetitiveMatchReport[]
+  competitiveSettings          CompetitiveEventSettings?
+  competitiveSettingsAuditLogs CompetitiveEventSettingsAuditLog[]
+  tableBlocks                  TableBlock[]
 }
 
 model Notification {
@@ -453,18 +455,18 @@ model Notification {
 }
 
 model UserNotification {
-  id              String               @id @default(cuid())
-  userId          Int
-  type            UserNotificationType
-  title           String
-  body            String               @db.Text
-  linkUrl         String?
-  metadata        Json?
-  actorUserId     Int?
-  dedupeKey       String?              @unique
-  visibleInApp    Boolean              @default(true)
-  readAt          DateTime?
-  createdAt       DateTime             @default(now())
+  id           String               @id @default(cuid())
+  userId       Int
+  type         UserNotificationType
+  title        String
+  body         String               @db.Text
+  linkUrl      String?
+  metadata     Json?
+  actorUserId  Int?
+  dedupeKey    String?              @unique
+  visibleInApp Boolean              @default(true)
+  readAt       DateTime?
+  createdAt    DateTime             @default(now())
 
   user       User                       @relation("UserNotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
   actor      User?                      @relation("UserNotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull)
@@ -491,29 +493,29 @@ model UserNotificationDelivery {
 }
 
 model UserNotificationPreference {
-  userId                  Int      @id
-  proposalReceivedInApp   Boolean  @default(true)
-  proposalReceivedEmail   Boolean  @default(false)
-  proposalReceivedPush    Boolean  @default(true)
-  proposalAcceptedInApp   Boolean  @default(true)
-  proposalAcceptedEmail   Boolean  @default(false)
-  proposalAcceptedPush    Boolean  @default(true)
-  proposalRejectedInApp   Boolean  @default(true)
-  proposalRejectedEmail   Boolean  @default(false)
-  proposalRejectedPush    Boolean  @default(true)
-  proposalSupersededInApp Boolean  @default(true)
-  proposalSupersededEmail Boolean  @default(false)
-  proposalSupersededPush  Boolean  @default(true)
-  matchReminderInApp      Boolean  @default(true)
-  matchReminderEmail      Boolean  @default(false)
-  matchReminderPush       Boolean  @default(true)
-  matchReminderMinutes    Int      @default(1440)
-  matchCancelledInApp     Boolean  @default(true)
-  matchCancelledEmail     Boolean  @default(false)
-  matchCancelledPush      Boolean  @default(true)
-  compatibleSlotInApp     Boolean  @default(true)
-  compatibleSlotEmail     Boolean  @default(false)
-  compatibleSlotPush      Boolean  @default(true)
+  userId                   Int      @id
+  proposalReceivedInApp    Boolean  @default(true)
+  proposalReceivedEmail    Boolean  @default(false)
+  proposalReceivedPush     Boolean  @default(true)
+  proposalAcceptedInApp    Boolean  @default(true)
+  proposalAcceptedEmail    Boolean  @default(false)
+  proposalAcceptedPush     Boolean  @default(true)
+  proposalRejectedInApp    Boolean  @default(true)
+  proposalRejectedEmail    Boolean  @default(false)
+  proposalRejectedPush     Boolean  @default(true)
+  proposalSupersededInApp  Boolean  @default(true)
+  proposalSupersededEmail  Boolean  @default(false)
+  proposalSupersededPush   Boolean  @default(true)
+  matchReminderInApp       Boolean  @default(true)
+  matchReminderEmail       Boolean  @default(false)
+  matchReminderPush        Boolean  @default(true)
+  matchReminderMinutes     Int      @default(1440)
+  matchCancelledInApp      Boolean  @default(true)
+  matchCancelledEmail      Boolean  @default(false)
+  matchCancelledPush       Boolean  @default(true)
+  compatibleSlotInApp      Boolean  @default(true)
+  compatibleSlotEmail      Boolean  @default(false)
+  compatibleSlotPush       Boolean  @default(true)
   competitivePendingInApp  Boolean  @default(true)
   competitivePendingEmail  Boolean  @default(false)
   competitivePendingPush   Boolean  @default(true)
@@ -523,21 +525,21 @@ model UserNotificationPreference {
   competitiveRejectedInApp Boolean  @default(true)
   competitiveRejectedEmail Boolean  @default(false)
   competitiveRejectedPush  Boolean  @default(true)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model UserPushSubscription {
-  id        String    @id @default(cuid())
-  userId    Int
-  endpoint  String    @unique @db.Text
-  p256dh    String    @db.Text
-  auth      String    @db.Text
-  userAgent String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  userId     Int
+  endpoint   String    @unique @db.Text
+  p256dh     String    @db.Text
+  auth       String    @db.Text
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   lastSeenAt DateTime  @default(now())
   revokedAt  DateTime?
 
@@ -547,25 +549,25 @@ model UserPushSubscription {
 }
 
 model ClubTable {
-  id        String      @id @default(cuid())
-  name      String
-  posX      Int         @default(0)
-  posY      Int         @default(0)
-  width     Int         @default(180)
-  height    Int         @default(120)
-  rotation  Int         @default(0)
-  sizeTag   String?
-  status    TableStatus @default(AVAILABLE)
+  id               String      @id @default(cuid())
+  name             String
+  posX             Int         @default(0)
+  posY             Int         @default(0)
+  width            Int         @default(180)
+  height           Int         @default(120)
+  rotation         Int         @default(0)
+  sizeTag          String?
+  status           TableStatus @default(AVAILABLE)
   gameId           String?
   gameLabel        String?
   layoutImagePath  String?
   sceneryImagePath String?
-  isActive  Boolean     @default(true)
-  notes     String?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  isActive         Boolean     @default(true)
+  notes            String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
-  game         Game?            @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  game         Game?              @relation(fields: [gameId], references: [id], onDelete: SetNull)
   layouts      TableLayout[]
   reservations TableReservation[]
   blocks       TableBlock[]
@@ -687,9 +689,9 @@ model AvailabilitySlot {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  creator User   @relation("AvailabilitySlotCreator", fields: [creatorId], references: [id], onDelete: Cascade)
-  game    Game?  @relation(fields: [gameId], references: [id], onDelete: SetNull)
-  match   Match? @relation("SlotMatch")
+  creator   User           @relation("AvailabilitySlotCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  game      Game?          @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  match     Match?         @relation("SlotMatch")
   proposals SlotProposal[]
 
   @@index([creatorId])
@@ -699,15 +701,15 @@ model AvailabilitySlot {
 
 model SlotProposal {
   id            String             @id @default(cuid())
-  slotId         String
-  requesterId    Int
-  gameId         String?
-  proposedStart  DateTime
-  proposedEnd    DateTime
-  note           String?
-  status         SlotProposalStatus @default(PENDING)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  slotId        String
+  requesterId   Int
+  gameId        String?
+  proposedStart DateTime
+  proposedEnd   DateTime
+  note          String?
+  status        SlotProposalStatus @default(PENDING)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   slot      AvailabilitySlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
   requester User             @relation("SlotProposalRequester", fields: [requesterId], references: [id], onDelete: Cascade)
@@ -1020,30 +1022,30 @@ model EventRegistration {
 }
 
 model CompetitiveMatch {
-  id             String               @id @default(cuid())
+  id             String                 @id @default(cuid())
   eventId        String?
   gameId         String?
-  kind           CompetitiveMatchKind @default(CASUAL)
+  kind           CompetitiveMatchKind   @default(CASUAL)
   status         CompetitiveMatchStatus @default(APPROVED)
   playedAt       DateTime
   roundNumber    Int?
-  sourceReportId String?              @unique
-  notes          String?              @db.Text
+  sourceReportId String?                @unique
+  notes          String?                @db.Text
   createdById    Int?
   validatedById  Int?
   validatedAt    DateTime?
   voidedById     Int?
   voidedAt       DateTime?
-  voidReason     String?              @db.Text
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  voidReason     String?                @db.Text
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
 
-  event        Event?                   @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  game         Game?                    @relation(fields: [gameId], references: [id], onDelete: SetNull)
-  sourceReport CompetitiveMatchReport?  @relation("ApprovedCompetitiveMatchReport", fields: [sourceReportId], references: [id], onDelete: SetNull)
-  createdBy    User?                    @relation("CompetitiveMatchCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  validatedBy  User?                    @relation("CompetitiveMatchValidator", fields: [validatedById], references: [id], onDelete: SetNull)
-  voidedBy     User?                    @relation("CompetitiveMatchVoider", fields: [voidedById], references: [id], onDelete: SetNull)
+  event        Event?                     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  game         Game?                      @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  sourceReport CompetitiveMatchReport?    @relation("ApprovedCompetitiveMatchReport", fields: [sourceReportId], references: [id], onDelete: SetNull)
+  createdBy    User?                      @relation("CompetitiveMatchCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  validatedBy  User?                      @relation("CompetitiveMatchValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  voidedBy     User?                      @relation("CompetitiveMatchVoider", fields: [voidedById], references: [id], onDelete: SetNull)
   players      CompetitiveMatchPlayer[]
   auditLogs    CompetitiveMatchAuditLog[]
 
@@ -1137,6 +1139,30 @@ model CompetitiveMatchReportPlayer {
 
   @@unique([reportId, participantOrder])
   @@index([userId])
+}
+
+model CompetitiveEventSettings {
+  eventId        String   @id
+  paladinFormula String   @db.Text
+  updatedById    Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model CompetitiveEventSettingsAuditLog {
+  id              String   @id @default(cuid())
+  eventId         String
+  actorId         Int?
+  previousFormula String?  @db.Text
+  nextFormula     String   @db.Text
+  createdAt       DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, createdAt])
+  @@index([actorId])
 }
 
 model TelegramBotSession {

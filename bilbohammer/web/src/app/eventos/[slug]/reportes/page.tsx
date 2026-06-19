@@ -178,18 +178,18 @@ function resolveRegistrationId(player: ReportPlayer | undefined, registrations: 
 
 function ReportCard({
   eventId,
+  eventSlug,
   fallbackEventTitle,
   hasLeagueDuplicate,
   report,
   registrations,
-  returnTo,
 }: {
   eventId: string;
+  eventSlug: string;
   fallbackEventTitle: string;
   hasLeagueDuplicate: boolean;
   report: PendingCompetitiveReport;
   registrations: RegistrationOption[];
-  returnTo: string;
 }) {
   const [firstPlayer, secondPlayer] = report.players;
   const firstRegistrationId = resolveRegistrationId(firstPlayer, registrations);
@@ -324,8 +324,8 @@ function ReportCard({
         <summary className="cursor-pointer text-sm font-semibold text-white">Corregir reporte</summary>
         <form action={updateCompetitiveReportAction} className="mt-4 space-y-4">
           <input type="hidden" name="eventId" value={eventId} />
+          <input type="hidden" name="eventSlug" value={eventSlug} />
           <input type="hidden" name="reportId" value={report.id} />
-          <input type="hidden" name="returnTo" value={returnTo} />
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
@@ -475,8 +475,8 @@ function ReportCard({
 
       <form action={rejectCompetitiveReportAction} className="space-y-3 rounded-2xl border border-white/10 p-3 sm:p-4">
           <input type="hidden" name="eventId" value={eventId} />
+          <input type="hidden" name="eventSlug" value={eventSlug} />
           <input type="hidden" name="reportId" value={report.id} />
-          <input type="hidden" name="returnTo" value={returnTo} />
           <div className="flex flex-wrap gap-3">
             <button
               type="submit"
@@ -565,7 +565,6 @@ export default async function EventCompetitiveReportsPage({
     ).filter((reportId): reportId is string => Boolean(reportId)),
   );
   const eventHref = `/eventos/${buildEventSlug(event.id, event.title)}`;
-  const reportsHref = `/eventos/${params.slug}/reportes`;
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 py-8">
@@ -608,11 +607,11 @@ export default async function EventCompetitiveReportsPage({
             <ReportCard
               key={report.id}
               eventId={event.id}
+              eventSlug={params.slug}
               fallbackEventTitle={event.title}
               hasLeagueDuplicate={duplicateReportIds.has(report.id)}
               registrations={registrations}
               report={report}
-              returnTo={reportsHref}
             />
           ))}
         </section>

@@ -2,11 +2,14 @@ import { CompetitiveMatchKind } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { auth } from "@/auth";
 import CompetitiveDataTable, {
   type CompetitiveTableColumn,
   type CompetitiveTableRow,
 } from "@/components/competitive/CompetitiveDataTable";
 import {
+  DEFAULT_PALADIN_FORMULA,
+  getCompetitiveEventSettings,
   listApprovedCompetitiveMatches,
   listLeagueStandings,
   listPaladinStandings,
@@ -14,6 +17,9 @@ import {
 } from "@/lib/competitive-matches";
 import { buildEventSlug, extractEventIdFromSlug } from "@/lib/events/slug";
 import { prisma } from "@/lib/prisma";
+import { userCanEditEvent } from "@/lib/roles";
+
+import { updatePaladinFormulaAction } from "./actions";
 
 type Params = {
   slug: string;
@@ -26,6 +32,9 @@ type SearchParams = {
   tipo?: string;
   ronda?: string;
   fecha?: string;
+  calculo?: string;
+  feedback?: string;
+  error?: string;
 };
 
 type SheetId = "liga" | "paladin" | "partidas";
@@ -63,6 +72,19 @@ const paladinColumns: CompetitiveTableColumn[] = [
   { id: "rank", label: "Rank", numeric: true },
   { id: "displayName", label: "Jugador" },
   { id: "classificationPoints", label: "P. Clasificación", numeric: true },
+  { id: "pointsPerGame", label: "PpP", numeric: true },
+  { id: "played", label: "PJ", numeric: true },
+  { id: "won", label: "G", numeric: true },
+  { id: "drawn", label: "E", numeric: true },
+  { id: "winRate", label: "Win rate", numeric: true },
+  { id: "adjustedElo", label: "Elo ajustado", numeric: true },
+];
+
+const paladinCalculationColumns: CompetitiveTableColumn[] = [
+  { id: "rank", label: "Rank", numeric: true },
+  { id: "displayName", label: "Jugador" },
+  { id: "classificationPoints", label: "P. Clasificación", numeric: true },
+  { id: "classificationScore", label: "Clasif", numeric: true },
   { id: "pointsPerGame", label: "PpP", numeric: true },
   { id: "played", label: "PJ", numeric: true },
   { id: "won", label: "G", numeric: true },
@@ -210,6 +232,93 @@ function CriteriaHelp() {
   );
 }
 
+function paladinCalculationHref(baseHref: string, enabled: boolean) {
+  return enabled ? `${baseHref}?hoja=paladin` : `${baseHref}?hoja=paladin&calculo=paladin`;
+}
+
+function FeedbackBanner({ searchParams }: { searchParams?: SearchParams }) {
+  if (searchParams?.error) {
+    return (
+      <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+        {searchParams.error}
+      </div>
+    );
+  }
+
+  if (searchParams?.feedback === "paladin-formula-updated") {
+    return (
+      <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+        Fórmula de Paladín guardada. La tabla se ha recalculado con la nueva configuración.
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function PaladinFormulaPanel({
+  eventId,
+  eventSlug,
+  formula,
+}: {
+  eventId: string;
+  eventSlug: string;
+  formula: string;
+}) {
+  return (
+    <section className="mb-6 rounded-2xl border border-sky-300/20 bg-sky-500/5 p-4 text-sm leading-relaxed text-sky-50">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-2">
+          <h2 className="text-base font-semibold text-white">Cálculo técnico de Paladín</h2>
+          <p className="text-sky-100/80">
+            La tabla se ordena por `Clasif`. IFR y Elo quedan ocultos en la vista normal para no saturar, pero aquí se
+            muestran para auditoría de organizador/admin.
+          </p>
+        </div>
+      </div>
+      <pre className="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-sky-50">
+{`Si PJ = 0:
+  Clasif = 1000
+Si PJ > 0:
+  Clasif = redondear(
+    1000
+    + 100 * WinRate * PpP * (IFR / Elo) * factor_volumen
+    + ln(PJ + 1) * 12,5
+  )
+
+factor_volumen = 1 / (1 + exp(-0,4 * (PJ - mediana_PJ)))`}
+      </pre>
+      <form action={updatePaladinFormulaAction} className="mt-4 space-y-3">
+        <input type="hidden" name="eventId" value={eventId} />
+        <input type="hidden" name="eventSlug" value={eventSlug} />
+        <label htmlFor="paladinFormula" className="text-xs uppercase tracking-[0.22em] text-sky-100/70">
+          Fórmula persistente
+        </label>
+        <textarea
+          id="paladinFormula"
+          name="paladinFormula"
+          rows={5}
+          defaultValue={formula}
+          className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 font-mono text-xs text-white outline-none focus:border-sky-300/50"
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="submit"
+            className="rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400"
+          >
+            Guardar y recalcular
+          </button>
+          <p className="text-xs text-sky-100/70">
+            Variables permitidas: classificationPoints, pointsPerGame, played, won, drawn, winRate, ifr, elo,
+            adjustedElo, medianPlayed. Funciones: if, round, floor, ceil, log, exp, min, max, abs. Usa punto decimal
+            en la fórmula editable, por ejemplo 12.5.
+          </p>
+        </div>
+      </form>
+    </section>
+  );
+}
+
 export default async function EventCompetitiveSheetsPage({
   params,
   searchParams,
@@ -228,14 +337,18 @@ export default async function EventCompetitiveSheetsPage({
   }
 
   const eventSlug = buildEventSlug(event.id, event.title);
+  const session = await auth();
+  const canManage = await userCanEditEvent(session, event.id);
 
-  const [leagueRows, paladinRows, matches] = await Promise.all([
+  const [leagueRows, paladinRows, matches, competitiveSettings] = await Promise.all([
     listLeagueStandings(event.id),
     listPaladinStandings({ eventId: event.id }),
     listApprovedCompetitiveMatches({ eventId: event.id }),
+    getCompetitiveEventSettings(event.id),
   ]);
 
   const sheet = activeSheet(searchParams?.hoja);
+  const showPaladinCalculation = canManage && sheet === "paladin" && searchParams?.calculo === "paladin";
   const baseHref = `/eventos/${eventSlug}/competitivo`;
   const leagueTableRows: CompetitiveTableRow[] = leagueRows.map((row) => ({
     id: row.playerKey,
@@ -254,6 +367,7 @@ export default async function EventCompetitiveSheetsPage({
     rank: row.rank,
     displayName: { label: row.displayName, href: playerMatchesHref(baseHref, row.displayName) },
     classificationPoints: row.classificationPoints,
+    classificationScore: row.classificationScore,
     pointsPerGame: formatNumber(row.pointsPerGame, 3),
     played: row.played,
     won: row.won,
@@ -274,6 +388,8 @@ export default async function EventCompetitiveSheetsPage({
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 py-8">
+      <FeedbackBanner searchParams={searchParams} />
+
       <header className="space-y-4">
         <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
           <Link href={`/eventos/${eventSlug}`} className="transition hover:text-white">
@@ -305,6 +421,14 @@ export default async function EventCompetitiveSheetsPage({
             >
               Descargar CSV
             </Link>
+            {canManage && sheet === "paladin" && (
+              <Link
+                href={paladinCalculationHref(baseHref, showPaladinCalculation)}
+                className="w-fit rounded-full border border-sky-300/40 px-4 py-2 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/10"
+              >
+                {showPaladinCalculation ? "Ocultar cálculo" : "Mostrar cálculo"}
+              </Link>
+            )}
             <Link
               href={`/eventos/${eventSlug}`}
               className="w-fit rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
@@ -418,12 +542,21 @@ export default async function EventCompetitiveSheetsPage({
           />
         )}
         {sheet === "paladin" && (
-          <CompetitiveDataTable
-            columns={paladinColumns}
-            rows={paladinTableRows}
-            emptyMessage="Todavía no hay partidas aprobadas para calcular Paladín."
-            searchPlaceholder="Buscar jugador"
-          />
+          <>
+            {showPaladinCalculation && (
+              <PaladinFormulaPanel
+                eventId={event.id}
+                eventSlug={eventSlug}
+                formula={competitiveSettings.paladinFormula || DEFAULT_PALADIN_FORMULA}
+              />
+            )}
+            <CompetitiveDataTable
+              columns={showPaladinCalculation ? paladinCalculationColumns : paladinColumns}
+              rows={paladinTableRows}
+              emptyMessage="Todavía no hay partidas aprobadas para calcular Paladín."
+              searchPlaceholder="Buscar jugador"
+            />
+          </>
         )}
         {sheet === "partidas" && (
           <CompetitiveDataTable

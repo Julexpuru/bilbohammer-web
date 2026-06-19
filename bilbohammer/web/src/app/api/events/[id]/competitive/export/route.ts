@@ -101,11 +101,12 @@ export async function GET(request: Request, { params }: RouteParams) {
   if (safeSheet === "paladin") {
     const rows = await listPaladinStandings({ eventId: event.id });
     csv = toCsv(
-      ["Rank", "Jugador", "P. Clasificación", "PpP", "PJ", "G", "E", "Win rate", "IFR", "Elo", "Elo ajustado"],
+      ["Rank", "Jugador", "P. Clasificación", "Clasif", "PpP", "PJ", "G", "E", "Win rate", "IFR", "Elo", "Elo ajustado"],
       rows.map((row) => [
         row.rank,
         row.displayName,
         row.classificationPoints,
+        row.classificationScore,
         row.pointsPerGame,
         row.played,
         row.won,

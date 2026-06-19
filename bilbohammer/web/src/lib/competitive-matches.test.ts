@@ -130,4 +130,26 @@ describe("competitive standings", () => {
       }),
     ]);
   });
+
+  it("recalcula y reordena Paladín con una fórmula personalizada", () => {
+    const rows = calculatePaladinStandings(
+      [
+        competitiveMatch("match-1", "2026-06-01T12:00:00.000Z", [
+          { userId: 1, displayName: "Ane", outcome: CompetitiveMatchOutcome.WIN, score: 20 },
+          { userId: 2, displayName: "Beñat", outcome: CompetitiveMatchOutcome.LOSS, score: 0 },
+        ]),
+        competitiveMatch("match-2", "2026-06-02T12:00:00.000Z", [
+          { userId: 2, displayName: "Beñat", outcome: CompetitiveMatchOutcome.WIN, score: 10 },
+          { userId: 3, displayName: "Carmen", outcome: CompetitiveMatchOutcome.LOSS, score: 0 },
+        ]),
+      ],
+      { formula: "played * 1000 + classificationPoints" },
+    );
+
+    expect(rows[0]).toMatchObject({
+      displayName: "Beñat",
+      classificationScore: 2010,
+      played: 2,
+    });
+  });
 });

@@ -11,6 +11,12 @@ import {
 
 import { prisma } from "@/lib/prisma";
 import {
+  DEFAULT_PALADIN_FORMULA,
+  evaluatePaladinFormula,
+  normalizePaladinFormula,
+  validatePaladinFormula,
+} from "@/lib/competitive-formulas";
+import {
   notifyCompetitiveReportPending,
   notifyCompetitiveReportReviewed,
 } from "@/lib/notifications";
@@ -57,6 +63,13 @@ type MatchWithPlayers = Prisma.CompetitiveMatchGetPayload<{
 
 type CompetitiveReadDb = PrismaClient | Prisma.TransactionClient;
 
+export type CompetitiveEventSettingsData = {
+  eventId: string;
+  paladinFormula: string;
+  updatedById: number | null;
+  updatedAt: Date | null;
+};
+
 export type ApprovedCompetitiveMatchRow = Prisma.CompetitiveMatchGetPayload<{
   include: {
     players: { orderBy: { participantOrder: "asc" } };
@@ -95,6 +108,7 @@ export type PaladinStandingRow = {
   userId: number | null;
   displayName: string;
   classificationPoints: number;
+  classificationScore: number;
   pointsPerGame: number;
   played: number;
   won: number;
@@ -107,13 +121,15 @@ export type PaladinStandingRow = {
 
 type PaladinAccumulator = Omit<
   PaladinStandingRow,
-  "rank" | "pointsPerGame" | "winRate" | "ifr" | "adjustedElo"
+  "rank" | "classificationScore" | "pointsPerGame" | "winRate" | "ifr" | "adjustedElo"
 > & {
   rivalRatings: number[];
 };
 
 const REPORT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const REPORT_RATE_LIMIT_MAX = 5;
+
+export { DEFAULT_PALADIN_FORMULA };
 
 function assertValidDate(value: Date) {
   if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
@@ -204,6 +220,74 @@ function sameTwoPlayerPair(
 function roundMetric(value: number, decimals = 3) {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
+}
+
+function median(values: number[]) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
+export async function getCompetitiveEventSettings(
+  eventId: string,
+  db: CompetitiveReadDb = prisma,
+): Promise<CompetitiveEventSettingsData> {
+  const settings = await db.competitiveEventSettings.findUnique({
+    where: { eventId },
+    select: { eventId: true, paladinFormula: true, updatedById: true, updatedAt: true },
+  });
+
+  return {
+    eventId,
+    paladinFormula: settings?.paladinFormula ?? DEFAULT_PALADIN_FORMULA,
+    updatedById: settings?.updatedById ?? null,
+    updatedAt: settings?.updatedAt ?? null,
+  };
+}
+
+export async function updateCompetitiveEventPaladinFormula(
+  eventId: string,
+  actorId: number | null,
+  formula: string,
+  db: CompetitiveDb = prisma,
+) {
+  const paladinFormula = normalizePaladinFormula(formula);
+  validatePaladinFormula(paladinFormula);
+
+  return db.$transaction(async (tx) => {
+    const previous = await tx.competitiveEventSettings.findUnique({
+      where: { eventId },
+      select: { paladinFormula: true },
+    });
+
+    const settings = await tx.competitiveEventSettings.upsert({
+      where: { eventId },
+      create: {
+        eventId,
+        paladinFormula,
+        updatedById: actorId,
+      },
+      update: {
+        paladinFormula,
+        updatedById: actorId,
+      },
+      select: { eventId: true, paladinFormula: true, updatedById: true, updatedAt: true },
+    });
+
+    if ((previous?.paladinFormula ?? DEFAULT_PALADIN_FORMULA) !== paladinFormula) {
+      await tx.competitiveEventSettingsAuditLog.create({
+        data: {
+          eventId,
+          actorId,
+          previousFormula: previous?.paladinFormula ?? DEFAULT_PALADIN_FORMULA,
+          nextFormula: paladinFormula,
+        },
+      });
+    }
+
+    return settings;
+  });
 }
 
 function matchDayKey(date: Date) {
@@ -706,6 +790,9 @@ export async function listPaladinStandings(
   filters: { eventId?: string; gameId?: string } = {},
   db: CompetitiveDb = prisma,
 ): Promise<PaladinStandingRow[]> {
+  const formula = filters.eventId
+    ? (await getCompetitiveEventSettings(filters.eventId, db)).paladinFormula
+    : DEFAULT_PALADIN_FORMULA;
   const matches = await db.competitiveMatch.findMany({
     where: {
       eventId: filters.eventId,
@@ -716,10 +803,13 @@ export async function listPaladinStandings(
     orderBy: [{ playedAt: "asc" }, { createdAt: "asc" }],
   });
 
-  return calculatePaladinStandings(matches);
+  return calculatePaladinStandings(matches, { formula });
 }
 
-export function calculatePaladinStandings(matches: MatchWithPlayers[]): PaladinStandingRow[] {
+export function calculatePaladinStandings(
+  matches: MatchWithPlayers[],
+  options: { formula?: string } = {},
+): PaladinStandingRow[] {
   const baseElo = 1500;
   const kFactor = 32;
   const ifrLambda = 5;
@@ -777,6 +867,8 @@ export function calculatePaladinStandings(matches: MatchWithPlayers[]): PaladinS
     }
   }
 
+  const playedMedian = Math.floor(median(Array.from(rows.values()).map((row) => row.played).filter((played) => played > 0)));
+
   return Array.from(rows.values())
     .map((row) => {
       const { rivalRatings, ...standingRow } = row;
@@ -785,19 +877,35 @@ export function calculatePaladinStandings(matches: MatchWithPlayers[]): PaladinS
         rivalRatings.length > 0
           ? roundMetric((rivalRatingTotal + ifrLambda * baseElo) / (rivalRatings.length + ifrLambda), 2)
           : 0;
+      const pointsPerGame = row.played > 0 ? roundMetric(row.classificationPoints / row.played, 3) : 0;
+      const winRate = row.played > 0 ? roundMetric(row.won / row.played, 3) : 0;
+      const elo = roundMetric(row.elo, 2);
+      const adjustedElo = roundMetric(row.elo + ifr - baseElo, 2);
+      const classificationScore = evaluatePaladinFormula(options.formula ?? DEFAULT_PALADIN_FORMULA, {
+        classificationPoints: row.classificationPoints,
+        pointsPerGame,
+        played: row.played,
+        won: row.won,
+        drawn: row.drawn,
+        winRate,
+        ifr,
+        elo,
+        adjustedElo,
+        medianPlayed: playedMedian,
+      });
       return {
         ...standingRow,
-        pointsPerGame: row.played > 0 ? roundMetric(row.classificationPoints / row.played, 3) : 0,
-        winRate: row.played > 0 ? roundMetric(row.won / row.played, 3) : 0,
+        classificationScore,
+        pointsPerGame,
+        winRate,
         ifr,
-        elo: roundMetric(row.elo, 2),
-        adjustedElo: roundMetric(row.elo + ifr - baseElo, 2),
+        elo,
+        adjustedElo,
       };
     })
     .sort((a, b) => {
-      if (b.classificationPoints !== a.classificationPoints) {
-        return b.classificationPoints - a.classificationPoints;
-      }
+      if (b.classificationScore !== a.classificationScore) return b.classificationScore - a.classificationScore;
+      if (b.classificationPoints !== a.classificationPoints) return b.classificationPoints - a.classificationPoints;
       if (b.pointsPerGame !== a.pointsPerGame) return b.pointsPerGame - a.pointsPerGame;
       if (b.elo !== a.elo) return b.elo - a.elo;
       return a.displayName.localeCompare(b.displayName, "es");

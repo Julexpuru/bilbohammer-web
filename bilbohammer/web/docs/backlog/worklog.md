@@ -4,6 +4,8 @@ Registro cronologico breve de trabajo realizado o contexto consolidado.
 
 ## 2026-06-19
 
+- Se añade configuración competitiva persistente por evento para la fórmula Paladín, con auditoría de cambios; la tabla y la exportación recalculan `Clasif` desde partidas aprobadas usando la fórmula guardada.
+- Se corrige la navegación tras aprobar/rechazar/corregir reportes competitivos para volver siempre a la bandeja de revisión; además, Paladín pasa a ordenarse por `Clasif`, oculta IFR/Elo en vista normal y añade vista técnica de cálculo para organizador/admin.
 - Se añade importador operativo de CSV para reportes competitivos: `npm run import:competitive-reports` valida por defecto, `--apply` crea `CompetitiveMatchReport` pendientes y `--ensure-registrations` puede crear participantes manuales faltantes.
 - Se cierra el alcance funcional actual de `BH-014`: se evita exponer un generador sintético en la página competitiva y se deja un CSV de fixture para importación futura controlada; se añade `npm test` con Vitest y pruebas unitarias de Liga, Paladín/Elo, deduplicación y empates; se reduce el ruido de las tarjetas móviles de `Partidas`.
 
