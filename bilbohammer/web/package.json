@@ -6,6 +6,7 @@
     "dev": "next dev -p 3000",
     "build": "prisma generate && next build",
     "start": "next start",
+    "test": "vitest run",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "seed": "tsx prisma/seed.ts",
@@ -15,6 +16,7 @@
     "migrate:uploads-r2": "tsx scripts/migrate-uploads-to-r2.ts",
     "sync:public-assets": "tsx scripts/sync-public-assets-to-r2.ts",
     "normalize:upload-urls": "tsx scripts/normalize-upload-urls.ts",
+    "import:competitive-reports": "tsx scripts/import-competitive-reports-csv.ts",
     "migration:guards": "tsx scripts/run-migration-guards.ts"
   },
   "prisma": {
@@ -49,6 +51,7 @@
     "prisma": "^6.14.0",
     "tailwindcss": "^3.4.7",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.9"
   }
 }

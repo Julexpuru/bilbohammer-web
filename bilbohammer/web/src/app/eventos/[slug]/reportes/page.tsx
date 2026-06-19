@@ -521,7 +521,7 @@ export default async function EventCompetitiveReportsPage({
           <div className="space-y-2">
             <h1 className="text-3xl font-semibold text-white">Revisión de reportes competitivos</h1>
             <p className="text-sm text-[var(--muted)]">
-              {event.title}. Aprueba o rechaza los reportes pendientes sin editar todavía el contenido.
+              {event.title}. Corrige, aprueba o rechaza los reportes pendientes antes de convertirlos en partidas aprobadas.
             </p>
           </div>
           <Link

@@ -1,12 +1,12 @@
 # BH-014 - Página competitiva de liga
 
-Estado: in_progress
+Estado: done
 Tipo: feature
 Prioridad: P2
 Area: eventos
 Owner: shared
 Origen: refinamiento de BH-010/BH-013
-Ultima actualizacion: 2026-06-18
+Ultima actualizacion: 2026-06-19
 
 ## Contexto
 
@@ -29,7 +29,7 @@ Entra:
 - Métricas resumen: líder de Liga, líder Paladín cuando aplique, total de partidas y última actualización.
 - Tooltip de ayuda con icono de pregunta para criterios de cálculo: victoria 3, empate 1, derrota 0; Paladín por puntos de batalla, PpP, Elo/IFR.
 - Exportación de `Tabla Liga`, `Tabla Paladín` cuando aplique y `Partidas` a `.xlsx` o `.csv`.
-- Datos sintéticos para validar diseño mediante generador/importación controlada a reportes pendientes o fixtures, no mediante escritura directa de clasificaciones.
+- Datos sintéticos para validar diseño mediante fixture CSV externo e importación controlada a reportes pendientes, no mediante escritura directa de clasificaciones ni generador en la página pública.
 - Auditoría clara de quién envió, revisó, corrigió o anuló cada dato.
 - Protección básica contra spam/error: límites por usuario, validaciones de fecha/participantes y mensajes claros.
 - Notificaciones a organizadores por reportes pendientes y al jugador cuando se apruebe o rechace su reporte.
@@ -53,6 +53,7 @@ No entra de momento:
 - La página competitiva permite filtrar partidas por jugador, facción, tipo, ronda y fecha.
 - Las tablas se pueden exportar a formato reutilizable.
 - Un organizador/admin puede vincular una inscripción manual a un usuario activo por correo sin partir clasificaciones ya existentes.
+- Existe un CSV sintético de referencia y un importador operativo que crea reportes pendientes para validar diseño/cálculos.
 
 ## Notas tecnicas
 
@@ -63,12 +64,14 @@ No entra de momento:
 - El formato móvil definitivo se deja para después de cerrar el comportamiento funcional; mientras tanto debe mantenerse usable y sin desbordes.
 - Los participantes manuales usan `playerName` como identidad temporal. Si después se vinculan a un usuario registrado, la vinculación debe propagar `userId` a reportes y partidas competitivas del mismo evento que coincidan por nombre para evitar duplicar filas de clasificación.
 - Los nombres de inscripción deben ser únicos por evento, incluso antes de vincular usuario, para que la identidad temporal por `playerName` sea segura.
-- Tests necesarios: cálculo de Liga, Paladín/Elo/IFR cuando aplique, deduplicación, empates, permisos público/jugador/organizador/admin y auditoría de correcciones/anulaciones.
+- Tests unitarios cubiertos: cálculo de Liga, Paladín/Elo/IFR, deduplicación y empates. Quedan como ampliación futura pruebas de integración para permisos público/jugador/organizador/admin y auditoría de correcciones/anulaciones.
 - Riesgos: correcciones posteriores a aprobación pueden invalidar clasificaciones visibles; hay que diseñarlas como cambios auditados y recalcular desde fuente canónica.
 - Dependencias: `BH-013` para revisión/corrección de reportes y `BH-010` para reglas de clasificación.
 
 ## Historial
 
+- 2026-06-19: se añade importador operativo de CSV a reportes competitivos pendientes con modo dry-run por defecto y opción de crear inscripciones manuales faltantes.
+- 2026-06-19: se cierra el alcance funcional actual con fixture CSV de reportes sintéticos, reducción de ruido en tarjetas móviles de `Partidas` y pruebas unitarias de cálculo competitivo con Vitest. Se descarta exponer un generador sintético en la página web para evitar confusión operativa.
 - 2026-06-18: se añaden notificaciones competitivas: aviso a organizadores/admins cuando entra un reporte pendiente y aviso al jugador cuando su reporte se aprueba o rechaza, reutilizando preferencias in-app/email/push.
 - 2026-06-18: se añaden enlaces cruzados desde jugadores en clasificaciones y partidas hacia la hoja `Partidas` filtrada por jugador, y un límite básico de 5 reportes por usuario/evento cada 10 minutos en el servicio común.
 - 2026-06-18: se añade estado de partida competitiva (`APPROVED`/`VOIDED`), auditoría de correcciones/anulaciones y gestión desde el detalle de partida aprobada; las clasificaciones, duplicados y exportaciones ignoran partidas anuladas.

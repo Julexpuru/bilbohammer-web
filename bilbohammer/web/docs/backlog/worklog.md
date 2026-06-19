@@ -2,6 +2,11 @@
 
 Registro cronologico breve de trabajo realizado o contexto consolidado.
 
+## 2026-06-19
+
+- Se añade importador operativo de CSV para reportes competitivos: `npm run import:competitive-reports` valida por defecto, `--apply` crea `CompetitiveMatchReport` pendientes y `--ensure-registrations` puede crear participantes manuales faltantes.
+- Se cierra el alcance funcional actual de `BH-014`: se evita exponer un generador sintético en la página competitiva y se deja un CSV de fixture para importación futura controlada; se añade `npm test` con Vitest y pruebas unitarias de Liga, Paladín/Elo, deduplicación y empates; se reduce el ruido de las tarjetas móviles de `Partidas`.
+
 ## 2026-06-18
 
 - Se añaden notificaciones competitivas a `BH-014`: organizadores/admins reciben aviso de reportes pendientes y el jugador que envió el reporte recibe aviso al aprobarse o rechazarse, usando las preferencias existentes.

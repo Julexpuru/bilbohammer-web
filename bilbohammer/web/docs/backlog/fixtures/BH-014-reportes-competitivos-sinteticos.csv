@@ -1,0 +1,11 @@
+event_slug,game_slug,kind,played_at,round_number,channel,submitted_by_email,notes,player_1_email,player_1_name,player_1_faction,player_1_outcome,player_1_score,player_2_email,player_2_name,player_2_faction,player_2_outcome,player_2_score
+liga-paladin-verano-invierno,w40k,LEAGUE,2026-06-01,1,IMPORT,,Reporte sintético para validar diseño y cálculos.,,Ane de Bilbao,Adepta Sororitas,WIN,18,,Beñat del Casco,Orks,LOSS,2
+liga-paladin-verano-invierno,w40k,CASUAL,2026-06-02,1,IMPORT,,Reporte sintético para validar diseño y cálculos.,,Carmen Santutxu,T'au Empire,DRAW,10,,Diego Rekalde,Leagues of Votann,DRAW,10
+liga-paladin-verano-invierno,w40k,LEAGUE,2026-06-03,2,IMPORT,,Reporte sintético para validar diseño y cálculos.,,Eider Abando,Aeldari,LOSS,1,,Iñigo Deusto,Chaos Knights,WIN,19
+liga-paladin-verano-invierno,w40k,CASUAL,2026-06-04,2,IMPORT,,Reporte sintético para validar diseño y cálculos.,,Maitane Otxarkoaga,Space Marines,WIN,20,,Unai San Ignazio,Necrons,LOSS,0
+liga-paladin-verano-invierno,w40k,LEAGUE,2026-06-05,3,IMPORT,,Reporte sintético para validar diseño y cálculos.,,Nerea Zorrotza,Tyranids,DRAW,10,,Aitor Indautxu,Drukhari,DRAW,10
+liga-paladin-verano-invierno,w40k,CASUAL,2026-06-06,3,IMPORT,,Reporte sintético para validar diseño y cálculos.,,Ane de Bilbao,Adepta Sororitas,LOSS,4,,Carmen Santutxu,T'au Empire,WIN,16
+liga-paladin-verano-invierno,w40k,CASUAL,2026-06-07,4,IMPORT,,Reporte sintético para validar diseño y cálculos.,,Beñat del Casco,Orks,WIN,12,,Eider Abando,Aeldari,LOSS,8
+liga-paladin-verano-invierno,w40k,LEAGUE,2026-06-08,4,IMPORT,,Reporte sintético para validar diseño y cálculos.,,Diego Rekalde,Leagues of Votann,WIN,13,,Maitane Otxarkoaga,Space Marines,LOSS,7
+liga-paladin-verano-invierno,w40k,CASUAL,2026-06-09,5,IMPORT,,Reporte sintético para validar diseño y cálculos.,,Iñigo Deusto,Chaos Knights,LOSS,5,,Nerea Zorrotza,Tyranids,WIN,15
+liga-paladin-verano-invierno,w40k,LEAGUE,2026-06-10,5,IMPORT,,Reporte sintético para validar diseño y cálculos.,,Unai San Ignazio,Necrons,WIN,11,,Aitor Indautxu,Drukhari,LOSS,9

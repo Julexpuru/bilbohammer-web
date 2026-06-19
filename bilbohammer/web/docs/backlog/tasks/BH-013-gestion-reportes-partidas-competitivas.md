@@ -1,6 +1,6 @@
 # BH-013 - Gestión web de reportes de partidas competitivas
 
-Estado: in_progress
+Estado: done
 Tipo: feature
 Prioridad: P2
 Area: eventos
@@ -48,6 +48,8 @@ No entra:
 - Regla refinada de duplicados: no puede aprobarse como partida de liga una partida entre los mismos jugadores dentro del mismo evento si ya existe otra partida de liga previa entre ambos. En revisión debe avisarse y la corrección preventiva es cambiar el reporte a pachanga (`CASUAL`) si procede.
 
 ## Historial
+
+- 2026-06-18: se marca como cerrada tras completar la bandeja de revisión, aprobación/rechazo y corrección previa a aprobación mediante la continuación en `BH-014`.
 
 - 2026-06-18: se precisa que la edición de reportes y la regla estricta de duplicados de liga se implementarán en `BH-014`.
 

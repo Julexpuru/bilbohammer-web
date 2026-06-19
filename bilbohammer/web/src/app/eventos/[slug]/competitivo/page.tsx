@@ -76,15 +76,15 @@ const paladinColumns: CompetitiveTableColumn[] = [
 const matchColumns: CompetitiveTableColumn[] = [
   { id: "detail", label: "Detalle" },
   { id: "playedAt", label: "Fecha" },
-  { id: "roundNumber", label: "Ronda", numeric: true },
+  { id: "roundNumber", label: "Ronda", numeric: true, hideOnMobile: true },
   { id: "kind", label: "Tipo" },
   { id: "player", label: "Jugador" },
-  { id: "playerFaction", label: "Facción" },
+  { id: "playerFaction", label: "Facción", hideOnMobile: true },
   { id: "result", label: "Resultado" },
   { id: "score", label: "Puntos" },
   { id: "opponent", label: "Rival" },
-  { id: "opponentFaction", label: "Facción rival" },
-  { id: "validatedBy", label: "Validador" },
+  { id: "opponentFaction", label: "Facción rival", hideOnMobile: true },
+  { id: "validatedBy", label: "Validador", hideOnMobile: true },
   { id: "notes", label: "Notas", hideOnMobile: true },
 ];
 
@@ -436,9 +436,8 @@ export default async function EventCompetitiveSheetsPage({
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-relaxed text-[var(--muted)]">
-        La importación de Excel antiguo no queda activada todavía. Si hace falta generar datos sintéticos para validar
-        diseño y cálculos, conviene hacerlo como importación controlada a reportes pendientes, no como escritura directa
-        sobre las clasificaciones.
+        La importación de Excel antiguo no queda activada todavía. Los datos sintéticos para validar diseño y cálculos se
+        mantienen fuera de la página pública como fixture controlado, no como generación directa desde la web.
       </section>
     </div>
   );
