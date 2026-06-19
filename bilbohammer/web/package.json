@@ -6,7 +6,7 @@
     "dev": "next dev -p 3000",
     "build": "prisma generate && next build",
     "start": "next start",
-    "test": "vitest run",
+    "test": "prisma generate && vitest run",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "seed": "tsx prisma/seed.ts",
