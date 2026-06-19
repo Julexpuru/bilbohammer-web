@@ -104,6 +104,10 @@ function describeScore(players: ReportPlayer[]) {
   return `${first.score} - ${second.score}`;
 }
 
+function describeSubmittedAt(report: PendingCompetitiveReport) {
+  return `${formatDate(report.createdAt)} · ${channelLabels[report.channel] ?? report.channel}`;
+}
+
 function describeLeague(report: PendingCompetitiveReport, fallbackEventTitle: string) {
   const eventLabel = report.event?.title ?? fallbackEventTitle;
   const kindLabel = kindLabels[report.kind] ?? report.kind;
@@ -178,29 +182,32 @@ function ReportCard({
   hasLeagueDuplicate,
   report,
   registrations,
+  returnTo,
 }: {
   eventId: string;
   fallbackEventTitle: string;
   hasLeagueDuplicate: boolean;
   report: PendingCompetitiveReport;
   registrations: RegistrationOption[];
+  returnTo: string;
 }) {
   const [firstPlayer, secondPlayer] = report.players;
   const firstRegistrationId = resolveRegistrationId(firstPlayer, registrations);
   const secondRegistrationId = resolveRegistrationId(secondPlayer, registrations);
+  const hasSecondaryDetails = report.roundNumber != null || report.notes || describeSubmitter(report);
 
   return (
-    <article className="space-y-5 rounded-3xl border border-white/10 bg-black/20 p-5 shadow-lg">
+    <article className="space-y-4 rounded-3xl border border-white/10 bg-black/20 p-4 shadow-lg sm:space-y-5 sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
-          <p className="break-words text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
+          <p className="break-words text-[0.68rem] uppercase tracking-[0.22em] text-[var(--muted)] sm:text-xs sm:tracking-[0.3em]">
             {describeLeague(report, fallbackEventTitle)}
           </p>
-          <h2 className="break-words text-xl font-semibold text-white">
+          <h2 className="break-words text-lg font-semibold text-white sm:text-xl">
             {describePlayer(firstPlayer)} vs {describePlayer(secondPlayer)}
           </h2>
-          <p className="text-sm text-[var(--muted)]">
-            Enviado el {formatDate(report.createdAt)} por {channelLabels[report.channel] ?? report.channel}
+          <p className="text-xs text-[var(--muted)] sm:text-sm">
+            Enviado el {describeSubmittedAt(report)}
           </p>
         </div>
         <span className="w-fit rounded-full border border-amber-300/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-amber-100">
@@ -208,7 +215,52 @@ function ReportCard({
         </span>
       </div>
 
-      <dl className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <dl className="grid gap-3 rounded-2xl border border-white/10 bg-black/10 p-3 sm:hidden">
+        <div className="flex items-start justify-between gap-3">
+          <dt className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--muted)]">Fecha</dt>
+          <dd className="text-right text-sm text-white">{formatDate(report.playedAt)}</dd>
+        </div>
+        <div className="flex items-start justify-between gap-3">
+          <dt className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--muted)]">Resultado</dt>
+          <dd className="text-right text-sm text-white">{describeResult(report.players)}</dd>
+        </div>
+        <div className="flex items-start justify-between gap-3">
+          <dt className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--muted)]">Puntos</dt>
+          <dd className="text-right text-sm text-white">{describeScore(report.players)}</dd>
+        </div>
+        <div className="grid gap-1">
+          <dt className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--muted)]">Facciones</dt>
+          <dd className="break-words text-sm text-white">
+            {describeFaction(firstPlayer)} vs {describeFaction(secondPlayer)}
+          </dd>
+        </div>
+      </dl>
+
+      {hasSecondaryDetails && (
+        <details className="rounded-2xl border border-white/10 bg-black/10 p-3 sm:hidden">
+          <summary className="cursor-pointer text-sm font-semibold text-white">Ver trazabilidad y notas</summary>
+          <dl className="mt-3 space-y-3">
+            <div className="grid gap-1">
+              <dt className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--muted)]">Trazabilidad</dt>
+              <dd className="break-all text-sm text-white">{describeSubmitter(report)}</dd>
+            </div>
+            {report.roundNumber != null && (
+              <div className="grid gap-1">
+                <dt className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--muted)]">Ronda</dt>
+                <dd className="text-sm text-white">{report.roundNumber}</dd>
+              </div>
+            )}
+            {report.notes && (
+              <div className="grid gap-1">
+                <dt className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--muted)]">Notas</dt>
+                <dd className="break-words text-sm text-white/90">{report.notes}</dd>
+              </div>
+            )}
+          </dl>
+        </details>
+      )}
+
+      <dl className="hidden gap-4 sm:grid md:grid-cols-2 xl:grid-cols-4">
         <div className="space-y-1">
           <dt className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Fecha de partida</dt>
           <dd className="text-sm text-white">{formatDate(report.playedAt)}</dd>
@@ -246,7 +298,7 @@ function ReportCard({
       </dl>
 
       {(report.roundNumber != null || report.notes) && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="hidden gap-4 sm:grid md:grid-cols-2">
           {report.roundNumber != null && (
             <div className="space-y-1">
               <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Ronda</p>
@@ -273,6 +325,7 @@ function ReportCard({
         <form action={updateCompetitiveReportAction} className="mt-4 space-y-4">
           <input type="hidden" name="eventId" value={eventId} />
           <input type="hidden" name="reportId" value={report.id} />
+          <input type="hidden" name="returnTo" value={returnTo} />
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
@@ -420,22 +473,10 @@ function ReportCard({
         </form>
       </details>
 
-      <form action={rejectCompetitiveReportAction} className="space-y-3 rounded-2xl border border-white/10 p-4">
+      <form action={rejectCompetitiveReportAction} className="space-y-3 rounded-2xl border border-white/10 p-3 sm:p-4">
           <input type="hidden" name="eventId" value={eventId} />
           <input type="hidden" name="reportId" value={report.id} />
-          <div className="space-y-2">
-            <label htmlFor={`rejectionReason-${report.id}`} className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">
-              Motivo de rechazo opcional
-            </label>
-            <textarea
-              id={`rejectionReason-${report.id}`}
-              name="rejectionReason"
-              rows={3}
-              maxLength={500}
-              className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none transition focus:border-white/30"
-              placeholder="Explica brevemente qué falta o qué dato es incorrecto."
-            />
-          </div>
+          <input type="hidden" name="returnTo" value={returnTo} />
           <div className="flex flex-wrap gap-3">
             <button
               type="submit"
@@ -452,6 +493,24 @@ function ReportCard({
               {hasLeagueDuplicate ? "Aprobación bloqueada" : "Aprobar"}
             </button>
           </div>
+          <details>
+            <summary className="cursor-pointer text-sm font-semibold text-[var(--muted)]">
+              Añadir motivo de rechazo
+            </summary>
+            <div className="mt-3 space-y-2">
+              <label htmlFor={`rejectionReason-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
+                Motivo opcional
+              </label>
+              <textarea
+                id={`rejectionReason-${report.id}`}
+                name="rejectionReason"
+                rows={3}
+                maxLength={500}
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none transition focus:border-white/30"
+                placeholder="Explica brevemente qué falta o qué dato es incorrecto."
+              />
+            </div>
+          </details>
         </form>
     </article>
   );
@@ -506,6 +565,7 @@ export default async function EventCompetitiveReportsPage({
     ).filter((reportId): reportId is string => Boolean(reportId)),
   );
   const eventHref = `/eventos/${buildEventSlug(event.id, event.title)}`;
+  const reportsHref = `/eventos/${params.slug}/reportes`;
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 py-8">
@@ -552,6 +612,7 @@ export default async function EventCompetitiveReportsPage({
               hasLeagueDuplicate={duplicateReportIds.has(report.id)}
               registrations={registrations}
               report={report}
+              returnTo={reportsHref}
             />
           ))}
         </section>

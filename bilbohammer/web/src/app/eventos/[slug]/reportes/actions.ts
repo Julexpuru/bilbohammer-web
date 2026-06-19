@@ -31,6 +31,14 @@ function buildReviewPath(event: { id: string; title: string }) {
   return `/eventos/${buildEventSlug(event.id, event.title)}/reportes`;
 }
 
+function readReturnTo(formData: FormData, fallback: string) {
+  const returnTo = readString(formData, "returnTo");
+  if (returnTo.startsWith("/eventos/") && returnTo.includes("/reportes")) {
+    return returnTo;
+  }
+  return fallback;
+}
+
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
@@ -112,7 +120,7 @@ export async function approveCompetitiveReportAction(formData: FormData) {
     const session = await auth();
     const reviewerId = resolveSessionUserId(session);
     const context = await loadReviewContext(eventId, reportId);
-    path = context.path;
+    path = readReturnTo(formData, context.path);
 
     await approveCompetitiveMatchReport(reportId, reviewerId);
     revalidatePath(path);
@@ -134,7 +142,7 @@ export async function updateCompetitiveReportAction(formData: FormData) {
 
   try {
     const context = await loadReviewContext(eventId, reportId);
-    path = context.path;
+    path = readReturnTo(formData, context.path);
 
     const playedAt = parsePlayedAt(readString(formData, "playedAt"));
     if (!playedAt) {
@@ -216,7 +224,7 @@ export async function rejectCompetitiveReportAction(formData: FormData) {
     const session = await auth();
     const reviewerId = resolveSessionUserId(session);
     const context = await loadReviewContext(eventId, reportId);
-    path = context.path;
+    path = readReturnTo(formData, context.path);
 
     await rejectCompetitiveMatchReport(reportId, reviewerId, rejectionReason);
     revalidatePath(path);
