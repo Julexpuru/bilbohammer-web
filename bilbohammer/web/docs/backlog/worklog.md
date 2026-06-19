@@ -4,6 +4,7 @@ Registro cronologico breve de trabajo realizado o contexto consolidado.
 
 ## 2026-06-19
 
+- Se reabre `BH-013` por bug pendiente: aprobar/rechazar reportes sigue redirigiendo a la página principal del evento en producción. Se añade fixture CSV de regresión para duplicados, pachangas, empates, nombres problemáticos e idempotencia, junto con SQL revisable para resetear datos competitivos de un evento.
 - Se añade configuración competitiva persistente por evento para la fórmula Paladín, con auditoría de cambios; la tabla y la exportación recalculan `Clasif` desde partidas aprobadas usando la fórmula guardada.
 - Se corrige la navegación tras aprobar/rechazar/corregir reportes competitivos para volver siempre a la bandeja de revisión; además, Paladín pasa a ordenarse por `Clasif`, oculta IFR/Elo en vista normal y añade vista técnica de cálculo para organizador/admin.
 - Se añade importador operativo de CSV para reportes competitivos: `npm run import:competitive-reports` valida por defecto, `--apply` crea `CompetitiveMatchReport` pendientes y `--ensure-registrations` puede crear participantes manuales faltantes.

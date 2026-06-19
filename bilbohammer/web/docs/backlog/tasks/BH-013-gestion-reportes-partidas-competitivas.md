@@ -1,12 +1,12 @@
 # BH-013 - Gestión web de reportes de partidas competitivas
 
-Estado: done
+Estado: in_progress
 Tipo: feature
 Prioridad: P2
 Area: eventos
 Owner: shared
 Origen: desglose de BH-010/BH-011
-Ultima actualizacion: 2026-06-18
+Ultima actualizacion: 2026-06-19
 
 ## Contexto
 
@@ -47,7 +47,13 @@ No entra:
 - La corrección de reportes queda ligada a `BH-014`: antes de aprobar debe poder cambiarse tipo, fecha, rival, facciones, resultado, puntos y notas.
 - Regla refinada de duplicados: no puede aprobarse como partida de liga una partida entre los mismos jugadores dentro del mismo evento si ya existe otra partida de liga previa entre ambos. En revisión debe avisarse y la corrección preventiva es cambiar el reporte a pachanga (`CASUAL`) si procede.
 
+## Bugs pendientes
+
+- Al aprobar o rechazar un reporte pendiente desde la bandeja de revisión, la navegación sigue volviendo a la página principal del evento en producción. El comportamiento esperado es permanecer en `/eventos/[slug]/reportes` y que desaparezca la tarjeta procesada.
+
 ## Historial
+
+- 2026-06-19: se reabre la tarea por bug pendiente: aprobar/rechazar reportes sigue redirigiendo a la página principal del evento en producción.
 
 - 2026-06-18: se marca como cerrada tras completar la bandeja de revisión, aprobación/rechazo y corrección previa a aprobación mediante la continuación en `BH-014`.
 
