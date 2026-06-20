@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { errorJson, parseIntOrNull, parseString } from "../shared";
+import { errorJson, parseIntOrNull, parseString, requireOrganizedPlayAccess } from "../shared";
 
 function parseMinutes(value: unknown) {
   const parsed = parseIntOrNull(value);
@@ -14,8 +14,12 @@ function parseMinutes(value: unknown) {
 
 export async function GET() {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion para consultar tu horario habitual.", 401);
+  const access = await requireOrganizedPlayAccess(session, {
+    unauthenticatedMessage: "Debes iniciar sesion para consultar tu horario habitual.",
+    forbiddenMessage: "Necesitas ser socio o estar inscrito en una liga activa publicada para consultar tu horario habitual.",
+  });
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   const rows = await prisma.recurringAvailability.findMany({
     where: { userId },
@@ -27,8 +31,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion para guardar tu horario habitual.", 401);
+  const access = await requireOrganizedPlayAccess(session, {
+    unauthenticatedMessage: "Debes iniciar sesion para guardar tu horario habitual.",
+    forbiddenMessage: "Necesitas ser socio o estar inscrito en una liga activa publicada para guardar tu horario habitual.",
+  });
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   let raw: any;
   try {

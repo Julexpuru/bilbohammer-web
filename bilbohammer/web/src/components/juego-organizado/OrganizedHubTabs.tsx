@@ -16,7 +16,7 @@ type Props = {
   tables: FilterItem[];
   initialError?: string | null;
   canManage: boolean;
-  isAuthenticated: boolean;
+  canUseOrganizedPlay: boolean;
 };
 
 type TabKey = "calendar" | "tables";
@@ -26,7 +26,7 @@ export function OrganizedHubTabs({
   tables,
   initialError = null,
   canManage,
-  isAuthenticated,
+  canUseOrganizedPlay,
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>("calendar");
 
@@ -47,7 +47,7 @@ export function OrganizedHubTabs({
             />
           </div>
 
-          {activeTab === "calendar" && isAuthenticated && (
+          {activeTab === "calendar" && canUseOrganizedPlay && (
             <Link
               href="/juego-organizado/mis-partidas"
               className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[var(--accent-600)] px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-lg transition hover:bg-[var(--accent)] hover:text-[#0b1216] sm:min-w-[240px]"
@@ -70,7 +70,12 @@ export function OrganizedHubTabs({
             </div>
           </div>
 
-          <OrganizedCalendarView games={games} tables={tables} initialError={initialError} />
+          <OrganizedCalendarView
+            games={games}
+            tables={tables}
+            initialError={initialError}
+            canUseOrganizedPlay={canUseOrganizedPlay}
+          />
         </section>
       ) : (
         <section className="space-y-5">

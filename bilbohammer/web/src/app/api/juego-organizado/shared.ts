@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ReservationStatus, TableStatus, MatchStatus, SlotStatus, ParticipantRole, ParticipantStatus } from "@prisma/client";
+import type { Session } from "next-auth";
+import { userCanAccessOrganizedPlay } from "@/lib/roles";
 
 type EnumLike = Record<string, string>;
 
@@ -54,4 +56,33 @@ export function parseParticipantStatus(value: unknown): ParticipantStatus | null
 
 export function errorJson(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
+}
+
+export async function requireOrganizedPlayAccess(
+  session: Session | null | undefined,
+  options?: {
+    unauthenticatedMessage?: string;
+    forbiddenMessage?: string;
+  }
+) {
+  const userId = parseIntOrNull((session?.user as any)?.id);
+  if (!userId) {
+    return {
+      userId: null,
+      response: errorJson(options?.unauthenticatedMessage ?? "Debes iniciar sesion.", 401),
+    };
+  }
+
+  if (!(await userCanAccessOrganizedPlay(session))) {
+    return {
+      userId: null,
+      response: errorJson(
+        options?.forbiddenMessage ??
+          "Necesitas ser socio o estar inscrito en una liga activa publicada para usar esta parte de juego organizado.",
+        403
+      ),
+    };
+  }
+
+  return { userId, response: null };
 }

@@ -56,6 +56,7 @@ type Props = {
   games: FilterItem[];
   tables: FilterItem[];
   initialError?: string | null;
+  canUseOrganizedPlay: boolean;
 };
 
 const WEEKDAY_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
@@ -167,7 +168,7 @@ function rangeForGrid(cells: DayCell[]) {
   return { from, to };
 }
 
-export function OrganizedCalendarView({ games, tables, initialError = null }: Props) {
+export function OrganizedCalendarView({ games, tables, initialError = null, canUseOrganizedPlay }: Props) {
   const { data: session } = useSession();
   const userId = useMemo(() => {
     const raw = (session?.user as any)?.id;
@@ -378,13 +379,14 @@ export function OrganizedCalendarView({ games, tables, initialError = null }: Pr
 
             <div className="mt-5 space-y-3">
               {selectedItems.map((item) => (
-                <CalendarTicket
-                  key={`${item.type}-${item.id}`}
-                  item={item}
-                  userId={userId}
-                  onOpenProposal={() => setProposalTarget(item)}
-                />
-              ))}
+              <CalendarTicket
+                key={`${item.type}-${item.id}`}
+                item={item}
+                userId={userId}
+                canUseOrganizedPlay={canUseOrganizedPlay}
+                onOpenProposal={() => setProposalTarget(item)}
+              />
+            ))}
               {!loading && selectedItems.length === 0 && <p className="text-sm text-[var(--muted)]">No hay partidas, reservas ni ofertas para este dia.</p>}
             </div>
           </section>
@@ -397,6 +399,7 @@ export function OrganizedCalendarView({ games, tables, initialError = null }: Pr
               item={item}
               showDate
               userId={userId}
+              canUseOrganizedPlay={canUseOrganizedPlay}
               onOpenProposal={() => setProposalTarget(item)}
             />
           ))}
@@ -469,11 +472,13 @@ function CalendarTicket({
   item,
   showDate = false,
   userId,
+  canUseOrganizedPlay,
   onOpenProposal,
 }: {
   item: CalendarItem;
   showDate?: boolean;
   userId: number | null;
+  canUseOrganizedPlay: boolean;
   onOpenProposal: () => void;
 }) {
   const startDate = new Date(item.start);
@@ -490,6 +495,7 @@ function CalendarTicket({
   const canPropose =
     item.type === "slot" &&
     userId != null &&
+    canUseOrganizedPlay &&
     !isOwner &&
     slotStatus === "OPEN" &&
     !item.viewerProposal;

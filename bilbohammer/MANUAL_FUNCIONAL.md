@@ -7,7 +7,7 @@ Este documento resume que muestra cada seccion de la web, que flujos hay impleme
 | Rol | Acceso destacado |
 | --- | ---------------- |
 | Publico | Navega por inicio, novedades abiertas, eventos, galeria, sobre nosotros, login y registro. |
-| Amigo | Usuario registrado sin rol de socio. Puede iniciar sesion y editar su perfil, pero no accede a contenido privado. |
+| Amigo | Usuario registrado sin rol de socio. Puede iniciar sesion y editar su perfil. Ademas, puede usar `juego organizado` si esta inscrito en una liga activa publicada; fuera de eso no accede a contenido privado. |
 | Socio | Ve la pestana privada de novedades, el tablon de socios, la invitacion a Discord y aparece en los listados internos. |
 | Redactor | Todas las capacidades de socio y ademas puede crear/editar articulos en `/novedades`. |
 | Junta | Administra eventos, galeria, juegos, contacto, tablon, asignaciones de junta y todo el panel de usuarios. |
@@ -75,6 +75,13 @@ Este documento resume que muestra cada seccion de la web, que flujos hay impleme
 - `/register`: cualquier persona puede crear cuenta. Entra como `AMIGO` a la espera de que la junta le asigne otro rol.
 - `/register/invite/[token]`: valida invitaciones (`UserInvite`), pre rellena correo y rol, expira enlaces usados o caducados y muestra error si el email ya existe.
 - Cambios de contrasena locales se gestionan desde Admin > Gestion de usuarios (boton Cambiar contrasena).
+
+### 3.3 Juego organizado (`/juego-organizado`, `/juego-organizado/mis-partidas`)
+- La portada de `juego organizado` es consultable en abierto: calendario, partidas y estado de mesas.
+- El acceso operativo a `Mis partidas`, creacion de slots, horario habitual, publicacion semanal, propuestas y gestion de partidas requiere cumplir una de estas condiciones:
+  - tener rol `SOCIO`, `JUNTA` o `ADMIN`;
+  - o estar inscrito con estado activo en una liga activa publicada.
+- Si la cuenta no cumple esa regla, la web oculta las acciones privadas y las APIs devuelven acceso denegado aunque haya sesion iniciada.
 
 ## 4. Panel de administracion
 

@@ -4,15 +4,18 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { parseDate, parseIntOrNull, parseString, errorJson } from "../../../shared";
+import { parseDate, parseString, errorJson, requireOrganizedPlayAccess } from "../../../shared";
 import { getSlotAllowedGameIds, ensureProposalInsideSlot } from "@/lib/organized-slot-proposals";
 import { getEffectiveSlotStatus } from "@/lib/organized-slot-status";
 import { getUserDisplayName, notifySlotProposalReceived } from "@/lib/notifications";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion.", 401);
+  const access = await requireOrganizedPlayAccess(session, {
+    forbiddenMessage: "Necesitas ser socio o estar inscrito en una liga activa publicada para apuntarte a una oferta.",
+  });
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   let raw: any;
   try {

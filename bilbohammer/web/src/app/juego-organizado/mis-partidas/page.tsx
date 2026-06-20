@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { extractRoles } from "@/lib/roles";
+import { userCanAccessOrganizedPlay } from "@/lib/roles";
 import { SlotsList } from "@/components/juego-organizado/SlotsList";
 import { SlotForm } from "@/components/juego-organizado/SlotForm";
 import { MyAvailabilityPlanner } from "@/components/juego-organizado/MyAvailabilityPlanner";
@@ -53,7 +53,36 @@ async function loadMyMatches(userId: number | null) {
 
 export default async function MisPartidasPage() {
   const session = await auth();
-  const roles = extractRoles(session);
+  const canUseOrganizedPlay = session?.user ? await userCanAccessOrganizedPlay(session) : false;
+
+  if (!session?.user) {
+    return (
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-0">
+        <div className="space-y-2">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">Juego organizado</p>
+          <h1 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">Mis partidas</h1>
+        </div>
+        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-5 text-sm text-[var(--muted)]">
+          Necesitas iniciar sesion para usar esta seccion.
+        </div>
+      </div>
+    );
+  }
+
+  if (!canUseOrganizedPlay) {
+    return (
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-0">
+        <div className="space-y-2">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">Juego organizado</p>
+          <h1 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">Mis partidas</h1>
+        </div>
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-800">
+          Esta seccion esta disponible para socios y para usuarios inscritos en una liga activa publicada.
+        </div>
+      </div>
+    );
+  }
+
   const userIdRaw = (session?.user as any)?.id;
   const userId = typeof userIdRaw === "number" ? userIdRaw : typeof userIdRaw === "string" ? Number(userIdRaw) : null;
   const [{ games, error: gamesError }, { matches, error: matchesError }] = await Promise.all([
@@ -110,9 +139,6 @@ export default async function MisPartidasPage() {
           <h2 className="text-xl font-semibold text-[var(--text)]">Mis Slots</h2>
           <div className="flex items-center gap-3">
             <SlotCleanupButton />
-            {roles.length === 0 && (
-              <span className="text-xs text-[var(--muted)]">Inicia sesion para crear/gestionar.</span>
-            )}
           </div>
         </div>
         <div className="mt-4">

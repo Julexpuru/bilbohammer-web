@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { parseDate, parseIntOrNull, parseSlotStatus, parseString, errorJson } from "../shared";
+import { parseDate, parseIntOrNull, parseSlotStatus, parseString, errorJson, requireOrganizedPlayAccess } from "../shared";
 import { includesGamePreference } from "@/lib/organized-slot-metadata";
 import { isClosedMatchStatus } from "@/lib/organized-slot-status";
 import { notifyCompatibleSlotCreated } from "@/lib/notifications";
@@ -120,8 +120,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion para crear disponibilidad.", 401);
+  const access = await requireOrganizedPlayAccess(session, {
+    unauthenticatedMessage: "Debes iniciar sesion para crear disponibilidad.",
+    forbiddenMessage: "Necesitas ser socio o estar inscrito en una liga activa publicada para crear disponibilidad.",
+  });
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   let raw: any;
   try {

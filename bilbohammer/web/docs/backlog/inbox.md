@@ -18,5 +18,6 @@ Captura rapida de ideas todavia no refinadas.
 - [ ] Completar adecuadamente las secciones de juegos: contenido, textos y materiales pendientes.
 - [ ] Revisar como mejorar las secciones de redes sociales.
 - [ ] Revisar la seccion del inicio orientada a socios con noticias o contenido similar por si ha quedado obsoleta.
+- [ ] Corregir bug del editor de secciones con texto complejo: al aplicar formato de lista, el efecto no se ve mientras se edita, aunque sí queda aplicado al terminar.
 - [ ] Limpiar y refrescar las bases de datos expuestas para eliminar usuarios de prueba y datos similares antes de cierre real.
 - [ ] Hacer una revision global de toda la web cuando no queden tareas funcionales importantes abiertas.

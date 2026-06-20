@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { extractRoles } from "@/lib/roles";
+import { extractRoles, userCanAccessOrganizedPlay } from "@/lib/roles";
 import { isZoneTableName } from "@/lib/organized-tables";
 import { OrganizedHubTabs } from "@/components/juego-organizado/OrganizedHubTabs";
 
@@ -36,6 +36,7 @@ export default async function JuegoOrganizadoHubPage() {
   const session = await auth();
   const roles = extractRoles(session);
   const canManage = roles.includes("ADMIN") || roles.includes("JUNTA");
+  const canUseOrganizedPlay = session?.user ? await userCanAccessOrganizedPlay(session) : false;
   const { tables, games, loadError } = await loadHubData();
 
   return (
@@ -55,12 +56,19 @@ export default async function JuegoOrganizadoHubPage() {
         </div>
       )}
 
+      {session?.user && !canUseOrganizedPlay && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800">
+          Para usar <span className="font-semibold">Mis partidas</span> y apuntarte a ofertas necesitas ser socio o
+          estar inscrito en una liga activa publicada.
+        </div>
+      )}
+
       <OrganizedHubTabs
         games={games}
         tables={tables}
         initialError={loadError}
         canManage={canManage}
-        isAuthenticated={Boolean(session?.user)}
+        canUseOrganizedPlay={canUseOrganizedPlay}
       />
     </div>
   );

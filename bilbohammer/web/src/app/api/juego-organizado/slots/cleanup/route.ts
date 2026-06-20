@@ -4,13 +4,14 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { parseIntOrNull, errorJson } from "../../shared";
+import { errorJson, requireOrganizedPlayAccess } from "../../shared";
 import { getEffectiveSlotStatus } from "@/lib/organized-slot-status";
 
 export async function POST() {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion.", 401);
+  const access = await requireOrganizedPlayAccess(session);
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   const slots = await prisma.availabilitySlot.findMany({
     where: { creatorId: userId },

@@ -1,8 +1,10 @@
 export const dynamic = "force-dynamic";
 
+import { auth } from "@/auth";
 import { OrganizedCalendarView } from "@/components/juego-organizado/OrganizedCalendarView";
 import { isZoneTableName } from "@/lib/organized-tables";
 import { prisma } from "@/lib/prisma";
+import { userCanAccessOrganizedPlay } from "@/lib/roles";
 
 async function loadFilters() {
   try {
@@ -31,6 +33,8 @@ async function loadFilters() {
 }
 
 export default async function CalendarioPage() {
+  const session = await auth();
+  const canUseOrganizedPlay = session?.user ? await userCanAccessOrganizedPlay(session) : false;
   const { tables, games, loadError } = await loadFilters();
 
   return (
@@ -43,7 +47,12 @@ export default async function CalendarioPage() {
         </p>
       </div>
 
-      <OrganizedCalendarView games={games} tables={tables} initialError={loadError} />
+      <OrganizedCalendarView
+        games={games}
+        tables={tables}
+        initialError={loadError}
+        canUseOrganizedPlay={canUseOrganizedPlay}
+      />
     </div>
   );
 }

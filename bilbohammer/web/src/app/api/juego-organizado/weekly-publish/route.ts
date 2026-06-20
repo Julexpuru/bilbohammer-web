@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { errorJson, parseDate, parseIntOrNull, parseString } from "../shared";
+import { errorJson, parseDate, parseString, requireOrganizedPlayAccess } from "../shared";
 import { serializeSlotMetadata } from "@/lib/organized-slot-metadata";
 import { notifyCompatibleSlotCreated } from "@/lib/notifications";
 
@@ -24,8 +24,12 @@ function withMinutes(day: Date, minutes: number) {
 
 export async function POST(request: Request) {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion para publicar disponibilidad.", 401);
+  const access = await requireOrganizedPlayAccess(session, {
+    unauthenticatedMessage: "Debes iniciar sesion para publicar disponibilidad.",
+    forbiddenMessage: "Necesitas ser socio o estar inscrito en una liga activa publicada para publicar disponibilidad.",
+  });
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   let raw: any;
   try {

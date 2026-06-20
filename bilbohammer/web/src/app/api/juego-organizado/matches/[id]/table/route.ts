@@ -10,14 +10,15 @@ import { compareTableNames } from "@/lib/organized-table-naming";
 import { getEffectiveMatchStatus } from "@/lib/organized-slot-status";
 import { isZoneTableName } from "@/lib/organized-tables";
 import { userCanManageMatches, userCanManageReservations } from "@/lib/roles";
-import { errorJson, parseIntOrNull, parseString } from "../../../shared";
+import { errorJson, parseString, requireOrganizedPlayAccess } from "../../../shared";
 
 const ACTIVE_RESERVATION_STATUSES: ReservationStatus[] = ["PENDING", "CONFIRMED", "IN_PLAY"];
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion.", 401);
+  const access = await requireOrganizedPlayAccess(session);
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   const match = await prisma.match.findUnique({
     where: { id: params.id },
@@ -114,8 +115,9 @@ export async function GET(_request: Request, { params }: { params: { id: string 
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion.", 401);
+  const access = await requireOrganizedPlayAccess(session);
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   let raw: any;
   try {
@@ -220,8 +222,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion.", 401);
+  const access = await requireOrganizedPlayAccess(session);
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   const match = await prisma.match.findUnique({
     where: { id: params.id },

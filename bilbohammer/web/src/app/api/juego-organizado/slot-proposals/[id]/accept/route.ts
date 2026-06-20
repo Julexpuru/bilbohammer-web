@@ -3,13 +3,14 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { parseIntOrNull, errorJson } from "../../../shared";
+import { errorJson, requireOrganizedPlayAccess } from "../../../shared";
 import { acceptSlotProposal, SlotProposalActionError } from "@/lib/organized-slot-proposal-actions";
 
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion.", 401);
+  const access = await requireOrganizedPlayAccess(session);
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   try {
     const result = await acceptSlotProposal(params.id, userId);

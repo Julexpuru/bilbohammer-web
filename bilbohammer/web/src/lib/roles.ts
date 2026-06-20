@@ -1,7 +1,10 @@
-﻿import type { Session } from "next-auth";
+﻿import { EventStatus, EventType } from "@prisma/client";
+import type { Session } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { ACTIVE_EVENT_REGISTRATION_STATUSES } from "@/lib/event-registrations";
 
 const CLUB_PRIVILEGE_ROLES = new Set(["ADMIN", "JUNTA"]);
+const ORGANIZED_PLAY_BASE_ROLES = new Set(["SOCIO", "JUNTA", "ADMIN"]);
 
 export function extractRoles(session: Session | null | undefined): string[] {
   const rawRoles = Array.isArray((session?.user as any)?.roles)
@@ -18,6 +21,11 @@ export function extractRoles(session: Session | null | undefined): string[] {
 function hasClubPrivileges(session: Session | null | undefined): boolean {
   const roles = extractRoles(session);
   return roles.some((role) => CLUB_PRIVILEGE_ROLES.has(role));
+}
+
+export function userHasOrganizedPlayBaseRole(session: Session | null | undefined): boolean {
+  const roles = extractRoles(session);
+  return roles.some((role) => ORGANIZED_PLAY_BASE_ROLES.has(role));
 }
 
 export function userCanManageGallery(session: Session | null | undefined): boolean {
@@ -62,6 +70,34 @@ function normalizeEventId(eventId: string | null | undefined): string | null {
   if (typeof eventId !== "string") return null;
   const trimmed = eventId.trim();
   return trimmed.length ? trimmed : null;
+}
+
+export async function userHasActiveLeagueRegistration(session: Session | null | undefined): Promise<boolean> {
+  const userId = resolveSessionUserId(session);
+  if (userId == null) return false;
+
+  const registration = await prisma.eventRegistration.findFirst({
+    where: {
+      userId,
+      status: { in: [...ACTIVE_EVENT_REGISTRATION_STATUSES] },
+      event: {
+        type: EventType.LEAGUE,
+        status: { in: [EventStatus.PUBLISHED, EventStatus.PREPARATION, EventStatus.IN_PROGRESS] },
+        endsAt: { gte: new Date() },
+      },
+    },
+    select: { id: true },
+  });
+
+  return Boolean(registration);
+}
+
+export async function userCanAccessOrganizedPlay(session: Session | null | undefined): Promise<boolean> {
+  if (userHasOrganizedPlayBaseRole(session)) {
+    return true;
+  }
+
+  return userHasActiveLeagueRegistration(session);
 }
 
 export async function userIsEventOrganizer(

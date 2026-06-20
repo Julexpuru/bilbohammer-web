@@ -4,13 +4,14 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { parseIntOrNull, parseSlotStatus, parseString, parseDate, errorJson } from "../../shared";
+import { parseIntOrNull, parseSlotStatus, parseString, parseDate, errorJson, requireOrganizedPlayAccess } from "../../shared";
 import { getEffectiveSlotStatus } from "@/lib/organized-slot-status";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion.", 401);
+  const access = await requireOrganizedPlayAccess(session);
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   const { id } = params;
   const slot = await prisma.availabilitySlot.findUnique({
@@ -79,8 +80,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
-  const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion.", 401);
+  const access = await requireOrganizedPlayAccess(session);
+  if (access.response) return access.response;
+  const userId = access.userId;
 
   const { id } = params;
   const slot = await prisma.availabilitySlot.findUnique({

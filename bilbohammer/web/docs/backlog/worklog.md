@@ -4,6 +4,8 @@ Registro cronologico breve de trabajo realizado o contexto consolidado.
 
 ## 2026-06-20
 
+- Se registra en `inbox` un bug pendiente del editor de texto complejo: los formatos de lista no se previsualizan durante la edición aunque se aplican al terminar.
+
 - Se limita la notificación de reportes competitivos pendientes a organizadores explícitos del evento; admin/junta mantienen permisos globales, pero no reciben avisos de ligas que no organizan.
 - Se deja la gestión de participantes del evento plegada por defecto para organizador/admin y se ajusta la cabecera de hojas competitivas para usar el nombre del evento en la miga, sin repetirlo bajo `Datos competitivos`.
 - Se compacta la visualización móvil de hojas competitivas y se sustituye el bloqueo de columnas por resaltado de la última fila pulsada; además, los participantes activos aparecen con 0 partidas en Liga/Paladín y el panel de participantes del evento pasa a ser gestión privada de organizador/admin.
