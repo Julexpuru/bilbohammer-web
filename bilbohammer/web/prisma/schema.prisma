@@ -1142,11 +1142,12 @@ model CompetitiveMatchReportPlayer {
 }
 
 model CompetitiveEventSettings {
-  eventId        String   @id
-  paladinFormula String   @db.Text
-  updatedById    Int?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  eventId         String   @id
+  paladinFormula  String   @db.Text
+  showReportRound Boolean  @default(true)
+  updatedById     Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }

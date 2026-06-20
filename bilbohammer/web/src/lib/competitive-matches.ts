@@ -66,6 +66,7 @@ type CompetitiveReadDb = PrismaClient | Prisma.TransactionClient;
 export type CompetitiveEventSettingsData = {
   eventId: string;
   paladinFormula: string;
+  showReportRound: boolean;
   updatedById: number | null;
   updatedAt: Date | null;
 };
@@ -235,15 +236,38 @@ export async function getCompetitiveEventSettings(
 ): Promise<CompetitiveEventSettingsData> {
   const settings = await db.competitiveEventSettings.findUnique({
     where: { eventId },
-    select: { eventId: true, paladinFormula: true, updatedById: true, updatedAt: true },
+    select: { eventId: true, paladinFormula: true, showReportRound: true, updatedById: true, updatedAt: true },
   });
 
   return {
     eventId,
     paladinFormula: settings?.paladinFormula ?? DEFAULT_PALADIN_FORMULA,
+    showReportRound: settings?.showReportRound ?? true,
     updatedById: settings?.updatedById ?? null,
     updatedAt: settings?.updatedAt ?? null,
   };
+}
+
+export async function updateCompetitiveEventReportOptions(
+  eventId: string,
+  actorId: number | null,
+  input: { showReportRound: boolean },
+  db: CompetitiveDb = prisma,
+) {
+  return db.competitiveEventSettings.upsert({
+    where: { eventId },
+    create: {
+      eventId,
+      paladinFormula: DEFAULT_PALADIN_FORMULA,
+      showReportRound: input.showReportRound,
+      updatedById: actorId,
+    },
+    update: {
+      showReportRound: input.showReportRound,
+      updatedById: actorId,
+    },
+    select: { eventId: true, paladinFormula: true, showReportRound: true, updatedById: true, updatedAt: true },
+  });
 }
 
 export async function updateCompetitiveEventPaladinFormula(

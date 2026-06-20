@@ -2,6 +2,10 @@
 
 Registro cronologico breve de trabajo realizado o contexto consolidado.
 
+## 2026-06-20
+
+- Se endurece el flujo de revisión de reportes competitivos para que aprobar/rechazar/corregir no haga `redirect()` y permanezca en la bandeja tras revalidar. Se añade configuración de reportes por evento con opción admin/organizador para mostrar u ocultar la ronda.
+
 ## 2026-06-19
 
 - Se reabre `BH-013` por bug pendiente: aprobar/rechazar reportes sigue redirigiendo a la página principal del evento en producción. Se añade fixture CSV de regresión para duplicados, pachangas, empates, nombres problemáticos e idempotencia, junto con SQL revisable para resetear datos competitivos de un evento.

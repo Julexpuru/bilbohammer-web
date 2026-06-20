@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import {
   findExistingLeagueMatchForPlayers,
+  getCompetitiveEventSettings,
   listPendingCompetitiveMatchReports,
   type CreateCompetitiveMatchReportInput,
 } from "@/lib/competitive-matches";
@@ -183,6 +184,7 @@ function ReportCard({
   hasLeagueDuplicate,
   report,
   registrations,
+  showReportRound,
 }: {
   eventId: string;
   eventSlug: string;
@@ -190,11 +192,12 @@ function ReportCard({
   hasLeagueDuplicate: boolean;
   report: PendingCompetitiveReport;
   registrations: RegistrationOption[];
+  showReportRound: boolean;
 }) {
   const [firstPlayer, secondPlayer] = report.players;
   const firstRegistrationId = resolveRegistrationId(firstPlayer, registrations);
   const secondRegistrationId = resolveRegistrationId(secondPlayer, registrations);
-  const hasSecondaryDetails = report.roundNumber != null || report.notes || describeSubmitter(report);
+  const hasSecondaryDetails = (showReportRound && report.roundNumber != null) || report.notes || describeSubmitter(report);
 
   return (
     <article className="space-y-4 rounded-3xl border border-white/10 bg-black/20 p-4 shadow-lg sm:space-y-5 sm:p-5">
@@ -244,7 +247,7 @@ function ReportCard({
               <dt className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--muted)]">Trazabilidad</dt>
               <dd className="break-all text-sm text-white">{describeSubmitter(report)}</dd>
             </div>
-            {report.roundNumber != null && (
+            {showReportRound && report.roundNumber != null && (
               <div className="grid gap-1">
                 <dt className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--muted)]">Ronda</dt>
                 <dd className="text-sm text-white">{report.roundNumber}</dd>
@@ -297,9 +300,9 @@ function ReportCard({
         </div>
       </dl>
 
-      {(report.roundNumber != null || report.notes) && (
+      {((showReportRound && report.roundNumber != null) || report.notes) && (
         <div className="hidden gap-4 sm:grid md:grid-cols-2">
-          {report.roundNumber != null && (
+          {showReportRound && report.roundNumber != null && (
             <div className="space-y-1">
               <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Ronda</p>
               <p className="text-sm text-white">{report.roundNumber}</p>
@@ -355,19 +358,23 @@ function ReportCard({
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor={`roundNumber-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                Ronda
-              </label>
-              <input
-                id={`roundNumber-${report.id}`}
-                name="roundNumber"
-                type="number"
-                min={0}
-                defaultValue={report.roundNumber ?? ""}
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-              />
-            </div>
+            {showReportRound ? (
+              <div className="space-y-2">
+                <label htmlFor={`roundNumber-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
+                  Ronda
+                </label>
+                <input
+                  id={`roundNumber-${report.id}`}
+                  name="roundNumber"
+                  type="number"
+                  min={0}
+                  defaultValue={report.roundNumber ?? ""}
+                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                />
+              </div>
+            ) : (
+              <input type="hidden" name="roundNumber" value={report.roundNumber ?? ""} />
+            )}
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -539,20 +546,23 @@ export default async function EventCompetitiveReportsPage({
     redirect(`/eventos/${buildEventSlug(event.id, event.title)}`);
   }
 
-  const reports = await listPendingCompetitiveMatchReports(event.id);
-  const registrations = await prisma.eventRegistration.findMany({
-    where: {
-      eventId: event.id,
-      status: { in: [EventRegistrationStatus.INSCRITO, EventRegistrationStatus.PAGADO] },
-    },
-    select: {
-      id: true,
-      userId: true,
-      playerName: true,
-      factionLabel: true,
-    },
-    orderBy: [{ playerName: "asc" }],
-  });
+  const [reports, registrations, competitiveSettings] = await Promise.all([
+    listPendingCompetitiveMatchReports(event.id),
+    prisma.eventRegistration.findMany({
+      where: {
+        eventId: event.id,
+        status: { in: [EventRegistrationStatus.INSCRITO, EventRegistrationStatus.PAGADO] },
+      },
+      select: {
+        id: true,
+        userId: true,
+        playerName: true,
+        factionLabel: true,
+      },
+      orderBy: [{ playerName: "asc" }],
+    }),
+    getCompetitiveEventSettings(event.id),
+  ]);
   const duplicateReportIds = new Set(
     (
       await Promise.all(
@@ -589,6 +599,12 @@ export default async function EventCompetitiveReportsPage({
           >
             Volver al evento
           </Link>
+          <Link
+            href={`/eventos/${params.slug}/reportes/opciones`}
+            className="w-fit rounded-full border border-sky-300/40 px-4 py-2 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/10"
+          >
+            Opciones de reportes
+          </Link>
         </div>
       </header>
 
@@ -612,6 +628,7 @@ export default async function EventCompetitiveReportsPage({
               hasLeagueDuplicate={duplicateReportIds.has(report.id)}
               registrations={registrations}
               report={report}
+              showReportRound={competitiveSettings.showReportRound}
             />
           ))}
         </section>

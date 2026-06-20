@@ -49,9 +49,11 @@ No entra:
 
 ## Bugs pendientes
 
-- Al aprobar o rechazar un reporte pendiente desde la bandeja de revisión, la navegación sigue volviendo a la página principal del evento en producción. El comportamiento esperado es permanecer en `/eventos/[slug]/reportes` y que desaparezca la tarjeta procesada.
+- Validar en producción que aprobar/rechazar/corregir permanece en `/eventos/[slug]/reportes`. Se ha endurecido el flujo para no usar `redirect()` en esas Server Actions y limitarse a revalidar la bandeja.
 
 ## Historial
+
+- 2026-06-20: se endurece el bug de navegación eliminando el `redirect()` de aprobar/rechazar/corregir reportes; las acciones revalidan la bandeja y dejan al navegador en la misma página. Se añade página de opciones de reportes para configurar si se muestra la ronda.
 
 - 2026-06-19: se reabre la tarea por bug pendiente: aprobar/rechazar reportes sigue redirigiendo a la página principal del evento en producción.
 

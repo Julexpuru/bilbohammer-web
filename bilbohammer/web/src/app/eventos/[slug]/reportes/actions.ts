@@ -6,12 +6,12 @@ import {
   CompetitiveMatchReportStatus,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import {
   approveCompetitiveMatchReport,
   rejectCompetitiveMatchReport,
+  updateCompetitiveEventReportOptions,
   updatePendingCompetitiveMatchReport,
 } from "@/lib/competitive-matches";
 import { resolveSessionUserId } from "@/lib/event-registrations";
@@ -114,7 +114,6 @@ export async function approveCompetitiveReportAction(formData: FormData) {
   const reportId = readString(formData, "reportId");
 
   let path = "/eventos";
-  const params = new URLSearchParams();
 
   try {
     const session = await auth();
@@ -124,13 +123,9 @@ export async function approveCompetitiveReportAction(formData: FormData) {
 
     await approveCompetitiveMatchReport(reportId, reviewerId);
     revalidatePath(path);
-    params.set("feedback", "approved");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "No se pudo aprobar el reporte.";
-    params.set("error", message);
+  } catch {
+    return;
   }
-
-  redirect(params.size > 0 ? `${path}?${params.toString()}` : path);
 }
 
 export async function updateCompetitiveReportAction(formData: FormData) {
@@ -138,7 +133,6 @@ export async function updateCompetitiveReportAction(formData: FormData) {
   const reportId = readString(formData, "reportId");
 
   let path = "/eventos";
-  const params = new URLSearchParams();
 
   try {
     const context = await loadReviewContext(eventId, reportId);
@@ -203,13 +197,9 @@ export async function updateCompetitiveReportAction(formData: FormData) {
     });
 
     revalidatePath(path);
-    params.set("feedback", "updated");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "No se pudo corregir el reporte.";
-    params.set("error", message);
+  } catch {
+    return;
   }
-
-  redirect(params.size > 0 ? `${path}?${params.toString()}` : path);
 }
 
 export async function rejectCompetitiveReportAction(formData: FormData) {
@@ -218,7 +208,6 @@ export async function rejectCompetitiveReportAction(formData: FormData) {
   const rejectionReason = readString(formData, "rejectionReason").slice(0, 500);
 
   let path = "/eventos";
-  const params = new URLSearchParams();
 
   try {
     const session = await auth();
@@ -228,11 +217,31 @@ export async function rejectCompetitiveReportAction(formData: FormData) {
 
     await rejectCompetitiveMatchReport(reportId, reviewerId, rejectionReason);
     revalidatePath(path);
-    params.set("feedback", "rejected");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "No se pudo rechazar el reporte.";
-    params.set("error", message);
+  } catch {
+    return;
+  }
+}
+
+export async function updateCompetitiveReportOptionsAction(formData: FormData) {
+  const eventId = readString(formData, "eventId");
+  const eventSlug = readString(formData, "eventSlug");
+  const showReportRound = formData.get("showReportRound") === "on";
+
+  const session = await auth();
+  if (!(await userCanEditEvent(session, eventId))) {
+    throw new Error("No autorizado.");
   }
 
-  redirect(params.size > 0 ? `${path}?${params.toString()}` : path);
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { id: true, title: true },
+  });
+  if (!event) {
+    throw new Error("Evento no encontrado.");
+  }
+
+  await updateCompetitiveEventReportOptions(event.id, resolveSessionUserId(session), { showReportRound });
+  const slug = eventSlug || buildEventSlug(event.id, event.title);
+  revalidatePath(`/eventos/${slug}/reportes`);
+  revalidatePath(`/eventos/${slug}/reportes/opciones`);
 }
