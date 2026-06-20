@@ -404,7 +404,7 @@ export default async function EventCompetitiveSheetsPage({
       <header className="space-y-4">
         <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
           <Link href={`/eventos/${eventSlug}`} className="transition hover:text-white">
-            Evento
+            {event.title}
           </Link>
           <span>/</span>
           <span>Hojas competitivas</span>
@@ -416,7 +416,7 @@ export default async function EventCompetitiveSheetsPage({
             </p>
             <h1 className="text-3xl font-semibold text-white">Datos competitivos</h1>
             <p className="max-w-3xl text-sm leading-relaxed text-[var(--muted)]">
-              {event.title}. Las tablas se calculan desde las partidas aprobadas; no se editan a mano.
+              Las tablas se calculan desde las partidas aprobadas; no se editan a mano.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

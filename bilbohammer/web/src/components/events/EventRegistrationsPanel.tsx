@@ -92,6 +92,7 @@ export default function EventRegistrationsPanel({
   const [newStatus, setNewStatus] = React.useState<RegistrationStatus>("INSCRITO");
   const [drafts, setDrafts] = React.useState<Record<string, Registration>>({});
   const [linkEmails, setLinkEmails] = React.useState<Record<string, string>>({});
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   const orderedRegistrations = React.useMemo(
     () =>
@@ -278,6 +279,14 @@ export default function EventRegistrationsPanel({
           <h2 className="mt-1 text-xl font-semibold text-white">{capacityLabel}</h2>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setIsExpanded((current) => !current)}
+            aria-expanded={isExpanded}
+            className="rounded-full border border-sky-300/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-sky-100 hover:bg-sky-500/10"
+          >
+            {isExpanded ? "Ocultar gestión" : "Mostrar gestión"}
+          </button>
           {!currentUserId && canRegister && (
             <Link
               href="/login"
@@ -309,9 +318,11 @@ export default function EventRegistrationsPanel({
         </div>
       </div>
 
-      {error && <p className="rounded-2xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-100">{error}</p>}
+      {isExpanded && error && (
+        <p className="rounded-2xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-100">{error}</p>
+      )}
 
-      {orderedRegistrations.length > 0 ? (
+      {isExpanded && orderedRegistrations.length > 0 ? (
         <div className="space-y-2">
           {orderedRegistrations.map((registration) => {
             const draft = drafts[registration.id] ?? normalizeRegistration(registration);
@@ -401,11 +412,11 @@ export default function EventRegistrationsPanel({
             );
           })}
         </div>
-      ) : (
+      ) : isExpanded ? (
         <p className="text-sm text-[var(--muted)]">Todavía no hay participantes inscritos.</p>
-      )}
+      ) : null}
 
-      {canManage && (
+      {canManage && isExpanded && (
         <form onSubmit={handleAddRegistration} className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">Añadir participante</p>
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_150px_auto]">
