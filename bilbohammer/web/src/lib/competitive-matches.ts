@@ -5,6 +5,7 @@ import {
   CompetitiveMatchReportChannel,
   CompetitiveMatchReportStatus,
   CompetitiveMatchStatus,
+  CompetitiveReportScoringMode,
   Prisma,
   PrismaClient,
 } from "@prisma/client";
@@ -67,6 +68,7 @@ export type CompetitiveEventSettingsData = {
   eventId: string;
   paladinFormula: string;
   showReportRound: boolean;
+  scoringMode: CompetitiveReportScoringMode;
   updatedById: number | null;
   updatedAt: Date | null;
 };
@@ -218,6 +220,29 @@ function sameTwoPlayerPair(
   return left[0] === right[0] && left[1] === right[1];
 }
 
+function assertDistinctTwoPlayers(players: { userId: number | null; displayName: string }[]) {
+  if (players.length !== 2) return;
+  const [first, second] = players.map(playerKey);
+  if (first === second) {
+    throw new Error("Una partida no puede tener al mismo jugador en ambos lados.");
+  }
+}
+
+function validateScoresForMode(players: { score: number }[], mode: CompetitiveReportScoringMode) {
+  if (mode === CompetitiveReportScoringMode.SUM_20) {
+    const total = players.reduce((sum, player) => sum + player.score, 0);
+    if (total !== 20) {
+      throw new Error("La puntuación configurada para este evento exige que ambos jugadores sumen 20 puntos.");
+    }
+    return;
+  }
+
+  const invalid = players.some((player) => player.score < 0 || player.score > 100);
+  if (invalid) {
+    throw new Error("La puntuación configurada para este evento exige puntos entre 0 y 100 para cada jugador.");
+  }
+}
+
 function roundMetric(value: number, decimals = 3) {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
@@ -236,13 +261,21 @@ export async function getCompetitiveEventSettings(
 ): Promise<CompetitiveEventSettingsData> {
   const settings = await db.competitiveEventSettings.findUnique({
     where: { eventId },
-    select: { eventId: true, paladinFormula: true, showReportRound: true, updatedById: true, updatedAt: true },
+    select: {
+      eventId: true,
+      paladinFormula: true,
+      showReportRound: true,
+      scoringMode: true,
+      updatedById: true,
+      updatedAt: true,
+    },
   });
 
   return {
     eventId,
     paladinFormula: settings?.paladinFormula ?? DEFAULT_PALADIN_FORMULA,
     showReportRound: settings?.showReportRound ?? true,
+    scoringMode: settings?.scoringMode ?? CompetitiveReportScoringMode.INDIVIDUAL_0_100,
     updatedById: settings?.updatedById ?? null,
     updatedAt: settings?.updatedAt ?? null,
   };
@@ -251,7 +284,7 @@ export async function getCompetitiveEventSettings(
 export async function updateCompetitiveEventReportOptions(
   eventId: string,
   actorId: number | null,
-  input: { showReportRound: boolean },
+  input: { showReportRound: boolean; scoringMode: CompetitiveReportScoringMode },
   db: CompetitiveDb = prisma,
 ) {
   return db.competitiveEventSettings.upsert({
@@ -260,13 +293,22 @@ export async function updateCompetitiveEventReportOptions(
       eventId,
       paladinFormula: DEFAULT_PALADIN_FORMULA,
       showReportRound: input.showReportRound,
+      scoringMode: input.scoringMode,
       updatedById: actorId,
     },
     update: {
       showReportRound: input.showReportRound,
+      scoringMode: input.scoringMode,
       updatedById: actorId,
     },
-    select: { eventId: true, paladinFormula: true, showReportRound: true, updatedById: true, updatedAt: true },
+    select: {
+      eventId: true,
+      paladinFormula: true,
+      showReportRound: true,
+      scoringMode: true,
+      updatedById: true,
+      updatedAt: true,
+    },
   });
 }
 
@@ -396,7 +438,10 @@ export async function createCompetitiveMatchReport(
 
   assertNonNegativeInteger(input.roundNumber, "roundNumber");
   const players = normalizePlayers(input.players);
+  assertDistinctTwoPlayers(players);
   validateOutcomeConsistency(players);
+  const settings = input.eventId ? await getCompetitiveEventSettings(input.eventId, db) : null;
+  validateScoresForMode(players, settings?.scoringMode ?? CompetitiveReportScoringMode.INDIVIDUAL_0_100);
   await assertReportRateLimit(input, db);
 
   const report = await db.competitiveMatchReport.create({
@@ -405,7 +450,7 @@ export async function createCompetitiveMatchReport(
       gameId: input.gameId ?? null,
       kind,
       playedAt: input.playedAt,
-      roundNumber: input.roundNumber ?? null,
+      roundNumber: settings?.showReportRound === false ? null : input.roundNumber ?? null,
       channel: input.channel ?? CompetitiveMatchReportChannel.WEB,
       submittedById: input.submittedById ?? null,
       externalSubmitterId: normalizeNullableString(input.externalSubmitterId),
@@ -455,12 +500,13 @@ export async function updatePendingCompetitiveMatchReport(
   assertValidDate(input.playedAt);
   assertNonNegativeInteger(input.roundNumber, "roundNumber");
   const players = normalizePlayers(input.players);
+  assertDistinctTwoPlayers(players);
   validateOutcomeConsistency(players);
 
   return db.$transaction(async (tx) => {
     const report = await tx.competitiveMatchReport.findUnique({
       where: { id: reportId },
-      select: { id: true, status: true },
+      select: { id: true, eventId: true, status: true },
     });
 
     if (!report) {
@@ -469,6 +515,8 @@ export async function updatePendingCompetitiveMatchReport(
     if (report.status !== CompetitiveMatchReportStatus.PENDING) {
       throw new Error("Solo se pueden corregir reportes pendientes.");
     }
+    const settings = report.eventId ? await getCompetitiveEventSettings(report.eventId, tx) : null;
+    validateScoresForMode(players, settings?.scoringMode ?? CompetitiveReportScoringMode.INDIVIDUAL_0_100);
 
     await tx.competitiveMatchReportPlayer.deleteMany({ where: { reportId: report.id } });
 
@@ -477,7 +525,7 @@ export async function updatePendingCompetitiveMatchReport(
       data: {
         kind: input.kind,
         playedAt: input.playedAt,
-        roundNumber: input.roundNumber ?? null,
+        roundNumber: settings?.showReportRound === false ? null : input.roundNumber ?? null,
         notes: normalizeNullableString(input.notes),
         players: {
           create: players,
@@ -505,6 +553,9 @@ export async function approveCompetitiveMatchReport(
     if (report.status !== CompetitiveMatchReportStatus.PENDING) {
       throw new Error("Solo se pueden aprobar reportes pendientes.");
     }
+    assertDistinctTwoPlayers(report.players);
+    const settings = report.eventId ? await getCompetitiveEventSettings(report.eventId, tx) : null;
+    validateScoresForMode(report.players, settings?.scoringMode ?? CompetitiveReportScoringMode.INDIVIDUAL_0_100);
     if (report.kind === CompetitiveMatchKind.LEAGUE) {
       const duplicate = await findExistingLeagueMatchForPlayers(report.eventId, report.players, tx);
       if (duplicate) {

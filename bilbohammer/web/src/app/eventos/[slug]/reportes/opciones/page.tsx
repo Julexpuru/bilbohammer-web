@@ -1,3 +1,4 @@
+import { CompetitiveReportScoringMode } from "@prisma/client";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -77,6 +78,25 @@ export default async function CompetitiveReportOptionsPage({ params }: { params:
             </span>
           </span>
         </label>
+
+        <div className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-4">
+          <label htmlFor="scoringMode" className="block font-semibold text-white">
+            Tipo de puntuación
+          </label>
+          <select
+            id="scoringMode"
+            name="scoringMode"
+            defaultValue={settings.scoringMode}
+            className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+          >
+            <option value={CompetitiveReportScoringMode.INDIVIDUAL_0_100}>Cada jugador entre 0 y 100</option>
+            <option value={CompetitiveReportScoringMode.SUM_20}>Entre ambos suman 20</option>
+          </select>
+          <p className="text-sm leading-relaxed text-[var(--muted)]">
+            Esta opción es vinculante al enviar, corregir y aprobar reportes. Si un reporte importado no cumple la regla,
+            deberá corregirse o rechazarse antes de aprobarlo.
+          </p>
+        </div>
 
         <div className="flex flex-wrap gap-3">
           <button

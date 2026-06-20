@@ -1,8 +1,9 @@
-import { EventRegistrationStatus } from "@prisma/client";
+import { CompetitiveReportScoringMode, EventRegistrationStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
+import { getCompetitiveEventSettings } from "@/lib/competitive-matches";
 import { resolveSessionUserId } from "@/lib/event-registrations";
 import { buildEventSlug, extractEventIdFromSlug } from "@/lib/events/slug";
 import { prisma } from "@/lib/prisma";
@@ -48,25 +49,28 @@ export default async function SubmitCompetitiveReportPage({
   const session = await auth();
   const userId = resolveSessionUserId(session);
   const eventId = extractEventIdFromSlug(params.slug);
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    select: {
-      id: true,
-      title: true,
-      registrations: {
-        where: {
-          status: { in: [EventRegistrationStatus.INSCRITO, EventRegistrationStatus.PAGADO] },
-        },
-        orderBy: [{ playerName: "asc" }],
-        select: {
-          id: true,
-          userId: true,
-          playerName: true,
-          factionLabel: true,
+  const [event, competitiveSettings] = await Promise.all([
+    prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        title: true,
+        registrations: {
+          where: {
+            status: { in: [EventRegistrationStatus.INSCRITO, EventRegistrationStatus.PAGADO] },
+          },
+          orderBy: [{ playerName: "asc" }],
+          select: {
+            id: true,
+            userId: true,
+            playerName: true,
+            factionLabel: true,
+          },
         },
       },
-    },
-  });
+    }),
+    getCompetitiveEventSettings(eventId),
+  ]);
 
   if (!event) {
     notFound();
@@ -79,6 +83,11 @@ export default async function SubmitCompetitiveReportPage({
     ? event.registrations.filter((registration) => registration.id !== ownRegistration.id)
     : [];
   const today = new Date().toISOString().slice(0, 10);
+  const scoreHelp =
+    competitiveSettings.scoringMode === CompetitiveReportScoringMode.SUM_20
+      ? "La suma de ambos jugadores debe ser exactamente 20."
+      : "Cada jugador puede tener entre 0 y 100 puntos.";
+  const scoreMax = competitiveSettings.scoringMode === CompetitiveReportScoringMode.SUM_20 ? 20 : 100;
 
   return (
     <div className="container mx-auto max-w-3xl space-y-6 px-4 py-8">
@@ -173,19 +182,21 @@ export default async function SubmitCompetitiveReportPage({
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]" htmlFor="roundNumber">
-                Ronda
-              </label>
-              <input
-                id="roundNumber"
-                name="roundNumber"
-                type="number"
-                min={0}
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-                placeholder="Opcional"
-              />
-            </div>
+            {competitiveSettings.showReportRound && (
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]" htmlFor="roundNumber">
+                  Ronda
+                </label>
+                <input
+                  id="roundNumber"
+                  name="roundNumber"
+                  type="number"
+                  min={0}
+                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                  placeholder="Opcional"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -239,6 +250,7 @@ export default async function SubmitCompetitiveReportPage({
                 name="ownScore"
                 type="number"
                 min={0}
+                max={scoreMax}
                 required
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
               />
@@ -252,11 +264,16 @@ export default async function SubmitCompetitiveReportPage({
                 name="opponentScore"
                 type="number"
                 min={0}
+                max={scoreMax}
                 required
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
               />
             </div>
           </div>
+
+          <p className="rounded-2xl border border-sky-300/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+            {scoreHelp}
+          </p>
 
           <div className="space-y-2">
             <label className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]" htmlFor="notes">

@@ -4,6 +4,7 @@ import {
   CompetitiveMatchKind,
   CompetitiveMatchOutcome,
   CompetitiveMatchReportStatus,
+  CompetitiveReportScoringMode,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -59,6 +60,12 @@ function parseOutcome(value: string) {
   if (value === CompetitiveMatchOutcome.DRAW) return CompetitiveMatchOutcome.DRAW;
   if (value === CompetitiveMatchOutcome.LOSS) return CompetitiveMatchOutcome.LOSS;
   return CompetitiveMatchOutcome.WIN;
+}
+
+function parseScoringMode(value: string) {
+  return value === CompetitiveReportScoringMode.SUM_20
+    ? CompetitiveReportScoringMode.SUM_20
+    : CompetitiveReportScoringMode.INDIVIDUAL_0_100;
 }
 
 function opposingOutcome(outcome: CompetitiveMatchOutcome) {
@@ -226,6 +233,7 @@ export async function updateCompetitiveReportOptionsAction(formData: FormData) {
   const eventId = readString(formData, "eventId");
   const eventSlug = readString(formData, "eventSlug");
   const showReportRound = formData.get("showReportRound") === "on";
+  const scoringMode = parseScoringMode(readString(formData, "scoringMode"));
 
   const session = await auth();
   if (!(await userCanEditEvent(session, eventId))) {
@@ -240,7 +248,7 @@ export async function updateCompetitiveReportOptionsAction(formData: FormData) {
     throw new Error("Evento no encontrado.");
   }
 
-  await updateCompetitiveEventReportOptions(event.id, resolveSessionUserId(session), { showReportRound });
+  await updateCompetitiveEventReportOptions(event.id, resolveSessionUserId(session), { showReportRound, scoringMode });
   const slug = eventSlug || buildEventSlug(event.id, event.title);
   revalidatePath(`/eventos/${slug}/reportes`);
   revalidatePath(`/eventos/${slug}/reportes/opciones`);

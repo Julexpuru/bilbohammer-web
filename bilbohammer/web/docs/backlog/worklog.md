@@ -4,6 +4,7 @@ Registro cronologico breve de trabajo realizado o contexto consolidado.
 
 ## 2026-06-20
 
+- Se corrige el dominio competitivo para bloquear reportes con el mismo jugador en ambos lados, se limita la salida de tablas/exportaciones a 2 decimales y se añade modo de puntuación configurable para reportes: puntos individuales 0-100 o suma exacta 20.
 - Se endurece el flujo de revisión de reportes competitivos para que aprobar/rechazar/corregir no haga `redirect()` y permanezca en la bandeja tras revalidar. Se añade configuración de reportes por evento con opción admin/organizador para mostrar u ocultar la ronda.
 
 ## 2026-06-19

@@ -368,7 +368,7 @@ export default async function EventCompetitiveSheetsPage({
     displayName: { label: row.displayName, href: playerMatchesHref(baseHref, row.displayName) },
     classificationPoints: row.classificationPoints,
     classificationScore: row.classificationScore,
-    pointsPerGame: formatNumber(row.pointsPerGame, 3),
+    pointsPerGame: formatNumber(row.pointsPerGame),
     played: row.played,
     won: row.won,
     drawn: row.drawn,

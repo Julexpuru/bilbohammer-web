@@ -32,6 +32,11 @@ function kindLabel(kind: CompetitiveMatchKind) {
   return kind === CompetitiveMatchKind.LEAGUE ? "Liga" : "Pachanga";
 }
 
+function formatNumber(value: number | null | undefined, decimals = 2) {
+  if (value == null) return null;
+  return Number.isInteger(value) ? value : Number(value.toFixed(decimals));
+}
+
 function displayPlayer(player: ApprovedCompetitiveMatchRow["players"][number] | undefined) {
   if (!player) return "";
   return player.displayName.trim() || `Jugador ${player.participantOrder}`;
@@ -107,14 +112,14 @@ export async function GET(request: Request, { params }: RouteParams) {
         row.displayName,
         row.classificationPoints,
         row.classificationScore,
-        row.pointsPerGame,
+        formatNumber(row.pointsPerGame),
         row.played,
         row.won,
         row.drawn,
-        `${Math.round(row.winRate * 1000) / 10}%`,
-        row.ifr,
-        row.elo,
-        row.adjustedElo,
+        `${formatNumber(row.winRate * 100)}%`,
+        formatNumber(row.ifr),
+        formatNumber(row.elo),
+        formatNumber(row.adjustedElo),
       ]),
     );
   }

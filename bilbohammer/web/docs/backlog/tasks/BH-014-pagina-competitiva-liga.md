@@ -29,7 +29,7 @@ Entra:
 - Métricas resumen: líder de Liga, líder Paladín cuando aplique, total de partidas y última actualización.
 - Tooltip de ayuda con icono de pregunta para criterios de cálculo: victoria 3, empate 1, derrota 0; Paladín por puntos de batalla, PpP, Elo/IFR.
 - Tabla Paladín ordenada por `Clasif`, con vista normal simplificada y vista técnica para organizador/admin con fórmula, IFR y Elo.
-- Opciones de presentación de reportes por evento, empezando por mostrar u ocultar la ronda.
+- Opciones de reportes por evento: mostrar/ocultar ronda y tipo de puntuación (`0-100` por jugador o suma exacta `20`).
 - Exportación de `Tabla Liga`, `Tabla Paladín` cuando aplique y `Partidas` a `.xlsx` o `.csv`.
 - Datos sintéticos para validar diseño mediante fixture CSV externo e importación controlada a reportes pendientes, no mediante escritura directa de clasificaciones ni generador en la página pública.
 - Auditoría clara de quién envió, revisó, corrigió o anuló cada dato.
@@ -57,7 +57,8 @@ No entra de momento:
 - Un organizador/admin puede vincular una inscripción manual a un usuario activo por correo sin partir clasificaciones ya existentes.
 - Existe un CSV sintético de referencia y un importador operativo que crea reportes pendientes para validar diseño/cálculos.
 - La Tabla Paladín usa `Clasif` como métrica de ordenación y permite a organizador/admin ver y editar la fórmula aplicada con auditoría por evento.
-- Un organizador/admin puede configurar si la bandeja de reportes muestra el campo ronda.
+- Un organizador/admin puede configurar si los reportes usan ronda y qué tipo de puntuación validan.
+- Ninguna tabla competitiva muestra números con más de 2 decimales.
 
 ## Notas tecnicas
 
@@ -68,12 +69,14 @@ No entra de momento:
 - El formato móvil definitivo se deja para después de cerrar el comportamiento funcional; mientras tanto debe mantenerse usable y sin desbordes.
 - Los participantes manuales usan `playerName` como identidad temporal. Si después se vinculan a un usuario registrado, la vinculación debe propagar `userId` a reportes y partidas competitivas del mismo evento que coincidan por nombre para evitar duplicar filas de clasificación.
 - Los nombres de inscripción deben ser únicos por evento, incluso antes de vincular usuario, para que la identidad temporal por `playerName` sea segura.
+- El servicio común bloquea reportes con el mismo jugador en ambos lados y valida la puntuación configurada antes de crear, corregir o aprobar.
 - Tests unitarios cubiertos: cálculo de Liga, Paladín/Elo/IFR, deduplicación y empates. Quedan como ampliación futura pruebas de integración para permisos público/jugador/organizador/admin y auditoría de correcciones/anulaciones.
 - Riesgos: correcciones posteriores a aprobación pueden invalidar clasificaciones visibles; hay que diseñarlas como cambios auditados y recalcular desde fuente canónica.
 - Dependencias: `BH-013` para revisión/corrección de reportes y `BH-010` para reglas de clasificación.
 
 ## Historial
 
+- 2026-06-20: se bloquea la aprobación de reportes con el mismo jugador en ambos lados, se limita la visualización/exportación numérica a 2 decimales y se añade modo de puntuación configurable para reportes (`0-100` individual o suma `20`).
 - 2026-06-20: se añade configuración de presentación de reportes por evento con opción para mostrar/ocultar ronda en la bandeja de revisión.
 - 2026-06-19: se persiste la fórmula Paladín por evento con auditoría; al guardarla se revalida la página y la tabla se recalcula en la siguiente lectura/exportación desde partidas aprobadas.
 - 2026-06-19: se corrige el retorno de acciones de revisión para conservar la bandeja de reportes y se ajusta Paladín: `Clasif` pasa a ser la métrica de ordenación, IFR/Elo se ocultan en vista normal y quedan visibles en modo técnico para organizador/admin junto a la fórmula.

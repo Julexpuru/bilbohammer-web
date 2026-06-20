@@ -1,4 +1,4 @@
-import { EventRegistrationStatus } from "@prisma/client";
+import { CompetitiveReportScoringMode, EventRegistrationStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -131,6 +131,18 @@ function describeSubmitter(report: PendingCompetitiveReport) {
   return "Sin trazabilidad adicional";
 }
 
+function reportPlayerKey(player: ReportPlayer | undefined) {
+  if (!player) return null;
+  return player.userId != null ? `user:${player.userId}` : `name:${player.displayName.trim().toLowerCase()}`;
+}
+
+function hasSamePlayerOnBothSides(report: PendingCompetitiveReport) {
+  const [first, second] = report.players;
+  const firstKey = reportPlayerKey(first);
+  const secondKey = reportPlayerKey(second);
+  return Boolean(firstKey && secondKey && firstKey === secondKey);
+}
+
 function FeedbackBanner({ searchParams }: { searchParams?: SearchParams }) {
   if (searchParams?.error) {
     return (
@@ -182,22 +194,31 @@ function ReportCard({
   eventSlug,
   fallbackEventTitle,
   hasLeagueDuplicate,
+  hasSamePlayer,
   report,
   registrations,
   showReportRound,
+  scoringMode,
 }: {
   eventId: string;
   eventSlug: string;
   fallbackEventTitle: string;
   hasLeagueDuplicate: boolean;
+  hasSamePlayer: boolean;
   report: PendingCompetitiveReport;
   registrations: RegistrationOption[];
   showReportRound: boolean;
+  scoringMode: CompetitiveReportScoringMode;
 }) {
   const [firstPlayer, secondPlayer] = report.players;
   const firstRegistrationId = resolveRegistrationId(firstPlayer, registrations);
   const secondRegistrationId = resolveRegistrationId(secondPlayer, registrations);
   const hasSecondaryDetails = (showReportRound && report.roundNumber != null) || report.notes || describeSubmitter(report);
+  const scoreMax = scoringMode === CompetitiveReportScoringMode.SUM_20 ? 20 : 100;
+  const scoreHelp =
+    scoringMode === CompetitiveReportScoringMode.SUM_20
+      ? "La suma de ambos jugadores debe ser exactamente 20."
+      : "Cada jugador puede tener entre 0 y 100 puntos.";
 
   return (
     <article className="space-y-4 rounded-3xl border border-white/10 bg-black/20 p-4 shadow-lg sm:space-y-5 sm:p-5">
@@ -323,6 +344,12 @@ function ReportCard({
         </div>
       )}
 
+      {hasSamePlayer && (
+        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          El reporte tiene el mismo jugador en ambos lados. No puede aprobarse; corrígelo o recházalo.
+        </div>
+      )}
+
       <details className="rounded-2xl border border-white/10 bg-black/10 p-4">
         <summary className="cursor-pointer text-sm font-semibold text-white">Corregir reporte</summary>
         <form action={updateCompetitiveReportAction} className="mt-4 space-y-4">
@@ -404,6 +431,7 @@ function ReportCard({
                 name="firstScore"
                 type="number"
                 min={0}
+                max={scoreMax}
                 defaultValue={firstPlayer?.score ?? ""}
                 required
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
@@ -446,6 +474,7 @@ function ReportCard({
                 name="secondScore"
                 type="number"
                 min={0}
+                max={scoreMax}
                 defaultValue={secondPlayer?.score ?? ""}
                 required
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
@@ -456,6 +485,10 @@ function ReportCard({
               </p>
             </div>
           </div>
+
+          <p className="rounded-2xl border border-sky-300/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+            {scoreHelp}
+          </p>
 
           <div className="space-y-2">
             <label htmlFor={`notes-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
@@ -494,10 +527,10 @@ function ReportCard({
             <button
               type="submit"
               formAction={approveCompetitiveReportAction}
-              disabled={hasLeagueDuplicate}
+              disabled={hasLeagueDuplicate || hasSamePlayer}
               className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400"
             >
-              {hasLeagueDuplicate ? "Aprobación bloqueada" : "Aprobar"}
+              {hasLeagueDuplicate || hasSamePlayer ? "Aprobación bloqueada" : "Aprobar"}
             </button>
           </div>
           <details>
@@ -626,9 +659,11 @@ export default async function EventCompetitiveReportsPage({
               eventSlug={params.slug}
               fallbackEventTitle={event.title}
               hasLeagueDuplicate={duplicateReportIds.has(report.id)}
+              hasSamePlayer={hasSamePlayerOnBothSides(report)}
               registrations={registrations}
               report={report}
               showReportRound={competitiveSettings.showReportRound}
+              scoringMode={competitiveSettings.scoringMode}
             />
           ))}
         </section>
