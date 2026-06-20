@@ -13,11 +13,7 @@ import { buildEventSlug, extractEventIdFromSlug } from "@/lib/events/slug";
 import { prisma } from "@/lib/prisma";
 import { userCanEditEvent } from "@/lib/roles";
 
-import {
-  approveCompetitiveReportAction,
-  rejectCompetitiveReportAction,
-  updateCompetitiveReportAction,
-} from "./actions";
+import ReportReviewForms from "./ReportReviewForms";
 
 type Params = {
   slug: string;
@@ -350,208 +346,27 @@ function ReportCard({
         </div>
       )}
 
-      <details className="rounded-2xl border border-white/10 bg-black/10 p-4">
-        <summary className="cursor-pointer text-sm font-semibold text-white">Corregir reporte</summary>
-        <form action={updateCompetitiveReportAction} className="mt-4 space-y-4">
-          <input type="hidden" name="eventId" value={eventId} />
-          <input type="hidden" name="eventSlug" value={eventSlug} />
-          <input type="hidden" name="reportId" value={report.id} />
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <label htmlFor={`kind-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                Tipo
-              </label>
-              <select
-                id={`kind-${report.id}`}
-                name="kind"
-                defaultValue={report.kind}
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-              >
-                <option value="LEAGUE">Liga</option>
-                <option value="CASUAL">Pachanga</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor={`playedAt-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                Fecha
-              </label>
-              <input
-                id={`playedAt-${report.id}`}
-                name="playedAt"
-                type="date"
-                defaultValue={formatDateInput(report.playedAt)}
-                required
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-              />
-            </div>
-            {showReportRound ? (
-              <div className="space-y-2">
-                <label htmlFor={`roundNumber-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                  Ronda
-                </label>
-                <input
-                  id={`roundNumber-${report.id}`}
-                  name="roundNumber"
-                  type="number"
-                  min={0}
-                  defaultValue={report.roundNumber ?? ""}
-                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-                />
-              </div>
-            ) : (
-              <input type="hidden" name="roundNumber" value={report.roundNumber ?? ""} />
-            )}
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-3 rounded-2xl border border-white/10 p-3">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Jugador</p>
-              <select
-                name="firstRegistrationId"
-                defaultValue={firstRegistrationId}
-                required
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-              >
-                <option value="">Selecciona jugador</option>
-                {registrations.map((registration) => (
-                  <option key={registration.id} value={registration.id}>
-                    {registration.playerName}
-                  </option>
-                ))}
-              </select>
-              <input
-                name="firstFaction"
-                defaultValue={firstPlayer?.factionLabel ?? ""}
-                required
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-                placeholder="Facción"
-              />
-              <input
-                name="firstScore"
-                type="number"
-                min={0}
-                max={scoreMax}
-                defaultValue={firstPlayer?.score ?? ""}
-                required
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-                placeholder="Puntos"
-              />
-              <select
-                name="firstOutcome"
-                defaultValue={firstPlayer?.outcome ?? "WIN"}
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-              >
-                <option value="WIN">Victoria</option>
-                <option value="DRAW">Empate</option>
-                <option value="LOSS">Derrota</option>
-              </select>
-            </div>
-
-            <div className="space-y-3 rounded-2xl border border-white/10 p-3">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Rival</p>
-              <select
-                name="secondRegistrationId"
-                defaultValue={secondRegistrationId}
-                required
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-              >
-                <option value="">Selecciona rival</option>
-                {registrations.map((registration) => (
-                  <option key={registration.id} value={registration.id}>
-                    {registration.playerName}
-                  </option>
-                ))}
-              </select>
-              <input
-                name="secondFaction"
-                defaultValue={secondPlayer?.factionLabel ?? ""}
-                required
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-                placeholder="Facción"
-              />
-              <input
-                name="secondScore"
-                type="number"
-                min={0}
-                max={scoreMax}
-                defaultValue={secondPlayer?.score ?? ""}
-                required
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-                placeholder="Puntos"
-              />
-              <p className="text-xs leading-relaxed text-[var(--muted)]">
-                El resultado del rival se calcula automáticamente como opuesto al del jugador.
-              </p>
-            </div>
-          </div>
-
-          <p className="rounded-2xl border border-sky-300/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-            {scoreHelp}
-          </p>
-
-          <div className="space-y-2">
-            <label htmlFor={`notes-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-              Notas
-            </label>
-            <textarea
-              id={`notes-${report.id}`}
-              name="notes"
-              rows={3}
-              maxLength={1000}
-              defaultValue={report.notes ?? ""}
-              className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="rounded-full border border-sky-300/40 px-4 py-2 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/10"
-          >
-            Guardar corrección
-          </button>
-        </form>
-      </details>
-
-      <form action={rejectCompetitiveReportAction} className="space-y-3 rounded-2xl border border-white/10 p-3 sm:p-4">
-          <input type="hidden" name="eventId" value={eventId} />
-          <input type="hidden" name="eventSlug" value={eventSlug} />
-          <input type="hidden" name="reportId" value={report.id} />
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              className="rounded-full border border-red-400/40 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/10"
-            >
-              Rechazar
-            </button>
-            <button
-              type="submit"
-              formAction={approveCompetitiveReportAction}
-              disabled={hasLeagueDuplicate || hasSamePlayer}
-              className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400"
-            >
-              {hasLeagueDuplicate || hasSamePlayer ? "Aprobación bloqueada" : "Aprobar"}
-            </button>
-          </div>
-          <details>
-            <summary className="cursor-pointer text-sm font-semibold text-[var(--muted)]">
-              Añadir motivo de rechazo
-            </summary>
-            <div className="mt-3 space-y-2">
-              <label htmlFor={`rejectionReason-${report.id}`} className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                Motivo opcional
-              </label>
-              <textarea
-                id={`rejectionReason-${report.id}`}
-                name="rejectionReason"
-                rows={3}
-                maxLength={500}
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none transition focus:border-white/30"
-                placeholder="Explica brevemente qué falta o qué dato es incorrecto."
-              />
-            </div>
-          </details>
-        </form>
+      <ReportReviewForms
+        eventId={eventId}
+        eventSlug={eventSlug}
+        reportId={report.id}
+        approvalBlocked={hasLeagueDuplicate || hasSamePlayer}
+        kind={report.kind}
+        playedAt={formatDateInput(report.playedAt)}
+        roundNumber={report.roundNumber}
+        showReportRound={showReportRound}
+        notes={report.notes ?? ""}
+        registrations={registrations}
+        firstRegistrationId={firstRegistrationId}
+        secondRegistrationId={secondRegistrationId}
+        firstFaction={firstPlayer?.factionLabel ?? ""}
+        secondFaction={secondPlayer?.factionLabel ?? ""}
+        firstScore={firstPlayer?.score ?? ""}
+        secondScore={secondPlayer?.score ?? ""}
+        firstOutcome={firstPlayer?.outcome ?? "WIN"}
+        scoreMax={scoreMax}
+        scoreHelp={scoreHelp}
+      />
     </article>
   );
 }

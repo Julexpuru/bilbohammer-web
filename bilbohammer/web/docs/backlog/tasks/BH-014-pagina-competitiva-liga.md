@@ -36,6 +36,7 @@ Entra:
 - Protección básica contra spam/error: límites por usuario, validaciones de fecha/participantes y mensajes claros.
 - Notificaciones a organizadores por reportes pendientes y al jugador cuando se apruebe o rechace su reporte.
 - Vinculación controlada de participantes manuales a usuarios registrados si se registran más adelante, preferentemente por correo y con permisos de organizador/admin.
+- Feedback de errores de revisión por tarjeta, sin sacar al organizador de la bandeja.
 
 No entra de momento:
 
@@ -59,6 +60,7 @@ No entra de momento:
 - La Tabla Paladín usa `Clasif` como métrica de ordenación y permite a organizador/admin ver y editar la fórmula aplicada con auditoría por evento.
 - Un organizador/admin puede configurar si los reportes usan ronda y qué tipo de puntuación validan.
 - Ninguna tabla competitiva muestra números con más de 2 decimales.
+- Telegram respeta las opciones de reportes del evento en el flujo guiado y en modo rápido.
 
 ## Notas tecnicas
 
@@ -77,6 +79,7 @@ No entra de momento:
 ## Historial
 
 - 2026-06-20: se bloquea la aprobación de reportes con el mismo jugador en ambos lados, se limita la visualización/exportación numérica a 2 decimales y se añade modo de puntuación configurable para reportes (`0-100` individual o suma `20`).
+- 2026-06-20: se añade feedback de errores por tarjeta en revisión de reportes y se alinea Telegram con las opciones del evento para puntuación y ronda.
 - 2026-06-20: se añade configuración de presentación de reportes por evento con opción para mostrar/ocultar ronda en la bandeja de revisión.
 - 2026-06-19: se persiste la fórmula Paladín por evento con auditoría; al guardarla se revalida la página y la tabla se recalcula en la siguiente lectura/exportación desde partidas aprobadas.
 - 2026-06-19: se corrige el retorno de acciones de revisión para conservar la bandeja de reportes y se ajusta Paladín: `Clasif` pasa a ser la métrica de ordenación, IFR/Elo se ocultan en vista normal y quedan visibles en modo técnico para organizador/admin junto a la fórmula.

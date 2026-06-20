@@ -20,6 +20,8 @@ import { buildEventSlug } from "@/lib/events/slug";
 import { prisma } from "@/lib/prisma";
 import { userCanEditEvent } from "@/lib/roles";
 
+import type { ReportActionState } from "./report-action-state";
+
 type ReviewContext = {
   event: {
     id: string;
@@ -27,6 +29,14 @@ type ReviewContext = {
   };
   path: string;
 };
+
+function successState(): ReportActionState {
+  return { ok: true, error: null };
+}
+
+function errorState(error: unknown, fallback: string): ReportActionState {
+  return { ok: false, error: error instanceof Error ? error.message : fallback };
+}
 
 function buildReviewPath(event: { id: string; title: string }) {
   return `/eventos/${buildEventSlug(event.id, event.title)}/reportes`;
@@ -116,7 +126,10 @@ async function loadReviewContext(eventId: string, reportId: string): Promise<Rev
   };
 }
 
-export async function approveCompetitiveReportAction(formData: FormData) {
+export async function approveCompetitiveReportAction(
+  _previousState: ReportActionState,
+  formData: FormData,
+): Promise<ReportActionState> {
   const eventId = readString(formData, "eventId");
   const reportId = readString(formData, "reportId");
 
@@ -130,12 +143,16 @@ export async function approveCompetitiveReportAction(formData: FormData) {
 
     await approveCompetitiveMatchReport(reportId, reviewerId);
     revalidatePath(path);
-  } catch {
-    return;
+    return successState();
+  } catch (error) {
+    return errorState(error, "No se pudo aprobar el reporte.");
   }
 }
 
-export async function updateCompetitiveReportAction(formData: FormData) {
+export async function updateCompetitiveReportAction(
+  _previousState: ReportActionState,
+  formData: FormData,
+): Promise<ReportActionState> {
   const eventId = readString(formData, "eventId");
   const reportId = readString(formData, "reportId");
 
@@ -204,12 +221,16 @@ export async function updateCompetitiveReportAction(formData: FormData) {
     });
 
     revalidatePath(path);
-  } catch {
-    return;
+    return successState();
+  } catch (error) {
+    return errorState(error, "No se pudo corregir el reporte.");
   }
 }
 
-export async function rejectCompetitiveReportAction(formData: FormData) {
+export async function rejectCompetitiveReportAction(
+  _previousState: ReportActionState,
+  formData: FormData,
+): Promise<ReportActionState> {
   const eventId = readString(formData, "eventId");
   const reportId = readString(formData, "reportId");
   const rejectionReason = readString(formData, "rejectionReason").slice(0, 500);
@@ -224,8 +245,9 @@ export async function rejectCompetitiveReportAction(formData: FormData) {
 
     await rejectCompetitiveMatchReport(reportId, reviewerId, rejectionReason);
     revalidatePath(path);
-  } catch {
-    return;
+    return successState();
+  } catch (error) {
+    return errorState(error, "No se pudo rechazar el reporte.");
   }
 }
 

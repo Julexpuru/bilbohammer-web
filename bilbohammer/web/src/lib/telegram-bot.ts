@@ -3,13 +3,14 @@ import {
   CompetitiveMatchKind,
   CompetitiveMatchOutcome,
   CompetitiveMatchReportChannel,
+  CompetitiveReportScoringMode,
   EventRegistrationStatus,
   EventStatus,
   EventType,
   Prisma,
 } from "@prisma/client";
 
-import { createCompetitiveMatchReport } from "@/lib/competitive-matches";
+import { createCompetitiveMatchReport, getCompetitiveEventSettings } from "@/lib/competitive-matches";
 import { extractEventIdFromSlug } from "@/lib/events/slug";
 import { FACTIONS, fallbackGameName } from "@/lib/games";
 import { prisma } from "@/lib/prisma";
@@ -626,7 +627,8 @@ async function handleCallbackQuery(callback: TelegramCallbackQuery): Promise<Tel
       returnToConfirm: true,
     };
     await updateSession(session.id, "PLAYER_SCORE", nextPayload);
-    return { ...singleMessage(chatId, "Indica tus puntos de partida.", cancelKeyboard()), callbackQueryId: callback.id };
+    const settings = await reportSettingsForPayload(nextPayload);
+    return { ...singleMessage(chatId, scoreInstruction(settings?.scoringMode, "player"), cancelKeyboard()), callbackQueryId: callback.id };
   }
 
   if (data === "tg:edit:date") {
@@ -701,7 +703,8 @@ async function handleCallbackQuery(callback: TelegramCallbackQuery): Promise<Tel
       return { ...(await continueAfterDate(session.id, chatId, { ...nextPayload, returnToConfirm: undefined })), callbackQueryId: callback.id };
     }
     await updateSession(session.id, "PLAYER_SCORE", nextPayload);
-    return { ...singleMessage(chatId, "Indica tus puntos de partida. No asumo un sistema concreto, así que solo necesito un número entero no negativo.", cancelKeyboard()), callbackQueryId: callback.id };
+    const settings = await reportSettingsForPayload(nextPayload);
+    return { ...singleMessage(chatId, scoreInstruction(settings?.scoringMode, "player"), cancelKeyboard()), callbackQueryId: callback.id };
   }
 
   if (data === "tg:date:today") {
@@ -752,15 +755,24 @@ async function handleSessionText(
   }
 
   if (session.step === "PLAYER_SCORE") {
+    const settings = await reportSettingsForPayload(payload);
     const score = parseScore(text, "tus puntos");
     if (score == null) return singleMessage(chatId, "Los puntos deben ser un entero no negativo. Ejemplo: 17", cancelKeyboard());
+    const scoreError = validateScoreForMode(score, settings?.scoringMode);
+    if (scoreError) return singleMessage(chatId, scoreError, cancelKeyboard());
     await updateSession(session.id, "RIVAL_SCORE", { ...payload, playerScore: score });
-    return singleMessage(chatId, "Indica los puntos del rival.", cancelKeyboard());
+    return singleMessage(chatId, scoreInstruction(settings?.scoringMode, "rival"), cancelKeyboard());
   }
 
   if (session.step === "RIVAL_SCORE") {
+    const settings = await reportSettingsForPayload(payload);
     const score = parseScore(text, "los puntos del rival");
     if (score == null) return singleMessage(chatId, "Los puntos del rival deben ser un entero no negativo. Ejemplo: 3", cancelKeyboard());
+    const scoreError = validateScoreForMode(score, settings?.scoringMode);
+    if (scoreError) return singleMessage(chatId, scoreError, cancelKeyboard());
+    const pairError =
+      payload.playerScore == null ? null : validateScorePairForMode(payload.playerScore, score, settings?.scoringMode);
+    if (pairError) return singleMessage(chatId, pairError, cancelKeyboard());
     const nextPayload = { ...payload, rivalScore: score };
     if (payload.returnToConfirm && payload.playedAt) {
       return continueAfterDate(session.id, chatId, { ...nextPayload, returnToConfirm: undefined });
@@ -875,6 +887,9 @@ async function confirmGuidedReport(
 
   const playedAt = parsePlayedAt(payload.playedAt);
   if (!playedAt) return singleMessage(chatId, "La fecha del reporte no es válida. Usa /resultado para empezar de nuevo.");
+  const settings = await reportSettingsForPayload(payload);
+  const scoreError = validateScorePairForMode(payload.playerScore!, payload.rivalScore!, settings?.scoringMode);
+  if (scoreError) return singleMessage(chatId, scoreError);
 
   const outcome = payload.outcome!;
   const rivalOutcome = outcome === CompetitiveMatchOutcome.WIN
@@ -987,6 +1002,44 @@ function validateCompletePayload(payload: SessionPayload) {
   if (!payload.outcome) return "Falta el resultado.";
   if (payload.playerScore == null || payload.rivalScore == null) return "Faltan puntos.";
   if (!payload.playedAt) return "Falta la fecha.";
+  return null;
+}
+
+async function reportSettingsForPayload(payload: Pick<SessionPayload, "eventId">) {
+  return payload.eventId ? getCompetitiveEventSettings(payload.eventId) : null;
+}
+
+function scoreInstruction(scoringMode: CompetitiveReportScoringMode | null | undefined, target: "player" | "rival") {
+  const label = target === "player" ? "tus puntos" : "los puntos del rival";
+  if (scoringMode === CompetitiveReportScoringMode.SUM_20) {
+    return `Indica ${label}. En este evento, entre ambos jugadores deben sumar exactamente 20.`;
+  }
+  return `Indica ${label}. En este evento, cada jugador puede tener entre 0 y 100 puntos.`;
+}
+
+function validateScoreForMode(score: number, scoringMode: CompetitiveReportScoringMode | null | undefined) {
+  if (score < 0) return "Los puntos deben ser un entero no negativo.";
+  if (scoringMode === CompetitiveReportScoringMode.SUM_20 && score > 20) {
+    return "En este evento, ningún jugador puede superar 20 puntos porque ambos deben sumar 20.";
+  }
+  if ((scoringMode ?? CompetitiveReportScoringMode.INDIVIDUAL_0_100) === CompetitiveReportScoringMode.INDIVIDUAL_0_100 && score > 100) {
+    return "En este evento, cada jugador debe tener entre 0 y 100 puntos.";
+  }
+  return null;
+}
+
+function validateScorePairForMode(
+  playerScore: number,
+  rivalScore: number,
+  scoringMode: CompetitiveReportScoringMode | null | undefined,
+) {
+  const playerError = validateScoreForMode(playerScore, scoringMode);
+  if (playerError) return playerError;
+  const rivalError = validateScoreForMode(rivalScore, scoringMode);
+  if (rivalError) return rivalError;
+  if (scoringMode === CompetitiveReportScoringMode.SUM_20 && playerScore + rivalScore !== 20) {
+    return "En este evento, los puntos de ambos jugadores deben sumar exactamente 20.";
+  }
   return null;
 }
 
@@ -1229,6 +1282,15 @@ async function handleQuickResultCommand(
   });
   if (factionError) {
     return singleMessage(message.chat.id, factionError);
+  }
+
+  const settings = await getCompetitiveEventSettings(event.id);
+  if (!settings.showReportRound && parsed.roundNumber != null) {
+    return singleMessage(message.chat.id, "Este evento no usa ronda en sus reportes. Elimina la línea ronda/jornada y vuelve a enviarlo.");
+  }
+  const scoreError = validateScorePairForMode(parsed.players[0].score, parsed.players[1].score, settings.scoringMode);
+  if (scoreError) {
+    return singleMessage(message.chat.id, scoreError);
   }
 
   const externalMessageId = `${message.chat.id}:${message.message_id}`;
