@@ -27,6 +27,7 @@ export type CompetitiveTableColumn = {
   label: string;
   numeric?: boolean;
   hideOnMobile?: boolean;
+  help?: string;
 };
 
 type Props = {
@@ -84,7 +85,7 @@ export default function CompetitiveDataTable({
         accessorKey: column.id,
         header: column.label,
         cell: (info) => renderCellValue(info.getValue() as CompetitiveTableValue),
-        meta: { numeric: column.numeric, hideOnMobile: column.hideOnMobile },
+        meta: { numeric: column.numeric, hideOnMobile: column.hideOnMobile, help: column.help },
       })),
     [columns],
   );
@@ -118,9 +119,8 @@ export default function CompetitiveDataTable({
           {emptyMessage}
         </div>
       ) : (
-        <>
-          <div className="hidden overflow-x-auto rounded-2xl border border-white/10 md:block">
-            <table className="min-w-full divide-y divide-white/10 text-sm">
+        <div className="max-w-full overflow-x-auto rounded-2xl border border-white/10">
+            <table className="min-w-max divide-y divide-white/10 text-sm md:min-w-full">
               <thead className="bg-white/5 text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
@@ -142,6 +142,16 @@ export default function CompetitiveDataTable({
                               {sorted === "asc" ? "^" : sorted === "desc" ? "v" : ""}
                             </span>
                           </button>
+                          {(header.column.columnDef.meta as { help?: string } | undefined)?.help && (
+                            <span className="group relative ml-2 inline-flex">
+                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/20 text-[0.65rem] text-white/80">
+                                ?
+                              </span>
+                              <span className="pointer-events-none absolute left-0 top-6 z-10 hidden w-56 rounded-xl border border-white/10 bg-zinc-950 p-3 text-left text-xs normal-case tracking-normal text-white shadow-xl group-hover:block">
+                                {(header.column.columnDef.meta as { help?: string }).help}
+                              </span>
+                            </span>
+                          )}
                         </th>
                       );
                     })}
@@ -169,30 +179,6 @@ export default function CompetitiveDataTable({
               </tbody>
             </table>
           </div>
-
-          <div className="space-y-3 md:hidden">
-            {table.getRowModel().rows.map((row) => (
-              <article key={row.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <dl className="space-y-3">
-                  {row.getVisibleCells().map((cell) => {
-                    const meta = cell.column.columnDef.meta as { hideOnMobile?: boolean } | undefined;
-                    if (meta?.hideOnMobile) return null;
-                    return (
-                      <div key={cell.id} className="grid gap-1">
-                        <dt className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
-                          {String(cell.column.columnDef.header)}
-                        </dt>
-                        <dd className="break-words text-sm text-white">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </dd>
-                      </div>
-                    );
-                  })}
-                </dl>
-              </article>
-            ))}
-          </div>
-        </>
       )}
     </div>
   );

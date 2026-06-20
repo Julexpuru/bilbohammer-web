@@ -69,6 +69,7 @@ export type CompetitiveEventSettingsData = {
   paladinFormula: string;
   showReportRound: boolean;
   scoringMode: CompetitiveReportScoringMode;
+  minimumPrizeGames: number;
   updatedById: number | null;
   updatedAt: Date | null;
 };
@@ -266,6 +267,7 @@ export async function getCompetitiveEventSettings(
       paladinFormula: true,
       showReportRound: true,
       scoringMode: true,
+      minimumPrizeGames: true,
       updatedById: true,
       updatedAt: true,
     },
@@ -276,6 +278,7 @@ export async function getCompetitiveEventSettings(
     paladinFormula: settings?.paladinFormula ?? DEFAULT_PALADIN_FORMULA,
     showReportRound: settings?.showReportRound ?? true,
     scoringMode: settings?.scoringMode ?? CompetitiveReportScoringMode.INDIVIDUAL_0_100,
+    minimumPrizeGames: settings?.minimumPrizeGames ?? 0,
     updatedById: settings?.updatedById ?? null,
     updatedAt: settings?.updatedAt ?? null,
   };
@@ -284,7 +287,7 @@ export async function getCompetitiveEventSettings(
 export async function updateCompetitiveEventReportOptions(
   eventId: string,
   actorId: number | null,
-  input: { showReportRound: boolean; scoringMode: CompetitiveReportScoringMode },
+  input: { showReportRound: boolean; scoringMode: CompetitiveReportScoringMode; minimumPrizeGames: number },
   db: CompetitiveDb = prisma,
 ) {
   return db.competitiveEventSettings.upsert({
@@ -294,11 +297,13 @@ export async function updateCompetitiveEventReportOptions(
       paladinFormula: DEFAULT_PALADIN_FORMULA,
       showReportRound: input.showReportRound,
       scoringMode: input.scoringMode,
+      minimumPrizeGames: input.minimumPrizeGames,
       updatedById: actorId,
     },
     update: {
       showReportRound: input.showReportRound,
       scoringMode: input.scoringMode,
+      minimumPrizeGames: input.minimumPrizeGames,
       updatedById: actorId,
     },
     select: {
@@ -306,6 +311,7 @@ export async function updateCompetitiveEventReportOptions(
       paladinFormula: true,
       showReportRound: true,
       scoringMode: true,
+      minimumPrizeGames: true,
       updatedById: true,
       updatedAt: true,
     },

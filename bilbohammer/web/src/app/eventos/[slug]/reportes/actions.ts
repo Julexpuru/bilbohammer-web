@@ -78,6 +78,12 @@ function parseScoringMode(value: string) {
     : CompetitiveReportScoringMode.INDIVIDUAL_0_100;
 }
 
+function parseNonNegativeInteger(value: string) {
+  if (!value) return 0;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
+}
+
 function opposingOutcome(outcome: CompetitiveMatchOutcome) {
   if (outcome === CompetitiveMatchOutcome.WIN) return CompetitiveMatchOutcome.LOSS;
   if (outcome === CompetitiveMatchOutcome.LOSS) return CompetitiveMatchOutcome.WIN;
@@ -256,6 +262,7 @@ export async function updateCompetitiveReportOptionsAction(formData: FormData) {
   const eventSlug = readString(formData, "eventSlug");
   const showReportRound = formData.get("showReportRound") === "on";
   const scoringMode = parseScoringMode(readString(formData, "scoringMode"));
+  const minimumPrizeGames = parseNonNegativeInteger(readString(formData, "minimumPrizeGames"));
 
   const session = await auth();
   if (!(await userCanEditEvent(session, eventId))) {
@@ -270,7 +277,11 @@ export async function updateCompetitiveReportOptionsAction(formData: FormData) {
     throw new Error("Evento no encontrado.");
   }
 
-  await updateCompetitiveEventReportOptions(event.id, resolveSessionUserId(session), { showReportRound, scoringMode });
+  await updateCompetitiveEventReportOptions(event.id, resolveSessionUserId(session), {
+    showReportRound,
+    scoringMode,
+    minimumPrizeGames,
+  });
   const slug = eventSlug || buildEventSlug(event.id, event.title);
   revalidatePath(`/eventos/${slug}/reportes`);
   revalidatePath(`/eventos/${slug}/reportes/opciones`);

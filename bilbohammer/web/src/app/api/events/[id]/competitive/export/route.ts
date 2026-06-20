@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import {
   listApprovedCompetitiveMatches,
+  getCompetitiveEventSettings,
   listLeagueStandings,
   listPaladinStandings,
   type ApprovedCompetitiveMatchRow,
@@ -86,9 +87,13 @@ export async function GET(request: Request, { params }: RouteParams) {
   let csv = "";
 
   if (safeSheet === "liga") {
-    const rows = await listLeagueStandings(event.id);
+    const settings = await getCompetitiveEventSettings(event.id);
+    const rows = await listLeagueStandings(event.id, { minimumGames: settings.minimumPrizeGames });
+    const includeMinimum = settings.minimumPrizeGames > 0;
     csv = toCsv(
-      ["Posición", "Jugador", "Pts liga", "PJ", "G", "E", "P", "Puntos", "Mínimo"],
+      includeMinimum
+        ? ["Posición", "Jugador", "Pts liga", "PJ", "G", "E", "P", "Puntos", "Mínimo"]
+        : ["Posición", "Jugador", "Pts liga", "PJ", "G", "E", "P", "Puntos"],
       rows.map((row) => [
         row.position,
         row.displayName,
@@ -98,7 +103,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         row.drawn,
         row.lost,
         row.scoreTotal,
-        row.minimumGames ? "Sí" : "No",
+        ...(includeMinimum ? [row.minimumGames ? "Sí" : "No"] : []),
       ]),
     );
   }

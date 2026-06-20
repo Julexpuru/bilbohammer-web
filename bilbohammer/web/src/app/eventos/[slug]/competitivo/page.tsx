@@ -59,11 +59,11 @@ const sheetTabs: { id: SheetId; label: string }[] = [
 const leagueColumns: CompetitiveTableColumn[] = [
   { id: "position", label: "Pos.", numeric: true },
   { id: "displayName", label: "Jugador" },
-  { id: "leaguePoints", label: "Pts liga", numeric: true },
+  { id: "leaguePoints", label: "Pts liga", numeric: true, help: "Victoria = 3 puntos, empate = 1 punto, derrota = 0 puntos." },
   { id: "played", label: "PJ", numeric: true },
-  { id: "won", label: "G", numeric: true },
-  { id: "drawn", label: "E", numeric: true },
-  { id: "lost", label: "P", numeric: true },
+  { id: "won", label: "G", numeric: true, help: "Partidas ganadas." },
+  { id: "drawn", label: "E", numeric: true, help: "Partidas empatadas." },
+  { id: "lost", label: "P", numeric: true, help: "Partidas perdidas." },
   { id: "scoreTotal", label: "Puntos", numeric: true },
   { id: "minimumGames", label: "Mínimo" },
 ];
@@ -71,28 +71,28 @@ const leagueColumns: CompetitiveTableColumn[] = [
 const paladinColumns: CompetitiveTableColumn[] = [
   { id: "rank", label: "Rank", numeric: true },
   { id: "displayName", label: "Jugador" },
-  { id: "classificationPoints", label: "P. Clasificación", numeric: true },
-  { id: "pointsPerGame", label: "PpP", numeric: true },
+  { id: "classificationPoints", label: "P. Clasificación", numeric: true, help: "Suma de puntos de batalla en partidas aprobadas." },
+  { id: "pointsPerGame", label: "PpP", numeric: true, help: "Puntos de batalla por partida." },
   { id: "played", label: "PJ", numeric: true },
-  { id: "won", label: "G", numeric: true },
-  { id: "drawn", label: "E", numeric: true },
-  { id: "winRate", label: "Win rate", numeric: true },
-  { id: "adjustedElo", label: "Elo ajustado", numeric: true },
+  { id: "won", label: "G", numeric: true, help: "Partidas ganadas." },
+  { id: "drawn", label: "E", numeric: true, help: "Partidas empatadas." },
+  { id: "winRate", label: "Win rate", numeric: true, help: "Porcentaje de victorias." },
+  { id: "adjustedElo", label: "Elo ajustado", numeric: true, help: "Elo corregido por dificultad media de rivales." },
 ];
 
 const paladinCalculationColumns: CompetitiveTableColumn[] = [
   { id: "rank", label: "Rank", numeric: true },
   { id: "displayName", label: "Jugador" },
-  { id: "classificationPoints", label: "P. Clasificación", numeric: true },
-  { id: "classificationScore", label: "Clasif", numeric: true },
-  { id: "pointsPerGame", label: "PpP", numeric: true },
+  { id: "classificationPoints", label: "P. Clasificación", numeric: true, help: "Suma de puntos de batalla en partidas aprobadas." },
+  { id: "classificationScore", label: "Clasif", numeric: true, help: "Valor técnico usado para ordenar la Tabla Paladín." },
+  { id: "pointsPerGame", label: "PpP", numeric: true, help: "Puntos de batalla por partida." },
   { id: "played", label: "PJ", numeric: true },
-  { id: "won", label: "G", numeric: true },
-  { id: "drawn", label: "E", numeric: true },
-  { id: "winRate", label: "Win rate", numeric: true },
-  { id: "ifr", label: "IFR", numeric: true },
-  { id: "elo", label: "Elo", numeric: true },
-  { id: "adjustedElo", label: "Elo ajustado", numeric: true },
+  { id: "won", label: "G", numeric: true, help: "Partidas ganadas." },
+  { id: "drawn", label: "E", numeric: true, help: "Partidas empatadas." },
+  { id: "winRate", label: "Win rate", numeric: true, help: "Porcentaje de victorias." },
+  { id: "ifr", label: "IFR", numeric: true, help: "Índice de fuerza de rivales." },
+  { id: "elo", label: "Elo", numeric: true, help: "Rating Elo calculado desde partidas aprobadas." },
+  { id: "adjustedElo", label: "Elo ajustado", numeric: true, help: "Elo corregido por dificultad media de rivales." },
 ];
 
 const matchColumns: CompetitiveTableColumn[] = [
@@ -219,19 +219,6 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function CriteriaHelp() {
-  return (
-    <div className="group relative inline-flex">
-      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-xs font-bold text-white">
-        ?
-      </span>
-      <div className="pointer-events-none absolute right-0 top-8 z-10 hidden w-72 rounded-2xl border border-white/10 bg-zinc-950 p-4 text-xs leading-relaxed text-white shadow-xl group-hover:block">
-        Liga: victoria 3, empate 1, derrota 0. Paladín: puntos de batalla, puntos por partida, Elo e IFR calculados desde partidas aprobadas.
-      </div>
-    </div>
-  );
-}
-
 function paladinCalculationHref(baseHref: string, enabled: boolean) {
   return enabled ? `${baseHref}?hoja=paladin` : `${baseHref}?hoja=paladin&calculo=paladin`;
 }
@@ -340,16 +327,20 @@ export default async function EventCompetitiveSheetsPage({
   const session = await auth();
   const canManage = await userCanEditEvent(session, event.id);
 
-  const [leagueRows, paladinRows, matches, competitiveSettings] = await Promise.all([
-    listLeagueStandings(event.id),
+  const competitiveSettings = await getCompetitiveEventSettings(event.id);
+  const [leagueRows, paladinRows, matches] = await Promise.all([
+    listLeagueStandings(event.id, { minimumGames: competitiveSettings.minimumPrizeGames }),
     listPaladinStandings({ eventId: event.id }),
     listApprovedCompetitiveMatches({ eventId: event.id }),
-    getCompetitiveEventSettings(event.id),
   ]);
 
   const sheet = activeSheet(searchParams?.hoja);
   const showPaladinCalculation = canManage && sheet === "paladin" && searchParams?.calculo === "paladin";
   const baseHref = `/eventos/${eventSlug}/competitivo`;
+  const activeLeagueColumns =
+    competitiveSettings.minimumPrizeGames > 0
+      ? leagueColumns
+      : leagueColumns.filter((column) => column.id !== "minimumGames");
   const leagueTableRows: CompetitiveTableRow[] = leagueRows.map((row) => ({
     id: row.playerKey,
     position: row.position,
@@ -439,23 +430,13 @@ export default async function EventCompetitiveSheetsPage({
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Partidas aprobadas" value={matches.length} />
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard label="Jugadores" value={uniquePlayers} />
+        <StatCard label="Partidas totales" value={matches.length} />
         <StatCard label="Partidas de liga" value={matches.filter((match) => match.kind === "LEAGUE").length} />
         <StatCard label="Líder Liga" value={leagueLeader} />
         <StatCard label="Líder Paladín" value={paladinLeader} />
-        <StatCard label="Pachangas" value={matches.filter((match) => match.kind === "CASUAL").length} />
-        <StatCard label="Jugadores" value={uniquePlayers} />
         <StatCard label="Última actualización" value={lastUpdated} />
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Criterios</p>
-              <p className="mt-2 text-sm font-semibold text-white">Ver ayuda</p>
-            </div>
-            <CriteriaHelp />
-          </div>
-        </div>
       </section>
 
       <nav className="flex flex-wrap gap-2">
@@ -535,7 +516,7 @@ export default async function EventCompetitiveSheetsPage({
         )}
         {sheet === "liga" && (
           <CompetitiveDataTable
-            columns={leagueColumns}
+            columns={activeLeagueColumns}
             rows={leagueTableRows}
             emptyMessage="Todavía no hay partidas de liga aprobadas para calcular esta hoja."
             searchPlaceholder="Buscar jugador"
@@ -568,10 +549,12 @@ export default async function EventCompetitiveSheetsPage({
         )}
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-relaxed text-[var(--muted)]">
-        La importación de Excel antiguo no queda activada todavía. Los datos sintéticos para validar diseño y cálculos se
-        mantienen fuera de la página pública como fixture controlado, no como generación directa desde la web.
-      </section>
+      {canManage && (
+        <section className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-relaxed text-[var(--muted)]">
+          La importación de Excel antiguo no queda activada todavía. Los datos sintéticos para validar diseño y cálculos se
+          mantienen fuera de la página pública como fixture controlado, no como generación directa desde la web.
+        </section>
+      )}
     </div>
   );
 }

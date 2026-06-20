@@ -98,6 +98,24 @@ export default async function CompetitiveReportOptionsPage({ params }: { params:
           </p>
         </div>
 
+        <div className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-4">
+          <label htmlFor="minimumPrizeGames" className="block font-semibold text-white">
+            Mínimo de partidas para sorteos
+          </label>
+          <input
+            id="minimumPrizeGames"
+            name="minimumPrizeGames"
+            type="number"
+            min={0}
+            defaultValue={settings.minimumPrizeGames}
+            className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+          />
+          <p className="text-sm leading-relaxed text-[var(--muted)]">
+            Si es mayor que 0, la Tabla Liga mostrará una columna indicando si cada jugador cumple el mínimo. Si es 0,
+            esa columna se oculta.
+          </p>
+        </div>
+
         <div className="flex flex-wrap gap-3">
           <button
             type="submit"

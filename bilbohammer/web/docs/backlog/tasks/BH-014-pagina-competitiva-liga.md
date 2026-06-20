@@ -29,7 +29,7 @@ Entra:
 - Métricas resumen: líder de Liga, líder Paladín cuando aplique, total de partidas y última actualización.
 - Tooltip de ayuda con icono de pregunta para criterios de cálculo: victoria 3, empate 1, derrota 0; Paladín por puntos de batalla, PpP, Elo/IFR.
 - Tabla Paladín ordenada por `Clasif`, con vista normal simplificada y vista técnica para organizador/admin con fórmula, IFR y Elo.
-- Opciones de reportes por evento: mostrar/ocultar ronda y tipo de puntuación (`0-100` por jugador o suma exacta `20`).
+- Opciones de reportes/competitivo por evento: mostrar/ocultar ronda, tipo de puntuación (`0-100` por jugador o suma exacta `20`) y mínimo de partidas para sorteos.
 - Exportación de `Tabla Liga`, `Tabla Paladín` cuando aplique y `Partidas` a `.xlsx` o `.csv`.
 - Datos sintéticos para validar diseño mediante fixture CSV externo e importación controlada a reportes pendientes, no mediante escritura directa de clasificaciones ni generador en la página pública.
 - Auditoría clara de quién envió, revisó, corrigió o anuló cada dato.
@@ -59,8 +59,10 @@ No entra de momento:
 - Existe un CSV sintético de referencia y un importador operativo que crea reportes pendientes para validar diseño/cálculos.
 - La Tabla Paladín usa `Clasif` como métrica de ordenación y permite a organizador/admin ver y editar la fórmula aplicada con auditoría por evento.
 - Un organizador/admin puede configurar si los reportes usan ronda y qué tipo de puntuación validan.
+- Si el mínimo de partidas para sorteos es mayor que 0, la Tabla Liga muestra si cada jugador lo cumple; si es 0, la columna se oculta.
 - Ninguna tabla competitiva muestra números con más de 2 decimales.
 - Telegram respeta las opciones de reportes del evento en el flujo guiado y en modo rápido.
+- Las tablas competitivas se mantienen como tablas reales también en móvil, con scroll horizontal en vez de tarjetas por fila.
 
 ## Notas tecnicas
 
@@ -80,6 +82,7 @@ No entra de momento:
 
 - 2026-06-20: se bloquea la aprobación de reportes con el mismo jugador en ambos lados, se limita la visualización/exportación numérica a 2 decimales y se añade modo de puntuación configurable para reportes (`0-100` individual o suma `20`).
 - 2026-06-20: se añade feedback de errores por tarjeta en revisión de reportes y se alinea Telegram con las opciones del evento para puntuación y ronda.
+- 2026-06-20: se añade mínimo configurable de partidas para sorteos, columna condicional en Tabla Liga, tabla real con scroll horizontal en móvil y nota de fixture visible solo para organizador/admin.
 - 2026-06-20: se añade configuración de presentación de reportes por evento con opción para mostrar/ocultar ronda en la bandeja de revisión.
 - 2026-06-19: se persiste la fórmula Paladín por evento con auditoría; al guardarla se revalida la página y la tabla se recalcula en la siguiente lectura/exportación desde partidas aprobadas.
 - 2026-06-19: se corrige el retorno de acciones de revisión para conservar la bandeja de reportes y se ajusta Paladín: `Clasif` pasa a ser la métrica de ordenación, IFR/Elo se ocultan en vista normal y quedan visibles en modo técnico para organizador/admin junto a la fórmula.
