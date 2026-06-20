@@ -800,17 +800,7 @@ export async function notifyCompetitiveReportPending(input: CompetitiveReportNot
 
   if (!report?.event) return { created: 0, recipients: 0 };
 
-  const admins = await prisma.user.findMany({
-    where: {
-      isActive: true,
-      roles: { hasSome: [Rol.ADMIN, Rol.JUNTA] },
-    },
-    select: { id: true },
-  });
-  const recipients = new Set<number>([
-    ...report.event.organizers.map((organizer) => organizer.userId),
-    ...admins.map((admin) => admin.id),
-  ]);
+  const recipients = new Set<number>(report.event.organizers.map((organizer) => organizer.userId));
   if (input.actorUserId != null) recipients.delete(input.actorUserId);
 
   const eventSlug = buildEventSlug(report.event.id, report.event.title);

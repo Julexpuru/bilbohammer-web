@@ -65,6 +65,7 @@ No entra de momento:
 - Las tablas competitivas se mantienen como tablas reales también en móvil, con scroll horizontal en vez de tarjetas por fila.
 - Los participantes activos del evento aparecen en `Tabla Liga` y `Tabla Paladín` aunque todavía no tengan partidas aprobadas, con métricas a 0.
 - La gestión de participantes queda visible solo para organizadores/admins desde la página principal del evento, plegada por defecto y con control para mostrar/ocultar; la consulta pública se hace desde las hojas competitivas.
+- Los avisos de reportes competitivos pendientes se envían solo a organizadores explícitos del evento; admin/junta conservan permisos de gestión global, pero no reciben notificaciones de ligas que no organizan.
 
 ## Notas tecnicas
 
@@ -87,6 +88,7 @@ No entra de momento:
 - 2026-06-20: se añade mínimo configurable de partidas para sorteos, columna condicional en Tabla Liga, tabla real con scroll horizontal en móvil y nota de fixture visible solo para organizador/admin.
 - 2026-06-20: se compacta la tabla competitiva en móvil, se añade resaltado de la última fila pulsada, se añaden participantes activos sin partidas a Liga/Paladín y se limita el panel de participantes del evento a gestión privada de organizador/admin.
 - 2026-06-20: se deja la gestión de participantes plegada por defecto y se ajusta la cabecera competitiva para mostrar el nombre del evento en la miga sin repetirlo bajo el título.
+- 2026-06-20: se limita la notificación de reportes competitivos pendientes a organizadores explícitos del evento, sin incluir admin/junta si no figuran como organizadores.
 - 2026-06-20: se añade configuración de presentación de reportes por evento con opción para mostrar/ocultar ronda en la bandeja de revisión.
 - 2026-06-19: se persiste la fórmula Paladín por evento con auditoría; al guardarla se revalida la página y la tabla se recalcula en la siguiente lectura/exportación desde partidas aprobadas.
 - 2026-06-19: se corrige el retorno de acciones de revisión para conservar la bandeja de reportes y se ajusta Paladín: `Clasif` pasa a ser la métrica de ordenación, IFR/Elo se ocultan en vista normal y quedan visibles en modo técnico para organizador/admin junto a la fórmula.
