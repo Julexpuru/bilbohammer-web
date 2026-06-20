@@ -68,6 +68,7 @@ export default function CompetitiveDataTable({
 }: Props) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [query, setQuery] = useState("");
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredRows = useMemo(
@@ -124,17 +125,15 @@ export default function CompetitiveDataTable({
               <thead className="bg-white/5 text-[0.65rem] uppercase tracking-[0.14em] text-[var(--muted)] sm:text-xs sm:tracking-[0.22em]">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header, index) => {
+                    {headerGroup.headers.map((header) => {
                       const meta = header.column.columnDef.meta as { numeric?: boolean } | undefined;
                       const sorted = header.column.getIsSorted();
                       return (
                         <th
                           key={header.id}
                           className={`sticky top-0 z-20 whitespace-nowrap border-b border-white/10 bg-zinc-950 px-2 py-2 sm:px-4 sm:py-3 ${
-                            index === 0 ? "left-0 z-40 w-[3.75rem] min-w-[3.75rem] sm:w-[5.5rem] sm:min-w-[5.5rem]" : ""
-                          } ${
-                            index === 1 ? "left-[3.75rem] z-30 w-[9.25rem] min-w-[9.25rem] sm:left-[5.5rem] sm:w-[13rem] sm:min-w-[13rem]" : ""
-                          } ${meta?.numeric ? "text-right" : "text-left"}`}
+                            meta?.numeric ? "text-right" : "text-left"
+                          }`}
                         >
                           <button
                             type="button"
@@ -163,27 +162,36 @@ export default function CompetitiveDataTable({
                 ))}
               </thead>
               <tbody className="divide-y divide-white/10">
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="transition hover:bg-white/[0.03]">
-                    {row.getVisibleCells().map((cell, index) => {
-                      const meta = cell.column.columnDef.meta as { numeric?: boolean } | undefined;
-                      return (
-                        <td
-                          key={cell.id}
-                          className={`max-w-[14rem] break-words border-white/10 px-2 py-2 text-white/90 sm:max-w-[18rem] sm:px-4 sm:py-3 ${
-                            index === 0 ? "sticky left-0 z-20 w-[3.75rem] min-w-[3.75rem] border-r bg-zinc-950 sm:w-[5.5rem] sm:min-w-[5.5rem]" : ""
-                          } ${
-                            index === 1 ? "sticky left-[3.75rem] z-10 w-[9.25rem] min-w-[9.25rem] border-r bg-zinc-950 sm:left-[5.5rem] sm:w-[13rem] sm:min-w-[13rem]" : ""
-                          } ${
-                            meta?.numeric ? "text-right tabular-nums" : "text-left"
-                          }`}
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {table.getRowModel().rows.map((row) => {
+                  const rowId = row.original.id;
+                  const isSelected = selectedRowId === rowId;
+                  return (
+                    <tr
+                      key={row.id}
+                      aria-selected={isSelected}
+                      onClick={() => setSelectedRowId(rowId)}
+                      className={`cursor-pointer transition ${
+                        isSelected
+                          ? "bg-sky-400/10 outline outline-1 outline-inset outline-sky-300/30"
+                          : "hover:bg-white/[0.03]"
+                      }`}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const meta = cell.column.columnDef.meta as { numeric?: boolean } | undefined;
+                        return (
+                          <td
+                            key={cell.id}
+                            className={`max-w-[14rem] break-words border-white/10 px-2 py-2 text-white/90 sm:max-w-[18rem] sm:px-4 sm:py-3 ${
+                              meta?.numeric ? "text-right tabular-nums" : "text-left"
+                            }`}
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

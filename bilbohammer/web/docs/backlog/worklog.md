@@ -4,7 +4,7 @@ Registro cronologico breve de trabajo realizado o contexto consolidado.
 
 ## 2026-06-20
 
-- Se compacta la visualización móvil de hojas competitivas, manteniendo fijas las dos primeras columnas; además, los participantes activos aparecen con 0 partidas en Liga/Paladín y el panel de participantes del evento pasa a ser gestión privada de organizador/admin.
+- Se compacta la visualización móvil de hojas competitivas y se sustituye el bloqueo de columnas por resaltado de la última fila pulsada; además, los participantes activos aparecen con 0 partidas en Liga/Paladín y el panel de participantes del evento pasa a ser gestión privada de organizador/admin.
 - Se ajusta la página competitiva: mínimo configurable de partidas para sorteos con columna condicional, orden de métricas revisado, ayuda de criterios integrada en cabeceras de tabla, tablas reales con scroll horizontal en móvil y nota de fixture solo visible para organizador/admin.
 - Se añade feedback de errores por tarjeta en la bandeja de revisión mediante formularios cliente con estado de acción; Telegram pasa a mostrar y validar puntos según el modo configurado del evento y rechaza ronda en modo rápido si el evento no la usa.
 - Se corrige el dominio competitivo para bloquear reportes con el mismo jugador en ambos lados, se limita la salida de tablas/exportaciones a 2 decimales y se añade modo de puntuación configurable para reportes: puntos individuales 0-100 o suma exacta 20.

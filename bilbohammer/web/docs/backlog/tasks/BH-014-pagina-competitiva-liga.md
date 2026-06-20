@@ -85,7 +85,7 @@ No entra de momento:
 - 2026-06-20: se bloquea la aprobación de reportes con el mismo jugador en ambos lados, se limita la visualización/exportación numérica a 2 decimales y se añade modo de puntuación configurable para reportes (`0-100` individual o suma `20`).
 - 2026-06-20: se añade feedback de errores por tarjeta en revisión de reportes y se alinea Telegram con las opciones del evento para puntuación y ronda.
 - 2026-06-20: se añade mínimo configurable de partidas para sorteos, columna condicional en Tabla Liga, tabla real con scroll horizontal en móvil y nota de fixture visible solo para organizador/admin.
-- 2026-06-20: se compacta la tabla competitiva en móvil con dos primeras columnas fijas, se añaden participantes activos sin partidas a Liga/Paladín y se limita el panel de participantes del evento a gestión privada de organizador/admin.
+- 2026-06-20: se compacta la tabla competitiva en móvil, se añade resaltado de la última fila pulsada, se añaden participantes activos sin partidas a Liga/Paladín y se limita el panel de participantes del evento a gestión privada de organizador/admin.
 - 2026-06-20: se añade configuración de presentación de reportes por evento con opción para mostrar/ocultar ronda en la bandeja de revisión.
 - 2026-06-19: se persiste la fórmula Paladín por evento con auditoría; al guardarla se revalida la página y la tabla se recalcula en la siguiente lectura/exportación desde partidas aprobadas.
 - 2026-06-19: se corrige el retorno de acciones de revisión para conservar la bandeja de reportes y se ajusta Paladín: `Clasif` pasa a ser la métrica de ordenación, IFR/Elo se ocultan en vista normal y quedan visibles en modo técnico para organizador/admin junto a la fórmula.
