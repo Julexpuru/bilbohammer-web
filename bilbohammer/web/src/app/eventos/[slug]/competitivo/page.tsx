@@ -1,4 +1,4 @@
-import { CompetitiveMatchKind } from "@prisma/client";
+import { CompetitiveMatchKind, EventRegistrationStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -10,6 +10,8 @@ import CompetitiveDataTable, {
 import {
   DEFAULT_PALADIN_FORMULA,
   getCompetitiveEventSettings,
+  includeRegisteredPlayersInLeagueStandings,
+  includeRegisteredPlayersInPaladinStandings,
   listApprovedCompetitiveMatches,
   listLeagueStandings,
   listPaladinStandings,
@@ -212,9 +214,11 @@ function activeSheet(value: string | undefined): SheetId {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-      <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+    <div className="rounded-2xl border border-white/10 bg-black/20 p-3 sm:p-4">
+      <p className="text-[0.68rem] uppercase tracking-[0.16em] text-[var(--muted)] sm:text-xs sm:tracking-[0.22em]">
+        {label}
+      </p>
+      <p className="mt-2 text-xl font-semibold text-white sm:text-2xl">{value}</p>
     </div>
   );
 }
@@ -316,7 +320,15 @@ export default async function EventCompetitiveSheetsPage({
   const eventId = extractEventIdFromSlug(params.slug);
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { id: true, title: true, game: { select: { name: true, slug: true } } },
+    select: {
+      id: true,
+      title: true,
+      game: { select: { name: true, slug: true } },
+      registrations: {
+        where: { status: { not: EventRegistrationStatus.CANCELLED } },
+        select: { userId: true, playerName: true, status: true },
+      },
+    },
   });
 
   if (!event) {
@@ -328,11 +340,19 @@ export default async function EventCompetitiveSheetsPage({
   const canManage = await userCanEditEvent(session, event.id);
 
   const competitiveSettings = await getCompetitiveEventSettings(event.id);
-  const [leagueRows, paladinRows, matches] = await Promise.all([
+  const [calculatedLeagueRows, calculatedPaladinRows, matches] = await Promise.all([
     listLeagueStandings(event.id, { minimumGames: competitiveSettings.minimumPrizeGames }),
     listPaladinStandings({ eventId: event.id }),
     listApprovedCompetitiveMatches({ eventId: event.id }),
   ]);
+  const leagueRows = includeRegisteredPlayersInLeagueStandings(
+    calculatedLeagueRows,
+    event.registrations,
+    competitiveSettings.minimumPrizeGames,
+  );
+  const paladinRows = includeRegisteredPlayersInPaladinStandings(calculatedPaladinRows, event.registrations, {
+    formula: competitiveSettings.paladinFormula || DEFAULT_PALADIN_FORMULA,
+  });
 
   const sheet = activeSheet(searchParams?.hoja);
   const showPaladinCalculation = canManage && sheet === "paladin" && searchParams?.calculo === "paladin";
@@ -370,7 +390,7 @@ export default async function EventCompetitiveSheetsPage({
   }));
   const filteredMatches = filterMatches(matches, searchParams);
   const matchTableRows = filteredMatches.map((match) => toMatchRow(match, baseHref));
-  const uniquePlayers = new Set(matches.flatMap((match) => match.players.map((player) => player.userId ?? player.displayName))).size;
+  const uniquePlayers = paladinRows.length;
   const leagueLeader = leagueRows[0]?.displayName ?? "-";
   const paladinLeader = paladinRows[0]?.displayName ?? "-";
   const lastUpdated = matches.length

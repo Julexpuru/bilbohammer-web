@@ -391,7 +391,7 @@ export default async function EventDetailPage({
 
   const showShareButtons = event.status !== "DRAFT" && event.status !== "CANCELLED";
   const canRegisterForEvent = canAcceptRegistrations(event) && currentUserCanRegisterMembersOnly;
-  const showRegistrationsPanel = canManage || event.registrations.length > 0 || canRegisterForEvent;
+  const showRegistrationsPanel = canManage;
 
   return (
     <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">

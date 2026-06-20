@@ -1,9 +1,11 @@
-import { CompetitiveMatchKind } from "@prisma/client";
+import { CompetitiveMatchKind, EventRegistrationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import {
   listApprovedCompetitiveMatches,
   getCompetitiveEventSettings,
+  includeRegisteredPlayersInLeagueStandings,
+  includeRegisteredPlayersInPaladinStandings,
   listLeagueStandings,
   listPaladinStandings,
   type ApprovedCompetitiveMatchRow,
@@ -74,7 +76,14 @@ function filterMatches(matches: ApprovedCompetitiveMatchRow[], searchParams: URL
 export async function GET(request: Request, { params }: RouteParams) {
   const event = await prisma.event.findUnique({
     where: { id: params.id },
-    select: { id: true, title: true },
+    select: {
+      id: true,
+      title: true,
+      registrations: {
+        where: { status: { not: EventRegistrationStatus.CANCELLED } },
+        select: { userId: true, playerName: true, status: true },
+      },
+    },
   });
 
   if (!event) {
@@ -88,7 +97,11 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   if (safeSheet === "liga") {
     const settings = await getCompetitiveEventSettings(event.id);
-    const rows = await listLeagueStandings(event.id, { minimumGames: settings.minimumPrizeGames });
+    const rows = includeRegisteredPlayersInLeagueStandings(
+      await listLeagueStandings(event.id, { minimumGames: settings.minimumPrizeGames }),
+      event.registrations,
+      settings.minimumPrizeGames,
+    );
     const includeMinimum = settings.minimumPrizeGames > 0;
     csv = toCsv(
       includeMinimum
@@ -109,7 +122,12 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
 
   if (safeSheet === "paladin") {
-    const rows = await listPaladinStandings({ eventId: event.id });
+    const settings = await getCompetitiveEventSettings(event.id);
+    const rows = includeRegisteredPlayersInPaladinStandings(
+      await listPaladinStandings({ eventId: event.id }),
+      event.registrations,
+      { formula: settings.paladinFormula },
+    );
     csv = toCsv(
       ["Rank", "Jugador", "P. Clasificación", "Clasif", "PpP", "PJ", "G", "E", "Win rate", "IFR", "Elo", "Elo ajustado"],
       rows.map((row) => [

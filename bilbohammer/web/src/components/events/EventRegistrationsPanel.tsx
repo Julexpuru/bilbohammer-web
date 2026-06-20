@@ -274,7 +274,7 @@ export default function EventRegistrationsPanel({
     <section className="space-y-5 rounded-3xl border border-white/10 bg-black/20 p-6 shadow-lg">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Participantes</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Gestión de participantes</p>
           <h2 className="mt-1 text-xl font-semibold text-white">{capacityLabel}</h2>
         </div>
         <div className="flex flex-wrap gap-2">

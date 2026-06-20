@@ -123,6 +123,12 @@ export type PaladinStandingRow = {
   adjustedElo: number;
 };
 
+export type CompetitiveStandingRegistration = {
+  userId: number | null;
+  playerName: string;
+  status?: string | null;
+};
+
 type PaladinAccumulator = Omit<
   PaladinStandingRow,
   "rank" | "classificationScore" | "pointsPerGame" | "winRate" | "ifr" | "adjustedElo"
@@ -209,6 +215,16 @@ function leaguePointsForOutcome(outcome: CompetitiveMatchOutcome) {
 
 function playerKey(player: { userId: number | null; displayName: string }) {
   return player.userId ? `user:${player.userId}` : `name:${player.displayName.trim().toLowerCase()}`;
+}
+
+function registrationStandingKey(registration: CompetitiveStandingRegistration) {
+  return playerKey({ userId: registration.userId, displayName: registration.playerName });
+}
+
+function activeStandingRegistrations(registrations: CompetitiveStandingRegistration[]) {
+  return registrations.filter(
+    (registration) => registration.status !== "CANCELLED" && registration.playerName.trim().length > 0,
+  );
 }
 
 function sameTwoPlayerPair(
@@ -867,6 +883,46 @@ export function calculateLeagueStandings(
     }));
 }
 
+export function includeRegisteredPlayersInLeagueStandings(
+  rows: LeagueStandingRow[],
+  registrations: CompetitiveStandingRegistration[],
+  minimumGames = 0,
+): LeagueStandingRow[] {
+  const byKey = new Map(rows.map((row) => [row.playerKey, { ...row }]));
+
+  for (const registration of activeStandingRegistrations(registrations)) {
+    const key = registrationStandingKey(registration);
+    if (byKey.has(key)) continue;
+    byKey.set(key, {
+      position: 0,
+      playerKey: key,
+      userId: registration.userId,
+      displayName: registration.playerName.trim(),
+      leaguePoints: 0,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      scoreTotal: 0,
+      minimumGames: minimumGames <= 0,
+    });
+  }
+
+  return Array.from(byKey.values())
+    .sort((a, b) => {
+      if (b.leaguePoints !== a.leaguePoints) return b.leaguePoints - a.leaguePoints;
+      if (b.won !== a.won) return b.won - a.won;
+      if (b.scoreTotal !== a.scoreTotal) return b.scoreTotal - a.scoreTotal;
+      if (a.played !== b.played) return a.played - b.played;
+      return a.displayName.localeCompare(b.displayName, "es");
+    })
+    .map((row, index) => ({
+      ...row,
+      position: index + 1,
+      minimumGames: row.played >= minimumGames,
+    }));
+}
+
 export async function listPaladinStandings(
   filters: { eventId?: string; gameId?: string } = {},
   db: CompetitiveDb = prisma,
@@ -994,5 +1050,61 @@ export function calculatePaladinStandings(
     .map((row, index) => ({
       rank: index + 1,
       ...row,
+    }));
+}
+
+export function includeRegisteredPlayersInPaladinStandings(
+  rows: PaladinStandingRow[],
+  registrations: CompetitiveStandingRegistration[],
+  options: { formula?: string } = {},
+): PaladinStandingRow[] {
+  const byKey = new Map(rows.map((row) => [row.playerKey, { ...row }]));
+  const playedMedian = Math.floor(median(rows.map((row) => row.played).filter((played) => played > 0)));
+  const formula = options.formula ?? DEFAULT_PALADIN_FORMULA;
+
+  for (const registration of activeStandingRegistrations(registrations)) {
+    const key = registrationStandingKey(registration);
+    if (byKey.has(key)) continue;
+    const classificationScore = evaluatePaladinFormula(formula, {
+      classificationPoints: 0,
+      pointsPerGame: 0,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      winRate: 0,
+      ifr: 0,
+      elo: 1500,
+      adjustedElo: 0,
+      medianPlayed: playedMedian,
+    });
+    byKey.set(key, {
+      rank: 0,
+      playerKey: key,
+      userId: registration.userId,
+      displayName: registration.playerName.trim(),
+      classificationPoints: 0,
+      classificationScore,
+      pointsPerGame: 0,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      winRate: 0,
+      ifr: 0,
+      elo: 1500,
+      adjustedElo: 0,
+    });
+  }
+
+  return Array.from(byKey.values())
+    .sort((a, b) => {
+      if (b.classificationScore !== a.classificationScore) return b.classificationScore - a.classificationScore;
+      if (b.classificationPoints !== a.classificationPoints) return b.classificationPoints - a.classificationPoints;
+      if (b.pointsPerGame !== a.pointsPerGame) return b.pointsPerGame - a.pointsPerGame;
+      if (b.elo !== a.elo) return b.elo - a.elo;
+      return a.displayName.localeCompare(b.displayName, "es");
+    })
+    .map((row, index) => ({
+      ...row,
+      rank: index + 1,
     }));
 }
