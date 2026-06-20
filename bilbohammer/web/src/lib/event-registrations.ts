@@ -89,7 +89,13 @@ export async function getUserRegistrationName(userId: number, db: EventRegistrat
     select: { id: true, name: true, nombre: true, nick: true, email: true },
   });
   if (!user) return null;
-  return user.nick ?? user.nombre ?? user.name ?? user.email ?? `Usuario ${user.id}`;
+  return (
+    normalizeRegistrationText(user.nick) ??
+    normalizeRegistrationText(user.nombre) ??
+    normalizeRegistrationText(user.name) ??
+    normalizeRegistrationText(user.email) ??
+    `Usuario ${user.id}`
+  );
 }
 
 export function normalizeListData(value: unknown) {
