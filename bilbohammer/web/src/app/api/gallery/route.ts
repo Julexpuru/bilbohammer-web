@@ -78,12 +78,12 @@ export async function POST(request: Request) {
   try {
     payload = (await request.json()) as Record<string, unknown>;
   } catch {
-    return NextResponse.json({ error: "Cuerpo de la solicitud invalido." }, { status: 400 });
+    return NextResponse.json({ error: "Cuerpo de la solicitud inválido." }, { status: 400 });
   }
 
   const rawTitle = safeOptionalString(payload.title);
   if (!rawTitle) {
-    return NextResponse.json({ error: "El titulo del album es obligatorio." }, { status: 400 });
+    return NextResponse.json({ error: "El título del álbum es obligatorio." }, { status: 400 });
   }
 
   const description = safeOptionalString(payload.description);
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ album: { id: album.id, slug: album.slug, title: album.title } }, { status: 201 });
   } catch (error) {
-    console.error("Error creando album", error);
-    return NextResponse.json({ error: "No se pudo crear el album." }, { status: 500 });
+    console.error("Error creando álbum", error);
+    return NextResponse.json({ error: "No se pudo crear el álbum." }, { status: 500 });
   }
 }

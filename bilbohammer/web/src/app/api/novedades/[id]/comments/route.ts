@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { getUserDisplayName } from "@/lib/user-display";
 
 type ArticleComment = {
   id: string;
@@ -59,7 +60,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: "Noticia no encontrada." }, { status: 404 });
     }
 
-    const author = session.user.name?.trim() || session.user.email?.trim() || "Usuario de Bilbohammer";
+    const author = getUserDisplayName(session.user, "Usuario de Bilbohammer") ?? "Usuario de Bilbohammer";
     const comment: ArticleComment = {
       id: randomUUID(),
       author,

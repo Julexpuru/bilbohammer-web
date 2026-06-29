@@ -54,7 +54,7 @@ export async function uploadBannerFile(file: File, options?: UploadBannerOptions
   }
 
   if (file.size === 0) {
-    throw new Error("El archivo esta vacio.");
+    throw new Error("El archivo está vacío.");
   }
 
   if (file.size > MAX_BANNER_SIZE) {
@@ -116,7 +116,7 @@ export async function uploadAttachmentFile(
   }
 
   if (file.size === 0) {
-    throw new Error("El archivo esta vacio.");
+    throw new Error("El archivo está vacío.");
   }
 
   if (file.size > MAX_ATTACHMENT_SIZE) {

@@ -6,7 +6,9 @@ import { auth } from "@/auth";
 import { getCompetitiveEventSettings } from "@/lib/competitive-matches";
 import { resolveSessionUserId } from "@/lib/event-registrations";
 import { buildEventSlug, extractEventIdFromSlug } from "@/lib/events/slug";
+import { FACTIONS } from "@/lib/games";
 import { prisma } from "@/lib/prisma";
+import { userCanEditEvent } from "@/lib/roles";
 
 import { submitCompetitiveReportAction } from "./actions";
 
@@ -39,6 +41,20 @@ function FeedbackBanner({ searchParams }: { searchParams?: SearchParams }) {
 
 export const dynamic = "force-dynamic";
 
+function factionOptionsForGame(slug: string | null | undefined) {
+  if (slug === "w40k" || slug === "aos" || slug === "tow") {
+    return FACTIONS[slug];
+  }
+  return [];
+}
+
+function scoringFormatLabel(mode: CompetitiveReportScoringMode) {
+  if (mode === CompetitiveReportScoringMode.SUM_20) {
+    return "Formato de puntuación: WTC (diferencial de 20)";
+  }
+  return "Formato de puntuación: 0 a 100";
+}
+
 export default async function SubmitCompetitiveReportPage({
   params,
   searchParams,
@@ -55,6 +71,7 @@ export default async function SubmitCompetitiveReportPage({
       select: {
         id: true,
         title: true,
+        game: { select: { slug: true, name: true } },
         registrations: {
           where: {
             status: { in: [EventRegistrationStatus.INSCRITO, EventRegistrationStatus.PAGADO] },
@@ -78,15 +95,18 @@ export default async function SubmitCompetitiveReportPage({
 
   const eventSlug = buildEventSlug(event.id, event.title);
   const competitiveHref = `/eventos/${eventSlug}/competitivo`;
+  const canManage = await userCanEditEvent(session, event.id);
   const ownRegistration = userId == null ? null : event.registrations.find((registration) => registration.userId === userId);
+  const defaultPlayerRegistration = ownRegistration ?? event.registrations[0] ?? null;
   const opponentRegistrations = ownRegistration
     ? event.registrations.filter((registration) => registration.id !== ownRegistration.id)
     : [];
+  const selectableOpponentRegistrations = canManage && defaultPlayerRegistration
+    ? event.registrations.filter((registration) => registration.id !== defaultPlayerRegistration.id)
+    : opponentRegistrations;
+  const factionOptions = factionOptionsForGame(event.game?.slug);
   const today = new Date().toISOString().slice(0, 10);
-  const scoreHelp =
-    competitiveSettings.scoringMode === CompetitiveReportScoringMode.SUM_20
-      ? "La suma de ambos jugadores debe ser exactamente 20."
-      : "Cada jugador puede tener entre 0 y 100 puntos.";
+  const scoreHelp = scoringFormatLabel(competitiveSettings.scoringMode);
   const scoreMax = competitiveSettings.scoringMode === CompetitiveReportScoringMode.SUM_20 ? 20 : 100;
 
   return (
@@ -123,13 +143,13 @@ export default async function SubmitCompetitiveReportPage({
         </section>
       )}
 
-      {userId != null && !ownRegistration && (
+      {userId != null && !ownRegistration && !canManage && (
         <section className="rounded-3xl border border-white/10 bg-black/20 p-6 text-sm text-[var(--muted)]">
           Solo los jugadores inscritos en este evento pueden enviar resultados.
         </section>
       )}
 
-      {ownRegistration && (
+      {userId != null && (ownRegistration || canManage) && (
         <form action={submitCompetitiveReportAction} className="space-y-5 rounded-3xl border border-white/10 bg-black/20 p-5 shadow-lg">
           <input type="hidden" name="eventId" value={event.id} />
 
@@ -165,6 +185,37 @@ export default async function SubmitCompetitiveReportPage({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
+              <label className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]" htmlFor="playerRegistrationId">
+                Jugador
+              </label>
+              {canManage ? (
+                <select
+                  id="playerRegistrationId"
+                  name="playerRegistrationId"
+                  required
+                  defaultValue={defaultPlayerRegistration?.id ?? ""}
+                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                >
+                  <option value="">Selecciona jugador</option>
+                  {event.registrations.map((registration) => (
+                    <option key={registration.id} value={registration.id}>
+                      {registration.playerName}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <input type="hidden" name="playerRegistrationId" value={ownRegistration?.id ?? ""} />
+                  <input
+                    id="playerRegistrationId"
+                    value={ownRegistration?.playerName ?? ""}
+                    disabled
+                    className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/70 outline-none"
+                  />
+                </>
+              )}
+            </div>
+            <div className="space-y-2">
               <label className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]" htmlFor="opponentRegistrationId">
                 Rival
               </label>
@@ -175,13 +226,16 @@ export default async function SubmitCompetitiveReportPage({
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
               >
                 <option value="">Selecciona rival</option>
-                {opponentRegistrations.map((registration) => (
+                {selectableOpponentRegistrations.map((registration) => (
                   <option key={registration.id} value={registration.id}>
                     {registration.playerName}
                   </option>
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             {competitiveSettings.showReportRound && (
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]" htmlFor="roundNumber">
@@ -202,28 +256,46 @@ export default async function SubmitCompetitiveReportPage({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]" htmlFor="ownFaction">
-                Tu facción
+                Facción jugador
               </label>
-              <input
+              <select
                 id="ownFaction"
                 name="ownFaction"
-                defaultValue={ownRegistration.factionLabel ?? ""}
+                defaultValue={defaultPlayerRegistration?.factionLabel ?? ""}
                 required
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-              />
+              >
+                <option value="">Selecciona facción</option>
+                {factionOptions.map((faction) => (
+                  <option key={faction.id} value={faction.name}>
+                    {faction.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-2">
               <label className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]" htmlFor="opponentFaction">
                 Facción rival
               </label>
-              <input
+              <select
                 id="opponentFaction"
                 name="opponentFaction"
                 required
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-              />
+              >
+                <option value="">Selecciona facción</option>
+                {factionOptions.map((faction) => (
+                  <option key={faction.id} value={faction.name}>
+                    {faction.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
+
+          <p className="rounded-2xl border border-sky-300/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+            {scoreHelp}
+          </p>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
@@ -243,7 +315,7 @@ export default async function SubmitCompetitiveReportPage({
             </div>
             <div className="space-y-2">
               <label className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]" htmlFor="ownScore">
-                Tus puntos
+                Puntos jugador
               </label>
               <input
                 id="ownScore"
@@ -270,10 +342,6 @@ export default async function SubmitCompetitiveReportPage({
               />
             </div>
           </div>
-
-          <p className="rounded-2xl border border-sky-300/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-            {scoreHelp}
-          </p>
 
           <div className="space-y-2">
             <label className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]" htmlFor="notes">

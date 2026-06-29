@@ -16,7 +16,7 @@ const values = [
   {
     title: "Organizacion y cuidado del espacio",
     description:
-      "Mantenemos mesas, escenografia y material comun para que cada quedada se sienta preparada y acogedora.",
+      "Mantenemos mesas, escenografía y material común para que cada quedada se sienta preparada y acogedora.",
   },
   {
     title: "Promocion de la aficion",
@@ -39,7 +39,7 @@ const milestones = [
   {
     year: "2024",
     title: "Nuevo espacio para ligas",
-    description: "Incorporamos mesas modulares, escenografia propia y calendario regular de ligas y talleres.",
+    description: "Incorporamos mesas modulares, escenografía propia y calendario regular de ligas y talleres.",
   },
 ];
 
@@ -55,7 +55,7 @@ export default function QuienesSomosPage() {
             ligas competitivas, campanas narrativas y quedadas para juegos de mesa y rol.
           </p>
           <p className="text-sm text-[var(--muted)]">
-            Somos un equipo totalmente voluntario que invierte tiempo en mantener el local, preparar escenografia,
+            Somos un equipo totalmente voluntario que invierte tiempo en mantener el local, preparar escenografía,
             organizar eventos y acompanarte si es tu primera visita. Sin la comunidad no habria club.
           </p>
         </div>

@@ -111,7 +111,7 @@ export function ArticleEditor({
     event.preventDefault();
     if (!isValid) {
       setStatusMessage(
-        "Completa al menos el titulo, el resumen, selecciona una categoria y anade contenido al cuerpo de la noticia.",
+        "Completa al menos el título, el resumen, selecciona una categoría y añade contenido al cuerpo de la noticia.",
       );
       return;
     }

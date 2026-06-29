@@ -281,7 +281,7 @@ export function AlbumDetailView({ album, editAccess = "none" }: AlbumDetailViewP
           {preparedImages.map(({ image: preparedImage, usesPlaceholder }, index) => {
             const photoTitle = preparedImage.title ?? `Foto ${index + 1}`;
             const photoAlt = preparedImage.alt || photoTitle;
-            const locationLabel = preparedImage.location ?? "Ubicacion no indicada";
+            const locationLabel = preparedImage.location ?? "Ubicación no indicada";
             const takenAtLabel = preparedImage.takenAt ?? "Fecha no indicada";
 
             return (

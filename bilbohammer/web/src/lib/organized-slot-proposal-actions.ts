@@ -56,7 +56,7 @@ export async function acceptSlotProposal(proposalId: string, actingUserId: numbe
       throw new SlotProposalActionError("Solo el creador del slot puede gestionar propuestas.", 403);
     }
     if (proposal.status !== "PENDING") {
-      throw new SlotProposalActionError("La propuesta ya no esta pendiente.", 400);
+      throw new SlotProposalActionError("La propuesta ya no está pendiente.", 400);
     }
     if (
       getEffectiveSlotStatus({
@@ -215,7 +215,7 @@ export async function rejectSlotProposal(proposalId: string, actingUserId: numbe
     throw new SlotProposalActionError("Solo el creador del slot puede gestionar propuestas.", 403);
   }
   if (proposal.status !== "PENDING") {
-    throw new SlotProposalActionError("La propuesta ya no esta pendiente.", 400);
+    throw new SlotProposalActionError("La propuesta ya no está pendiente.", 400);
   }
 
   const updated = await prisma.slotProposal.update({

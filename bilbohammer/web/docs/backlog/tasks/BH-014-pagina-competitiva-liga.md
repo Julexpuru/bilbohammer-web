@@ -6,7 +6,7 @@ Prioridad: P2
 Area: eventos
 Owner: shared
 Origen: refinamiento de BH-010/BH-013
-Ultima actualizacion: 2026-06-19
+Ultima actualizacion: 2026-06-29
 
 ## Contexto
 
@@ -66,6 +66,7 @@ No entra de momento:
 - Los participantes activos del evento aparecen en `Tabla Liga` y `Tabla Paladín` aunque todavía no tengan partidas aprobadas, con métricas a 0.
 - La gestión de participantes queda visible solo para organizadores/admins desde la página principal del evento, plegada por defecto y con control para mostrar/ocultar; la consulta pública se hace desde las hojas competitivas.
 - Los avisos de reportes competitivos pendientes se envían solo a organizadores explícitos del evento; admin/junta conservan permisos de gestión global, pero no reciben notificaciones de ligas que no organizan.
+- En el envío web de resultados, organizador/admin puede seleccionar el jugador que reporta entre participantes; un jugador normal lo ve bloqueado a su propia inscripción. Las facciones se eligen desde el catálogo del juego y el formato de puntuación se muestra antes de introducir resultado/puntos.
 
 ## Notas tecnicas
 
@@ -83,6 +84,7 @@ No entra de momento:
 
 ## Historial
 
+- 2026-06-29: se mejora el envío web de resultados con selector de jugador para organizador/admin, jugador bloqueado para usuarios normales, facciones por desplegable de catálogo y aviso de formato de puntuación antes de resultado/puntos.
 - 2026-06-20: se bloquea la aprobación de reportes con el mismo jugador en ambos lados, se limita la visualización/exportación numérica a 2 decimales y se añade modo de puntuación configurable para reportes (`0-100` individual o suma `20`).
 - 2026-06-20: se añade feedback de errores por tarjeta en revisión de reportes y se alinea Telegram con las opciones del evento para puntuación y ronda.
 - 2026-06-20: se añade mínimo configurable de partidas para sorteos, columna condicional en Tabla Liga, tabla real con scroll horizontal en móvil y nota de fixture visible solo para organizador/admin.

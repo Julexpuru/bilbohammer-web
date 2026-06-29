@@ -63,7 +63,7 @@ export default async function MisPartidasPage() {
           <h1 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">Mis partidas</h1>
         </div>
         <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-5 text-sm text-[var(--muted)]">
-          Necesitas iniciar sesion para usar esta seccion.
+          Necesitas iniciar sesión para usar esta sección.
         </div>
       </div>
     );
@@ -77,7 +77,7 @@ export default async function MisPartidasPage() {
           <h1 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">Mis partidas</h1>
         </div>
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-800">
-          Esta seccion esta disponible para socios y para usuarios inscritos en una liga activa publicada.
+          Esta sección está disponible para socios y para usuarios inscritos en una liga activa publicada.
         </div>
       </div>
     );
@@ -109,7 +109,7 @@ export default async function MisPartidasPage() {
 
       <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-4">
         <h3 className="text-lg font-semibold text-[var(--text)]">Mis partidas confirmadas</h3>
-        <p className="mt-1 text-sm text-[var(--muted)]">Partidas confirmadas o en curso en las que estas como jugador, con mesa si aplica.</p>
+        <p className="mt-1 text-sm text-[var(--muted)]">Partidas confirmadas o en curso en las que estás como jugador, con mesa si aplica.</p>
         <MyConfirmedMatches
           matches={matches.map((match) => ({
             id: match.id,

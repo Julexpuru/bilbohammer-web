@@ -77,7 +77,7 @@ function mapArticleToPost(article: Article, type: PostType): UiPost {
   const fallback =
     article.summary ||
     htmlToPlainText(firstParagraph?.text) ||
-    "Consulta la ficha completa en la seccion de novedades.";
+    "Consulta la ficha completa en la sección de novedades.";
   const category = article.category || article.categories?.[0] || "news";
   return {
     id: `article-${article.id}`,

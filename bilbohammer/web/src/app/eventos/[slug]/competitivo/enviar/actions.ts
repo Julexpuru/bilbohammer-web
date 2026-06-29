@@ -16,7 +16,9 @@ import {
 } from "@/lib/competitive-matches";
 import { resolveSessionUserId } from "@/lib/event-registrations";
 import { buildEventSlug } from "@/lib/events/slug";
+import { FACTIONS } from "@/lib/games";
 import { prisma } from "@/lib/prisma";
+import { userCanEditEvent } from "@/lib/roles";
 
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -58,6 +60,19 @@ function buildRedirectPath(event: { id: string; title: string }) {
   return `/eventos/${buildEventSlug(event.id, event.title)}/competitivo/enviar`;
 }
 
+function factionOptionsForGame(slug: string | null | undefined) {
+  if (slug === "w40k" || slug === "aos" || slug === "tow") {
+    return FACTIONS[slug].map((faction) => faction.name);
+  }
+  return [];
+}
+
+function assertKnownFaction(value: string, options: string[], field: string) {
+  if (options.length > 0 && !options.includes(value)) {
+    throw new Error(`Selecciona una facción válida para ${field}.`);
+  }
+}
+
 export async function submitCompetitiveReportAction(formData: FormData) {
   const eventId = readString(formData, "eventId");
   let path = "/eventos";
@@ -76,6 +91,7 @@ export async function submitCompetitiveReportAction(formData: FormData) {
         id: true,
         title: true,
         gameId: true,
+        game: { select: { slug: true } },
         registrations: {
           where: {
             status: { in: [EventRegistrationStatus.INSCRITO, EventRegistrationStatus.PAGADO] },
@@ -96,8 +112,16 @@ export async function submitCompetitiveReportAction(formData: FormData) {
     }
     path = buildRedirectPath(event);
 
+    const canManage = await userCanEditEvent(session, event.id);
     const ownRegistration = event.registrations.find((registration) => registration.userId === userId);
-    if (!ownRegistration) {
+    const playerRegistrationId = readString(formData, "playerRegistrationId");
+    const playerRegistration = canManage
+      ? event.registrations.find((registration) => registration.id === playerRegistrationId)
+      : ownRegistration;
+    if (!playerRegistration) {
+      if (canManage) {
+        throw new Error("Selecciona un jugador inscrito en el evento.");
+      }
       throw new Error("Debes estar inscrito en este evento para enviar resultados.");
     }
 
@@ -105,7 +129,7 @@ export async function submitCompetitiveReportAction(formData: FormData) {
     const opponentRegistration = event.registrations.find(
       (registration) => registration.id === opponentRegistrationId,
     );
-    if (!opponentRegistration || opponentRegistration.id === ownRegistration.id) {
+    if (!opponentRegistration || opponentRegistration.id === playerRegistration.id) {
       throw new Error("Selecciona un rival válido inscrito en el evento.");
     }
 
@@ -125,14 +149,17 @@ export async function submitCompetitiveReportAction(formData: FormData) {
     if (!ownFaction || !opponentFaction) {
       throw new Error("Las facciones de ambos jugadores son obligatorias.");
     }
+    const factionOptions = factionOptionsForGame(event.game?.slug);
+    assertKnownFaction(ownFaction, factionOptions, "el jugador");
+    assertKnownFaction(opponentFaction, factionOptions, "el rival");
 
     const roundNumber = readInteger(formData, "roundNumber");
     const kind = parseKind(readString(formData, "kind"));
     const outcome = parseOutcome(readString(formData, "outcome"));
     const players = [
       {
-        userId: ownRegistration.userId,
-        displayName: ownRegistration.playerName,
+        userId: playerRegistration.userId,
+        displayName: playerRegistration.playerName,
         factionLabel: ownFaction,
         outcome,
         score: ownScore,

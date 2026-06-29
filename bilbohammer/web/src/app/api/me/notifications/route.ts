@@ -36,7 +36,7 @@ export async function PATCH(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Cuerpo invalido" }, { status: 400 });
+    return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
   }
 
   const ids = Array.isArray(body?.ids)
@@ -63,7 +63,7 @@ export async function DELETE(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Cuerpo invalido" }, { status: 400 });
+    return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
   }
 
   const ids = Array.isArray(body?.ids)

@@ -25,7 +25,7 @@ function withMinutes(day: Date, minutes: number) {
 export async function POST(request: Request) {
   const session = await auth();
   const access = await requireOrganizedPlayAccess(session, {
-    unauthenticatedMessage: "Debes iniciar sesion para publicar disponibilidad.",
+    unauthenticatedMessage: "Debes iniciar sesión para publicar disponibilidad.",
     forbiddenMessage: "Necesitas ser socio o estar inscrito en una liga activa publicada para publicar disponibilidad.",
   });
   if (access.response) return access.response;
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud invalido.", 400);
+    return errorJson("Cuerpo de la solicitud inválido.", 400);
   }
 
   const selectedGames = Array.isArray(raw.gameIds)

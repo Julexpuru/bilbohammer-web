@@ -626,7 +626,7 @@ export function TableMap({ canManage }: Props) {
 
         if (cancelled) return;
         if (!Array.isArray(t)) {
-          throw new Error("Formato de mesas invalido");
+          throw new Error("Formato de mesas inválido");
         }
         const rawTables: Table[] = t || [];
         const tablesData: Table[] = rawTables.map((table) => ({
@@ -2075,7 +2075,7 @@ export function TableMap({ canManage }: Props) {
                             )}
                           </div>
                           <LabelInput
-                            label="URL escenografia"
+                            label="URL escenografía"
                             value={draft.sceneryImagePath}
                             onChange={(v) => handleChange("sceneryImagePath", v)}
                             disabled={!editing}

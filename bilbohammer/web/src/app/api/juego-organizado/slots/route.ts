@@ -121,7 +121,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await auth();
   const access = await requireOrganizedPlayAccess(session, {
-    unauthenticatedMessage: "Debes iniciar sesion para crear disponibilidad.",
+    unauthenticatedMessage: "Debes iniciar sesión para crear disponibilidad.",
     forbiddenMessage: "Necesitas ser socio o estar inscrito en una liga activa publicada para crear disponibilidad.",
   });
   if (access.response) return access.response;
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud invalido.", 400);
+    return errorJson("Cuerpo de la solicitud inválido.", 400);
   }
 
   const start = parseDate(raw.start);

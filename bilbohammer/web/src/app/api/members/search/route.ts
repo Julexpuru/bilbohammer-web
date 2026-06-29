@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { Rol } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getUserDisplayName } from "@/lib/user-display";
 
 export const runtime = "nodejs";
 
@@ -37,18 +38,13 @@ export async function GET(request: Request) {
         nick: true,
         email: true,
       },
-      orderBy: [{ name: "asc" }, { nombre: "asc" }],
+      orderBy: [{ nick: "asc" }, { name: "asc" }, { nombre: "asc" }],
       take: 10,
     });
 
     const results = members.map((member) => ({
       id: String(member.id),
-      name:
-        member.name ??
-        member.nombre ??
-        member.nick ??
-        member.email ??
-        `Socio ${member.id}`,
+      name: getUserDisplayName(member, `Socio ${member.id}`),
       nick: member.nick,
       email: member.email,
     }));

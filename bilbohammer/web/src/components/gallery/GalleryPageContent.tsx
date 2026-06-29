@@ -252,9 +252,9 @@ function StandalonePhotoCard({ photo, onSelect, variant = "default" }: Standalon
       <div className="flex flex-1 flex-col gap-3 p-6">
         <div className="space-y-1">
           <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">{photo.facets.game}</p>
-          <h3 className="text-xl font-semibold leading-tight text-[var(--text)]">{image.title ?? "Sin titulo"}</h3>
+          <h3 className="text-xl font-semibold leading-tight text-[var(--text)]">{image.title ?? "Sin título"}</h3>
           <p className="text-sm text-[var(--muted)]">
-            {image.takenAt ?? "Fecha por confirmar"} - {image.location ?? "Ubicacion no indicada"}
+            {image.takenAt ?? "Fecha por confirmar"} - {image.location ?? "Ubicación no indicada"}
           </p>
         </div>
         <div className="mt-auto text-sm text-[var(--muted)]">
@@ -287,7 +287,7 @@ function HighlightsGrid({ items, onSelectAlbum, onSelectPhoto }: HighlightsGridP
           item.kind === "album" ? (
             <div key={`highlight-album-${item.album.id}`} className="relative">
               <span className="absolute left-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-                Album
+                Álbum
               </span>
               <GalleryAlbumCard album={item.album} onSelect={() => onSelectAlbum(item.album)} variant="condensed" />
             </div>
@@ -686,7 +686,7 @@ export function GalleryPageContent({
                   item.kind === "album" ? (
                     <div key={`album-${item.album.id}`} className="relative">
                       <span className="absolute left-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-                        Album
+                        Álbum
                       </span>
                       <GalleryAlbumCard album={item.album} onSelect={() => openAlbum(item.album)} />
                     </div>

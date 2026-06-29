@@ -62,7 +62,7 @@ export async function DELETE(_: Request, { params }: { params: { slug: string } 
       },
     });
     if (!album) {
-      return NextResponse.json({ error: "Album no encontrado" }, { status: 404 });
+      return NextResponse.json({ error: "Álbum no encontrado" }, { status: 404 });
     }
     const collaboratorIds = album.collaborators.map((collaborator) => String(collaborator.userId));
     const permission = userCanEditAlbum(session, collaboratorIds);
@@ -92,14 +92,14 @@ export async function DELETE(_: Request, { params }: { params: { slug: string } 
       try {
         await moveObjectsToRemovedPrefix(keys, removedPrefix);
       } catch (error) {
-        console.warn("No se pudo mover el contenido del album eliminado:", error);
+        console.warn("No se pudo mover el contenido del álbum eliminado:", error);
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error eliminando album", error);
-    const message = error instanceof Error ? error.message : "No se pudo eliminar el album.";
+    console.error("Error eliminando álbum", error);
+    const message = error instanceof Error ? error.message : "No se pudo eliminar el álbum.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

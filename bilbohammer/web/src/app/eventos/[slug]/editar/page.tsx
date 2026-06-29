@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { findArticleById } from "@/lib/novedades-repository";
 import { buildEventSlug, extractEventIdFromSlug } from "@/lib/events/slug";
+import { getUserDisplayName } from "@/lib/user-display";
 
 type Params = {
   slug: string;
@@ -81,12 +82,7 @@ async function mapEventToInitialData(event: LoadedEvent): Promise<EventFormIniti
     tags: event.tags.map((tag) => tag.label),
     organizers: event.organizers.map((entry) => ({
       userId: entry.userId,
-      name:
-        entry.user?.name ??
-        entry.user?.nombre ??
-        entry.user?.nick ??
-        entry.user?.email ??
-        `Socio ${entry.userId}`,
+      name: getUserDisplayName(entry.user, `Socio ${entry.userId}`) ?? `Socio ${entry.userId}`,
       role: entry.role,
     })),
     organizations: event.organizations.map((entry) => ({

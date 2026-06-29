@@ -27,13 +27,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud invalido.", 400);
+    return errorJson("Cuerpo de la solicitud inválido.", 400);
   }
 
   const data: any = {};
   if (raw.name !== undefined) {
     const name = parseString(raw.name);
-    if (!name) return errorJson("El nombre no puede estar vacio.");
+    if (!name) return errorJson("El nombre no puede estar vacío.");
     data.name = name;
   }
   if (raw.posX !== undefined) data.posX = parseIntOrNull(raw.posX);

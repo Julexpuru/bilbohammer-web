@@ -138,7 +138,7 @@ export async function POST(request: Request) {
   try {
     payload = (await request.json()) as { updates?: UpdatePayload[] };
   } catch {
-    return NextResponse.json({ error: "Formato de entrada invalido" }, { status: 400 });
+    return NextResponse.json({ error: "Formato de entrada inválido" }, { status: 400 });
   }
 
   const updates = Array.isArray(payload.updates) ? payload.updates : [];
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     for (const update of updates) {
       const userId = Number(update.userId);
       if (!Number.isFinite(userId) || userId <= 0) {
-        errors.push({ userId: Number(update.userId) || 0, message: "Identificador invalido" });
+        errors.push({ userId: Number(update.userId) || 0, message: "Identificador inválido" });
         continue;
       }
 

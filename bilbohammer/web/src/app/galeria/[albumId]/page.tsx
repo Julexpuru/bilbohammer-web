@@ -12,13 +12,13 @@ export async function generateMetadata({ params }: { params: { albumId: string }
   const album = await fetchAlbumBySlug(params.albumId);
   if (!album) {
     return {
-      title: "Album no encontrado - Galeria Bilbohammer",
-      description: "El album solicitado no existe o ha sido retirado.",
+      title: "Álbum no encontrado - Galería Bilbohammer",
+      description: "El álbum solicitado no existe o ha sido retirado.",
     };
   }
 
   return {
-    title: `${album.title} - Galeria Bilbohammer`,
+    title: `${album.title} - Galería Bilbohammer`,
     description: album.description ?? undefined,
   };
 }
@@ -35,4 +35,3 @@ export default async function AlbumPage({ params }: { params: { albumId: string 
 
   return <AlbumDetailView album={album} editAccess={editAccess} />;
 }
-

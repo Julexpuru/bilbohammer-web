@@ -69,7 +69,7 @@ export async function requireOrganizedPlayAccess(
   if (!userId) {
     return {
       userId: null,
-      response: errorJson(options?.unauthenticatedMessage ?? "Debes iniciar sesion.", 401),
+      response: errorJson(options?.unauthenticatedMessage ?? "Debes iniciar sesión.", 401),
     };
   }
 

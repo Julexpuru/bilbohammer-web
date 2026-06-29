@@ -10,10 +10,10 @@ Estado operativo actual del backlog.
 - Bajo la fotografia funcional actual asumida, `BH-005` y `BH-006` pueden darse por cerradas: mesas y su integracion con partidas ya no son el frente principal.
 - `BH-004 - notificaciones de juego organizado` queda cerrada como bloque funcional principal. Ya cuenta con persistencia, preferencias, centro interno, email opcional, recordatorios, avisos compatibles, PWA basica, push web con VAPID, estado push por dispositivo, borrado de notificaciones visibles y recuperacion manual de suscripcion push.
 - `BH-007 - bugs y glitches de juego organizado` queda cerrada como pasada de estabilizacion general. Cualquier correccion menor nueva debe registrarse como incidencia concreta o tarea separada si merece seguimiento.
+- `BH-013 - gestión web de reportes de partidas competitivas` queda cerrada; nuevas incidencias del flujo de revisión deben registrarse como tareas separadas.
 
 ## Proximas candidatas
 
-- `BH-013`: completar UI web de revisión/corrección/aprobación de reportes pendientes de partidas competitivas cuando el flujo del bot esté pulido.
 - `BH-008`: habilitar vista publica por QR de cada mesa con informacion base y calendario del dia.
 - `BH-001`: corregir el copy desactualizado del panel admin.
 - `BH-002`: definir el alcance funcional de gestion documental.

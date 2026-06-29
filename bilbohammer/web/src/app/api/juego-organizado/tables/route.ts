@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud invalido.", 400);
+    return errorJson("Cuerpo de la solicitud inválido.", 400);
   }
 
   const requestedName = parseString(raw.name);

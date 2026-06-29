@@ -32,7 +32,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud invalido.", 400);
+    return errorJson("Cuerpo de la solicitud inválido.", 400);
   }
 
   const data: any = {};
@@ -54,7 +54,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   if (!nextTableId) return errorJson("La reserva debe estar asociada a una mesa.");
   if (!(nextStart instanceof Date) || Number.isNaN(nextStart.getTime()) || !(nextEnd instanceof Date) || Number.isNaN(nextEnd.getTime())) {
-    return errorJson("Horario invalido.");
+    return errorJson("Horario inválido.");
   }
   if (nextStart >= nextEnd) return errorJson("start debe ser anterior a end.");
 
@@ -67,7 +67,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       : null;
     if (!table || !table.isActive) return errorJson("Mesa no encontrada.", 404);
     if (isZoneTableName(table.name)) return errorJson("No puedes reservar una zona como si fuera una mesa.", 400);
-    if (table.status === "BLOCKED") return errorJson("La mesa esta bloqueada y no puede reservarse.", 400);
+    if (table.status === "BLOCKED") return errorJson("La mesa está bloqueada y no puede reservarse.", 400);
   }
 
   if (nextMatchId) {
@@ -148,8 +148,8 @@ async function findReservationConflict({
     }),
   ]);
 
-  if (overlappingBlock) return "La mesa esta bloqueada en ese horario.";
-  if (overlappingReservation) return "La mesa ya esta reservada en ese horario.";
+  if (overlappingBlock) return "La mesa está bloqueada en ese horario.";
+  if (overlappingReservation) return "La mesa ya está reservada en ese horario.";
   return null;
 }
 

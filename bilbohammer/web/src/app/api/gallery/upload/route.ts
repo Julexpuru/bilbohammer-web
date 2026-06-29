@@ -152,7 +152,7 @@ async function handleStandaloneUpload(photos: IncomingPhoto[], uploaderId: numbe
 
 async function createAlbum(meta: IncomingAlbumMeta, photos: IncomingPhoto[], uploaderId: number | null) {
   if (photos.length === 0) {
-    throw new Error("Un album debe incluir al menos una fotografia.");
+    throw new Error("Un álbum debe incluir al menos una fotografía.");
   }
 
   const eventDate = safeDateInput(meta.date);
@@ -286,7 +286,7 @@ async function updateAlbum(
     include: { images: true },
   });
   if (!existing) {
-    throw new Error("El album indicado no existe.");
+    throw new Error("El álbum indicado no existe.");
   }
 
   const eventDate = safeDateInput(meta.date);
@@ -491,7 +491,7 @@ export async function POST(request: Request) {
         },
       });
       if (!albumForPermissions) {
-        return NextResponse.json({ error: "Album no encontrado" }, { status: 404 });
+        return NextResponse.json({ error: "Álbum no encontrado" }, { status: 404 });
       }
       const collaboratorIds = albumForPermissions.collaborators.map((collaborator) => String(collaborator.userId));
       const accessLevel = userCanEditAlbum(session, collaboratorIds);
@@ -503,7 +503,7 @@ export async function POST(request: Request) {
     }
 
     if (!body.album) {
-      return NextResponse.json({ error: "Faltan metadatos del album." }, { status: 400 });
+      return NextResponse.json({ error: "Faltan metadatos del álbum." }, { status: 400 });
     }
 
     const album = await handleAlbumUpload(body.album, body.photos, numericUploaderId, body.albumId);

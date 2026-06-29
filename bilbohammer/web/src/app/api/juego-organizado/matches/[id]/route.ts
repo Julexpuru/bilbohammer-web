@@ -58,7 +58,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const nextStatus = (data.status as MatchStatus | undefined) ?? existing.status;
 
   if (!(nextStartsAt instanceof Date) || Number.isNaN(nextStartsAt.getTime()) || !(nextEndsAt instanceof Date) || Number.isNaN(nextEndsAt.getTime())) {
-    return errorJson("Horario de partida invalido.");
+    return errorJson("Horario de partida inválido.");
   }
   if (nextStartsAt >= nextEndsAt) return errorJson("startsAt debe ser anterior a endsAt.");
 
@@ -85,7 +85,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       }),
     ]);
 
-    if (overlappingBlock) return errorJson("La mesa reservada para esta partida esta bloqueada en el nuevo horario.", 409);
+    if (overlappingBlock) return errorJson("La mesa reservada para esta partida está bloqueada en el nuevo horario.", 409);
     if (overlappingReservation) {
       return errorJson("La mesa reservada para esta partida colisiona con otra reserva en el nuevo horario.", 409);
     }

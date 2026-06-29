@@ -123,7 +123,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud invalido.", 400);
+    return errorJson("Cuerpo de la solicitud inválido.", 400);
   }
 
   const tableId = parseString(raw.tableId);
@@ -162,7 +162,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   });
   if (!table || !table.isActive) return errorJson("Mesa no encontrada.", 404);
   if (isZoneTableName(table.name)) return errorJson("No puedes reservar una zona como si fuera una mesa.", 400);
-  if (table.status === "BLOCKED") return errorJson("La mesa esta bloqueada y no puede reservarse.", 400);
+  if (table.status === "BLOCKED") return errorJson("La mesa está bloqueada y no puede reservarse.", 400);
 
   const currentReservation = match.reservations[0] ?? null;
   const conflict = await findTableConflict({
@@ -295,8 +295,8 @@ async function findTableConflict({
     }),
   ]);
 
-  if (overlappingBlock) return "La mesa esta bloqueada en ese horario.";
-  if (overlappingReservation) return "La mesa ya esta reservada para otra partida en ese horario.";
+  if (overlappingBlock) return "La mesa está bloqueada en ese horario.";
+  if (overlappingReservation) return "La mesa ya está reservada para otra partida en ese horario.";
   return null;
 }
 

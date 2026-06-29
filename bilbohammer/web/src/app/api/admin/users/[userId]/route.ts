@@ -28,7 +28,7 @@ export async function DELETE(_: Request, { params }: { params: { userId: string 
   const userIdParam = params.userId;
   const userId = Number.parseInt(userIdParam, 10);
   if (!Number.isFinite(userId) || userId <= 0) {
-    return NextResponse.json({ error: "Identificador invalido" }, { status: 400 });
+    return NextResponse.json({ error: "Identificador inválido" }, { status: 400 });
   }
 
   if (Number(session.user.id) === userId) {

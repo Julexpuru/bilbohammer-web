@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import type { GalleryAlbum, GalleryStandalonePhoto } from "@/components/gallery/types";
 import { uploadImageToR2 } from "@/lib/uploads/presign-client";
+import { getUserDisplayName } from "@/lib/user-display";
 
 export type UploadMode = "standalone" | "album";
 
@@ -236,7 +237,7 @@ export function GalleryContentUploader({
         setSearchResults(
           rawResults.map((candidate: any) => ({
             id: String(candidate.id),
-            name: candidate.name ?? candidate.nombre ?? candidate.nick ?? candidate.email ?? "Socio sin nombre",
+            name: getUserDisplayName(candidate, "Socio sin nombre") ?? "Socio sin nombre",
             nick: candidate.nick ?? null,
             email: candidate.email ?? null,
           }))
@@ -555,7 +556,9 @@ export function GalleryContentUploader({
             >
               <span className="flex flex-col">
                 <span className="font-medium text-[var(--text)]">{member.name}</span>
-                {member.nick && <span className="text-xs text-[var(--muted)]">@{member.nick}</span>}
+                {member.nick && member.nick !== member.name && (
+                  <span className="text-xs text-[var(--muted)]">@{member.nick}</span>
+                )}
                 {!member.nick && member.email && <span className="text-xs text-[var(--muted)]">{member.email}</span>}
               </span>
             </button>
@@ -572,7 +575,7 @@ export function GalleryContentUploader({
           <div>
             <h2 className="text-2xl font-semibold">Gestor de la galería</h2>
             <p className="text-sm text-[var(--muted)]">
-                Sube fotos o prepara un nuevo album. El contenido se guardara en el servidor cuando confirmes.
+                Sube fotos o prepara un nuevo álbum. El contenido se guardará en el servidor cuando confirmes.
             </p>
           </div>
           <button
@@ -604,14 +607,14 @@ export function GalleryContentUploader({
               )}
               onClick={() => setMode("album")}
             >
-              Crear album
+              Crear álbum
             </button>
           </div>
         )}
 
         {mode === "album" && (
           <section className="grid gap-4 rounded-3xl border border-[var(--hairline)] bg-[var(--bg)] p-4">
-            <h3 className="text-lg font-semibold">Metadatos del album</h3>
+            <h3 className="text-lg font-semibold">Metadatos del álbum</h3>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-1 text-sm">
                 <span className="text-[var(--muted)]">Titulo</span>
@@ -632,7 +635,7 @@ export function GalleryContentUploader({
                 />
               </label>
               <label className="grid gap-1 text-sm">
-                <span className="text-[var(--muted)]">Ubicacion</span>
+                <span className="text-[var(--muted)]">Ubicación</span>
                 <input
                   value={albumMeta.location}
                   onChange={(event) => handleAlbumMetaChange("location", event.target.value)}
@@ -679,7 +682,7 @@ export function GalleryContentUploader({
               </label>
             </div>
             <label className="grid gap-1 text-sm">
-              <span className="text-[var(--muted)]">Descripcion</span>
+              <span className="text-[var(--muted)]">Descripción</span>
               <textarea
                 value={albumMeta.description}
                 onChange={(event) => handleAlbumMetaChange("description", event.target.value)}
@@ -706,7 +709,7 @@ export function GalleryContentUploader({
 
         <section className="space-y-4 rounded-3xl border border-[var(--hairline)] bg-[var(--bg)] p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-lg font-semibold">{mode === "album" ? "Tus fotos para el album" : "Fotos"}</h3>
+            <h3 className="text-lg font-semibold">{mode === "album" ? "Tus fotos para el álbum" : "Fotos"}</h3>
             <div className="flex items-center gap-2">
               <input
                 ref={fileInputRef}
@@ -771,7 +774,7 @@ export function GalleryContentUploader({
                         />
                       </label>
                       <label className="grid gap-1">
-                        <span className="text-[var(--muted)]">Ubicacion</span>
+                        <span className="text-[var(--muted)]">Ubicación</span>
                         <input
                           value={photo.location ?? ""}
                           onChange={(event) => handlePhotoMetaChange(photo.id, "location", event.target.value)}
@@ -877,7 +880,7 @@ export function GalleryContentUploader({
                 : mode === "album"
                   ? editingAlbumId
                     ? "Guardar cambios"
-                    : "Crear album"
+                    : "Crear álbum"
                   : "Guardar fotos"}
             </button>
           </div>

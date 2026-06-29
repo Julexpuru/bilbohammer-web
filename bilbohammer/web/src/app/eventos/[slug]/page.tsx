@@ -206,7 +206,7 @@ export default async function EventDetailPage({
   const tabsConfig: { id: TabId; label: string; enabled: boolean }[] = [
     {
       id: "descripcion",
-      label: "Descripcion",
+      label: "Descripción",
       enabled:
         event.showTabDescription &&
         event.showDescription &&
@@ -234,12 +234,12 @@ export default async function EventDetailPage({
     },
     {
       id: "galeria",
-      label: "Galeria",
+      label: "Galería",
       enabled: event.showTabGallery && event.showGallery,
     },
     {
       id: "ubicacion",
-      label: "Ubicacion",
+      label: "Ubicación",
       enabled: event.showTabLocation && event.showLocation && locationAvailable,
     },
   ];
@@ -292,7 +292,7 @@ export default async function EventDetailPage({
       (event.mapsUrl || (event.latitude != null && event.longitude != null)
         ? "Consulta el mapa"
         : "");
-    heroInfoItems.push({ key: "location", label: "Ubicacion", lines: [locationLine] });
+    heroInfoItems.push({ key: "location", label: "Ubicación", lines: [locationLine] });
   }
   if (showPriceInfo && generalPrice) {
     const lines = [generalPrice];
@@ -537,7 +537,7 @@ export default async function EventDetailPage({
                   dangerouslySetInnerHTML={{ __html: event.details }}
                 />
               ) : (
-                <p className="text-sm text-[var(--muted)]">La descripcion estara disponible en breve.</p>
+                <p className="text-sm text-[var(--muted)]">La descripción estará disponible en breve.</p>
               )}
             </div>
             {event.tags.length > 0 && (

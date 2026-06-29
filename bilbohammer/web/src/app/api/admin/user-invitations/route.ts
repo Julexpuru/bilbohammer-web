@@ -105,13 +105,13 @@ export async function POST(request: Request) {
   try {
     payload = (await request.json()) as { email?: string };
   } catch {
-    return NextResponse.json({ error: "Formato de entrada invalido" }, { status: 400 });
+    return NextResponse.json({ error: "Formato de entrada inválido" }, { status: 400 });
   }
 
   const rawEmail = (payload.email ?? "").trim();
   const normalizedEmail = rawEmail.toLowerCase();
   if (!rawEmail || !EMAIL_REGEX.test(rawEmail)) {
-    return NextResponse.json({ error: "Email invalido", code: "INVALID_EMAIL" }, { status: 400 });
+    return NextResponse.json({ error: "Email inválido", code: "INVALID_EMAIL" }, { status: 400 });
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -147,7 +147,7 @@ export async function POST(request: Request) {
     if (inviteTableMissing(error)) {
       return NextResponse.json(
         {
-          error: "El sistema de invitaciones no esta inicializado. Ejecuta la migracion que crea la tabla UserInvite.",
+          error: "El sistema de invitaciones no está inicializado. Ejecuta la migración que crea la tabla UserInvite.",
           code: "INVITE_TABLE_MISSING",
         },
         { status: 503 },
@@ -182,7 +182,7 @@ export async function POST(request: Request) {
     if (inviteTableMissing(error)) {
       return NextResponse.json(
         {
-          error: "El sistema de invitaciones no esta inicializado. Ejecuta la migracion que crea la tabla UserInvite.",
+          error: "El sistema de invitaciones no está inicializado. Ejecuta la migración que crea la tabla UserInvite.",
           code: "INVITE_TABLE_MISSING",
         },
         { status: 503 },

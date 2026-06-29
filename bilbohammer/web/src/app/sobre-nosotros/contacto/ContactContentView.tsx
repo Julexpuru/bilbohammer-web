@@ -360,7 +360,7 @@ export function ContactContentView({
           <div className="overflow-hidden rounded-3xl border border-[var(--hairline)]">
             <iframe
               src={mapEmbedUrl}
-              title="Ubicacion del local Bilbohammer"
+              title="Ubicación del local Bilbohammer"
               className="h-72 w-full"
               allowFullScreen
               loading="lazy"
@@ -466,7 +466,7 @@ export function ContactContentView({
                 className="rounded-full border border-[var(--hairline)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em]"
                 disabled={saving}
               >
-                Editar seccion
+                Editar sección
               </button>
             )}
           </div>
@@ -549,7 +549,7 @@ export function ContactContentView({
                 className="rounded-full border border-[var(--hairline)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em]"
                 disabled={saving}
               >
-                Editar seccion
+                Editar sección
               </button>
             )}
           </div>

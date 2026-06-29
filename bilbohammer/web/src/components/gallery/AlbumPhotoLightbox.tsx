@@ -89,7 +89,7 @@ export function AlbumPhotoLightbox({
     });
   }, [image?.comments]);
 
-  const photoTitle = image.title ?? "Sin titulo";
+  const photoTitle = image.title ?? "Sin título";
   const photoAlt = image.alt || photoTitle;
   const fallbackSrc = album?.coverImage ?? image.src;
   const photoSrc = image.src || fallbackSrc;
@@ -132,7 +132,7 @@ export function AlbumPhotoLightbox({
         body: JSON.stringify({ action: wasLiked ? "unlike" : "like" }),
       });
       if (!response.ok) {
-        throw new Error("No se pudo guardar la reacci�n.");
+        throw new Error("No se pudo guardar la reacción.");
       }
       const data = await response.json();
       if (typeof data.likesCount === "number") {
@@ -140,7 +140,7 @@ export function AlbumPhotoLightbox({
       }
       setActionError(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "No se pudo guardar la reacci�n.";
+      const message = error instanceof Error ? error.message : "No se pudo guardar la reacción.";
       setActionError(message);
       setLiked((prev) => {
         const next = new Set(prev);
@@ -185,7 +185,7 @@ export function AlbumPhotoLightbox({
 
   const handleDelete = async () => {
     if (!onDeleteStandalone) return;
-    if (!window.confirm("Seguro que quieres eliminar esta foto?")) return;
+    if (!window.confirm("¿Seguro que quieres eliminar esta foto?")) return;
     setPendingAction("delete");
     setActionError(null);
     try {
@@ -222,7 +222,7 @@ export function AlbumPhotoLightbox({
                     {album.title}
                   </h2>
                   <p className="text-sm text-slate-300">
-                    {album.date} - {album.location} - {album.totalPhotos} fotografias
+                    {album.date} - {album.location} - {album.totalPhotos} fotografías
                   </p>
                 </>
               ) : (
@@ -234,7 +234,7 @@ export function AlbumPhotoLightbox({
                   <p className="text-sm text-slate-300">
                     {(image.takenAt ?? "Fecha desconocida") +
                       " - " +
-                      (image.location ?? "Ubicacion no indicada")}
+                      (image.location ?? "Ubicación no indicada")}
                   </p>
                 </>
               )}
@@ -246,7 +246,7 @@ export function AlbumPhotoLightbox({
                   onClick={onClose}
                   className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:border-white/60 hover:text-white"
                 >
-                  Ir al album
+                  Ir al álbum
                 </Link>
               )}
               {kind === "standalone" && canManageStandalone && (
@@ -362,7 +362,7 @@ export function AlbumPhotoLightbox({
                   <span className="text-slate-400">Tomada:</span> {image.takenAt ?? "Fecha desconocida"}
                 </div>
                 <div>
-                  <span className="text-slate-400">Lugar:</span> {image.location ?? "Ubicacion no indicada"}
+                  <span className="text-slate-400">Lugar:</span> {image.location ?? "Ubicación no indicada"}
                 </div>
                 <div>
                   <span className="text-slate-400">Favoritos:</span> {currentLikes}
@@ -395,7 +395,7 @@ export function AlbumPhotoLightbox({
                     />
                   </label>
                   <label className="block text-sm text-slate-200">
-                    Ubicacion
+                    Ubicación
                     <input
                       className="mt-1 w-full rounded-md border border-white/15 bg-black/30 px-3 py-1.5 text-sm text-white focus:border-sky-400 focus:outline-none"
                       value={locationInput}

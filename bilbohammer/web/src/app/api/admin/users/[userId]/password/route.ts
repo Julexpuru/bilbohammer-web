@@ -36,18 +36,18 @@ export async function POST(request: Request, { params }: { params: { userId: str
 
   const userId = Number.parseInt(params.userId, 10);
   if (!Number.isFinite(userId) || userId <= 0) {
-    return NextResponse.json({ error: "Identificador invalido" }, { status: 400 });
+    return NextResponse.json({ error: "Identificador inválido" }, { status: 400 });
   }
 
   let payload: { password?: string; confirm?: string };
   try {
     payload = (await request.json()) as { password?: string; confirm?: string };
   } catch {
-    return NextResponse.json({ error: "Formato de entrada invalido" }, { status: 400 });
+    return NextResponse.json({ error: "Formato de entrada inválido" }, { status: 400 });
   }
 
   if (typeof payload.password !== "string" || typeof payload.confirm !== "string") {
-    return NextResponse.json({ error: "La contraseña y su confirmacion son obligatorias" }, { status: 400 });
+    return NextResponse.json({ error: "La contraseña y su confirmación son obligatorias" }, { status: 400 });
   }
 
   const password = payload.password.trim();

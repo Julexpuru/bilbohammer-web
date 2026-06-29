@@ -9,7 +9,7 @@ import { errorJson, requireOrganizedPlayAccess } from "../../shared";
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
   const access = await requireOrganizedPlayAccess(session, {
-    unauthenticatedMessage: "Debes iniciar sesion para eliminar horarios.",
+    unauthenticatedMessage: "Debes iniciar sesión para eliminar horarios.",
     forbiddenMessage: "Necesitas ser socio o estar inscrito en una liga activa publicada para eliminar horarios.",
   });
   if (access.response) return access.response;

@@ -39,7 +39,7 @@ export async function requestPresignedUpload(file: File, options?: PresignUpload
   }
 
   if (!payload?.uploadUrl || !payload?.publicUrl || !payload?.key) {
-    throw new Error("Respuesta de presign invalida.");
+    throw new Error("Respuesta de presign inválida.");
   }
 
   return payload as PresignResponse;

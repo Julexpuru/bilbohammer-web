@@ -44,15 +44,15 @@ export default async function JuegoOrganizadoHubPage() {
       <div className="space-y-3">
         <h1 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">Juego organizado</h1>
         <p className="max-w-3xl text-[var(--muted)]">
-          Punto de entrada unico al ecosistema: calendario vivo de partidas, gestiona tus partidas y disponibilidades y
+          Punto de entrada único al ecosistema: calendario vivo de partidas, gestiona tus partidas y disponibilidades y
           consulta del estado actual de las mesas del club.
         </p>
       </div>
 
       {!session?.user && (
         <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--card)] p-4 text-sm text-[var(--muted)]">
-          El area de consulta esta abierta. Para usar <span className="font-semibold text-[var(--text)]">Mis partidas</span>{" "}
-          necesitas iniciar sesion.
+          El área de consulta está abierta. Para usar <span className="font-semibold text-[var(--text)]">Mis partidas</span>{" "}
+          necesitas iniciar sesión.
         </div>
       )}
 

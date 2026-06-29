@@ -1,6 +1,7 @@
 import type { Rol } from "@prisma/client";
 import { formatClubDateTime } from "@/lib/date-format";
 import { prisma } from "@/lib/prisma";
+import { getUserDisplayName } from "@/lib/user-display";
 
 export type RawMember = {
   id: number;
@@ -34,9 +35,9 @@ export function toMemberCard(member: RawMember, profileBasePath = MEMBER_PROFILE
   const name = member.name?.trim() || null;
   const nick = member.nick?.trim() || null;
   const fallbackLabel = `Socio ${member.id}`;
-  const displayName = name || nick || fallbackLabel;
+  const displayName = getUserDisplayName(member, fallbackLabel) ?? fallbackLabel;
   const avatarUrl = member.avatarUrl || member.oauthAvatarUrl || member.image;
-  const initials = toInitials(name || displayName || fallbackLabel);
+  const initials = toInitials(displayName || fallbackLabel);
   const memberSince = member.membershipSince
     ? formatClubDateTime(member.membershipSince, { month: "short", year: "numeric" })
     : null;
@@ -84,7 +85,7 @@ export const BOARD_SLOT_CONFIG: readonly BoardSlotConfig[] = [
   { id: "VICEPRESIDENTE", label: "Vicepresidente", tier: "cargos" },
   { id: "TESORERO", label: "Tesorero", tier: "cargos" },
   { id: "SECRETARIO", label: "Secretario", tier: "cargos" },
-  { id: "VOCAL", label: "Vocalia", tier: "vocales", multiple: true },
+  { id: "VOCAL", label: "Vocalía", tier: "vocales", multiple: true },
 ] as const;
 
 export type BoardAssignments = Record<SingleBoardSlotId, number | null> & { VOCAL: number[] };

@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import { actualizaPerfilGoogleSiNecesario } from "@/servicios/usuario/actualiza-perfil-google";
 import { PrismaIntAdapter } from "@/lib/prisma-int-adapter";
 import { cacheRemoteAvatar, isHttpUrl } from "@/lib/oauth-avatar-cache";
+import { getUserDisplayName } from "@/lib/user-display";
 
 type AnyObject = Record<string, any>;
 
@@ -45,7 +46,7 @@ export const authConfig = {
         const authUser: User = {
           id: user.id,
           email: user.email,
-          name: user.name ?? user.nick ?? null,
+          name: getUserDisplayName(user, null),
           image: resolvedImage,
           roles,
           rol: roles[0] ?? null,
@@ -123,6 +124,7 @@ export const authConfig = {
                 image: true,
                 name: true,
                 nick: true,
+                email: true,
                 roles: true,
               },
             });
@@ -172,8 +174,11 @@ export const authConfig = {
               (token as AnyObject).avatarUrl = u.avatarUrl ?? null;
               (token as AnyObject).oauthAvatarUrl = oauthAvatar;
               (token as AnyObject).oauthAvatarRemote = remoteCandidate ?? null;
-              if (u.nick) (session.user as AnyObject).nick ??= u.nick;
-              if (u.name) (session.user as AnyObject).name ??= u.name;
+              if (u.nick) (session.user as AnyObject).nick = u.nick;
+              (session.user as AnyObject).name = getUserDisplayName(
+                u,
+                (session.user as AnyObject).name ?? null
+              );
               if (u.roles) {
                 const dbRoles = normalizeRoles(u.roles);
                 if (dbRoles.length) {

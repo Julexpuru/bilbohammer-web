@@ -114,12 +114,12 @@ export async function POST(request: Request) {
   try {
     payload = (await request.json()) as CreateUserPayload;
   } catch {
-    return NextResponse.json({ error: "Formato de entrada invalido" }, { status: 400 });
+    return NextResponse.json({ error: "Formato de entrada inválido" }, { status: 400 });
   }
 
   const rawEmail = typeof payload.email === "string" ? payload.email.trim() : "";
   if (!rawEmail || !EMAIL_REGEX.test(rawEmail)) {
-    return NextResponse.json({ error: "Email invalido", code: "INVALID_EMAIL" }, { status: 400 });
+    return NextResponse.json({ error: "Email inválido", code: "INVALID_EMAIL" }, { status: 400 });
   }
 
   const normalizedEmail = rawEmail.toLowerCase();

@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const to = parseRangeDate(searchParams.get("to"));
 
   if (!from || !to || from >= to) {
-    return NextResponse.json({ error: "Rango de fechas invalido." }, { status: 400 });
+    return NextResponse.json({ error: "Rango de fechas inválido." }, { status: 400 });
   }
 
   try {

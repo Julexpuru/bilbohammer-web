@@ -364,11 +364,11 @@ const HIGHLIGHT_TYPE_OPTIONS: { value: EventHighlightType; label: string }[] = [
 ];
 
 const EVENT_CONTENT_TABS = [
-  { id: "description", label: "Descripcion" },
+  { id: "description", label: "Descripción" },
   { id: "resources", label: "Archivos y enlaces" },
   { id: "stories", label: "Clasificación, destacados y crónica" },
-  { id: "gallery", label: "Galeria" },
-  { id: "location", label: "Ubicacion" },
+  { id: "gallery", label: "Galería" },
+  { id: "location", label: "Ubicación" },
 ] as const;
 const ALBUM_FORMAT_OPTIONS: { value: AlbumFormatValue; label: string }[] = [
   { value: "TORNEO", label: "Torneo" },
@@ -1204,7 +1204,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
       setAlbumResults([]);
       updateField('albumId', data.album.id);
       setAlbumCreatorOpen(false);
-      setAlbumCreateSuccess('Album creado y vinculado correctamente.');
+      setAlbumCreateSuccess('Álbum creado y vinculado correctamente.');
     } catch (error) {
       setAlbumCreateError(error instanceof Error ? error.message : 'No se pudo crear el álbum.');
     } finally {
@@ -2298,7 +2298,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
             </button>
           </div>
           {duplicateTag && (
-            <span className="text-xs text-yellow-200">Esta etiqueta ya esta en la lista.</span>
+            <span className="text-xs text-yellow-200">Esta etiqueta ya está en la lista.</span>
           )}
         </div>
         {state.tags.length > 0 ? (
@@ -2365,7 +2365,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                       onClick={() => handleMemberResultSelect(member)}
                     >
                       {member.name}
-                      {member.nick ? " (@" + member.nick + ")" : ""}
+                      {member.nick && member.nick !== member.name ? " (@" + member.nick + ")" : ""}
                     </button>
                   </li>
                 ))}
@@ -2610,11 +2610,11 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                     syncTabVisibility("showTabDescription", event.target.checked, ["showDescription"])
                   }
                 />
-                Mostrar pestaña Descripcion
+                Mostrar pestaña Descripción
               </label>
               <div className="space-y-2">
                 <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-                  Descripcion
+                  Descripción
                 </span>
                 <RichTextEditor
                   value={state.details}
@@ -2770,7 +2770,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                           </div>
                           <label className="grid gap-1">
                             <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-                              Descripcion
+                              Descripción
                             </span>
                             <textarea
                               rows={3}
@@ -3283,7 +3283,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                   syncTabVisibility("showTabGallery", event.target.checked, ["showGallery"])
                 }
               />
-              Mostrar pestaña Galeria
+              Mostrar pestaña Galería
             </label>
 
             <div className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -3373,7 +3373,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                         </select>
                       </label>
                       <label className="grid gap-1">
-                        <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Ubicacion</span>
+                        <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Ubicación</span>
                         <input
                           className="rounded-2xl border border-white/15 bg-black/30 px-3 py-2 text-sm focus:border-white/40 focus:outline-none"
                           value={albumDraft.location}
@@ -3383,7 +3383,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                       </label>
                     </div>
                     <label className="grid gap-1">
-                      <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Descripcion</span>
+                      <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Descripción</span>
                       <textarea
                         rows={3}
                         className="rounded-2xl border border-white/15 bg-black/30 px-3 py-2 text-sm focus:border-white/40 focus:outline-none"
@@ -3501,11 +3501,11 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
                   syncTabVisibility("showTabLocation", event.target.checked, ["showLocation"])
                 }
               />
-              Mostrar pestaña Ubicacion
+              Mostrar pestaña Ubicación
             </label>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="grid gap-1">
-                  <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Ubicacion</span>
+                  <span className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Ubicación</span>
                   <input
                     className="rounded-2xl border border-white/15 bg-black/30 px-3 py-2 text-sm focus:border-white/40 focus:outline-none"
                     value={state.location}

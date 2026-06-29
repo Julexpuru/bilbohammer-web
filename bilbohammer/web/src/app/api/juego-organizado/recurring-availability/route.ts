@@ -15,7 +15,7 @@ function parseMinutes(value: unknown) {
 export async function GET() {
   const session = await auth();
   const access = await requireOrganizedPlayAccess(session, {
-    unauthenticatedMessage: "Debes iniciar sesion para consultar tu horario habitual.",
+    unauthenticatedMessage: "Debes iniciar sesión para consultar tu horario habitual.",
     forbiddenMessage: "Necesitas ser socio o estar inscrito en una liga activa publicada para consultar tu horario habitual.",
   });
   if (access.response) return access.response;
@@ -32,7 +32,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await auth();
   const access = await requireOrganizedPlayAccess(session, {
-    unauthenticatedMessage: "Debes iniciar sesion para guardar tu horario habitual.",
+    unauthenticatedMessage: "Debes iniciar sesión para guardar tu horario habitual.",
     forbiddenMessage: "Necesitas ser socio o estar inscrito en una liga activa publicada para guardar tu horario habitual.",
   });
   if (access.response) return access.response;
@@ -42,14 +42,14 @@ export async function POST(request: Request) {
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud invalido.", 400);
+    return errorJson("Cuerpo de la solicitud inválido.", 400);
   }
 
   const weekday = parseIntOrNull(raw.weekday);
   const startMinutes = parseMinutes(raw.startMinutes);
   const endMinutes = parseMinutes(raw.endMinutes);
   if (weekday == null || weekday < 0 || weekday > 6) return errorJson("weekday debe estar entre 0 y 6.");
-  if (startMinutes == null || endMinutes == null) return errorJson("Horario invalido.");
+  if (startMinutes == null || endMinutes == null) return errorJson("Horario inválido.");
   if (startMinutes >= endMinutes) return errorJson("La hora de inicio debe ser anterior a la de fin.");
 
   const preferredGames = Array.isArray(raw.preferredGames)

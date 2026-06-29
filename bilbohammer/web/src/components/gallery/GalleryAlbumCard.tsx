@@ -11,8 +11,8 @@ type GalleryAlbumCardProps = {
 export function GalleryAlbumCard({ album, onSelect, variant = "default" }: GalleryAlbumCardProps) {
   const isCondensed = variant === "condensed";
   const displayDate = album.date ?? "Fecha por confirmar";
-  const displayLocation = album.location ?? "Ubicacion por confirmar";
-  const displayDescription = album.description ?? "Sin descripcion disponible.";
+  const displayLocation = album.location ?? "Ubicación por confirmar";
+  const displayDescription = album.description ?? "Sin descripción disponible.";
 
   return (
     <button
@@ -68,7 +68,7 @@ export function GalleryAlbumCard({ album, onSelect, variant = "default" }: Galle
         >
           {!isCondensed && <span>{album.totalPhotos} fotos</span>}
           <span className="inline-flex items-center gap-2">
-            Ver album
+            Ver álbum
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"

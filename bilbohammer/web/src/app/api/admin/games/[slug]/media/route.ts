@@ -24,7 +24,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
 
   const body = (await request.json()) as MediaPayload;
   if (!body || (body.kind !== "icon" && body.kind !== "hero")) {
-    return NextResponse.json({ error: "Peticion invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Petición inválida." }, { status: 400 });
   }
 
   const parsedImageUrl = parseImageUrl(body.imageUrl);
@@ -73,7 +73,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
 function parseImageUrl(value: unknown) {
   if (value === null || value === undefined) return { error: "URL de imagen requerida." };
   if (typeof value !== "string") {
-    return { error: "URL de imagen invalida." };
+    return { error: "URL de imagen inválida." };
   }
   const trimmed = value.trim();
   if (!trimmed) return { error: "URL de imagen requerida." };

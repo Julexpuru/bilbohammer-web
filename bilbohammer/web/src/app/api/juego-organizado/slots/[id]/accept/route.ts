@@ -10,7 +10,7 @@ import { acceptSlotProposal, SlotProposalActionError } from "@/lib/organized-slo
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const session = await auth();
   const userId = parseIntOrNull((session?.user as any)?.id);
-  if (!userId) return errorJson("Debes iniciar sesion.", 401);
+  if (!userId) return errorJson("Debes iniciar sesión.", 401);
 
   const proposals = await prisma.slotProposal.findMany({
     where: {

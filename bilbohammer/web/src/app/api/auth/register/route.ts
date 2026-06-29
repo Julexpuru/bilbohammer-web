@@ -52,12 +52,12 @@ export async function POST(req: Request) {
   try {
     payload = (await req.json()) as RegisterPayload;
   } catch {
-    return NextResponse.json({ error: "Formato de entrada invalido" }, { status: 400 });
+    return NextResponse.json({ error: "Formato de entrada inválido" }, { status: 400 });
   }
 
   const rawEmail = payload.email ?? "";
   if (!rawEmail || !EMAIL_REGEX.test(rawEmail)) {
-    return NextResponse.json({ error: "Email invalido", code: "INVALID_EMAIL" }, { status: 400 });
+    return NextResponse.json({ error: "Email inválido", code: "INVALID_EMAIL" }, { status: 400 });
   }
 
   const normalizedEmail = normalizeEmail(rawEmail);
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existingUser) {
     return NextResponse.json(
-      { error: "Ese email ya esta registrado.", code: "ALREADY_REGISTERED" },
+      { error: "Ese email ya está registrado.", code: "ALREADY_REGISTERED" },
       { status: 409 },
     );
   }
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             error:
-              "El sistema de invitaciones no esta inicializado. Ejecuta la migracion que crea la tabla UserInvite.",
+              "El sistema de invitaciones no está inicializado. Ejecuta la migración que crea la tabla UserInvite.",
             code: "INVITE_TABLE_MISSING",
           },
           { status: 503 },
@@ -109,25 +109,25 @@ export async function POST(req: Request) {
     }
     if (!invite) {
       return NextResponse.json(
-        { error: "El enlace de invitacion no existe.", code: "INVITE_NOT_FOUND" },
+        { error: "El enlace de invitación no existe.", code: "INVITE_NOT_FOUND" },
         { status: 400 },
       );
     }
     if (invite.usedAt) {
       return NextResponse.json(
-        { error: "El enlace de invitacion ya fue usado.", code: "INVITE_ALREADY_USED" },
+        { error: "El enlace de invitación ya fue usado.", code: "INVITE_ALREADY_USED" },
         { status: 400 },
       );
     }
     if (invite.expiresAt && invite.expiresAt < new Date()) {
       return NextResponse.json(
-        { error: "El enlace de invitacion ha caducado.", code: "INVITE_EXPIRED" },
+        { error: "El enlace de invitación ha caducado.", code: "INVITE_EXPIRED" },
         { status: 400 },
       );
     }
     if (normalizeEmail(invite.email) !== normalizedEmail) {
       return NextResponse.json(
-        { error: "El email no coincide con la invitacion.", code: "INVITE_EMAIL_MISMATCH" },
+        { error: "El email no coincide con la invitación.", code: "INVITE_EMAIL_MISMATCH" },
         { status: 400 },
       );
     }
@@ -190,7 +190,7 @@ export async function POST(req: Request) {
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json(
-        { error: "El email o nick ya estan registrados.", code: "UNIQUE_CONSTRAINT" },
+        { error: "El email o nick ya están registrados.", code: "UNIQUE_CONSTRAINT" },
         { status: 409 },
       );
     }

@@ -68,12 +68,12 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Cuerpo invalido" }, { status: 400 });
+    return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
   }
 
   const subscription = parseSubscription(body?.subscription ?? body);
   if (!subscription) {
-    return NextResponse.json({ error: "Suscripcion push invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Suscripción push inválida." }, { status: 400 });
   }
 
   await prisma.userPushSubscription.upsert({

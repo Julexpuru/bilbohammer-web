@@ -43,10 +43,10 @@ export async function POST(_request: Request, { params }: { params: { id: string
   });
 
   if (effectiveStatus === "DONE") {
-    return errorJson("La partida ya esta terminada.", 400);
+    return errorJson("La partida ya está terminada.", 400);
   }
   if (effectiveStatus === "CANCELLED") {
-    return errorJson("La partida ya esta cancelada.", 400);
+    return errorJson("La partida ya está cancelada.", 400);
   }
 
   await prisma.$transaction(async (tx) => {

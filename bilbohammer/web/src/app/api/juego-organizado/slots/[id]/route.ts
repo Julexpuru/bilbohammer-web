@@ -50,7 +50,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud invalido.", 400);
+    return errorJson("Cuerpo de la solicitud inválido.", 400);
   }
 
   const data: any = {};

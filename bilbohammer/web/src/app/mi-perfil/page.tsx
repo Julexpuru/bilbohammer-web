@@ -8,6 +8,7 @@ import { gameIconPath } from "@/lib/games";
 import { assetUrl } from "@/lib/assets";
 import { Avatar } from "@/components/profile/Avatar";
 import { auth } from "@/lib/auth";
+import { getUserDisplayName } from "@/lib/user-display";
 
 const ClientEditWrapper = dynamic(() => import("./ClientEditWrapper"), { ssr: false });
 
@@ -52,9 +53,8 @@ export default async function Page() {
   const memberSinceText = _memberSinceRaw
     ? new Date(_memberSinceRaw).toLocaleDateString("es-ES", { month: "long", year: "numeric" })
     : "—";
-  const preferredName = user.nombre?.trim() || user.name?.trim() || null;
   const nickLabel = user.nick?.trim() || null;
-  const displayName = preferredName || nickLabel || user.email;
+  const displayName = getUserDisplayName(user, user.email) ?? user.email;
   const memberSinceISO = user.membershipSince ? new Date(user.membershipSince).toISOString() : null;
   const description = user.descripcion ?? null;
   const oauthAvatarUrl = (user as any).oauthAvatarUrl ?? user.image ?? null;

@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud invalido.", 400);
+    return errorJson("Cuerpo de la solicitud inválido.", 400);
   }
 
   const proposedStart = parseDate(raw.proposedStart);
@@ -66,7 +66,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         : null,
     }) !== "OPEN"
   ) {
-    return errorJson("La oferta ya no esta disponible.", 400);
+    return errorJson("La oferta ya no está disponible.", 400);
   }
   if (slot.proposals.length > 0) return errorJson("Ya tienes una propuesta pendiente para esta oferta.", 400);
   if (!ensureProposalInsideSlot(slot, proposedStart, proposedEnd)) {

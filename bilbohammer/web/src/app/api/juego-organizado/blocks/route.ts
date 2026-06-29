@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const to = parseDate(searchParams.get("to"));
 
   if ((searchParams.get("from") || searchParams.get("to")) && (!from || !to || from >= to)) {
-    return errorJson("Rango de fechas invalido.");
+    return errorJson("Rango de fechas inválido.");
   }
 
   const blocks = await prisma.tableBlock.findMany({
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   try {
     raw = await request.json();
   } catch {
-    return errorJson("Cuerpo de la solicitud invalido.", 400);
+    return errorJson("Cuerpo de la solicitud inválido.", 400);
   }
 
   const tableId = parseString(raw.tableId);

@@ -96,7 +96,7 @@ export const CONTACT_CONTENT_DEFAULT: ContactPageContent = {
   },
   visit: {
     description:
-      "Comparte tu plan de visita por correo o WhatsApp. Asi coordinamos mejor la apertura del local y la escenografia.",
+      "Comparte tu plan de visita por correo o WhatsApp. Así coordinamos mejor la apertura del local y la escenografía.",
     schedule: {
       title: "Horarios habituales",
       lines: ["Jueves y viernes de 18:30 a 22:30", "Sabados de 10:00 a 14:00 segun actividad"],
@@ -113,9 +113,9 @@ export const CONTACT_CONTENT_DEFAULT: ContactPageContent = {
     intro:
       "Cuentanos tu experiencia, que juegos te interesan y si buscas ligas, partidas casuales o un sitio donde pintar.",
     requirements:
-      "Ser mayor de 16 anos o venir acompanado de una persona adulta socia. Compartir los valores del club y respetar el espacio comun.",
+      "Ser mayor de 16 años o venir acompañado de una persona adulta socia. Compartir los valores del club y respetar el espacio común.",
     pricing:
-      "La cuota es de 15 euros al mes. Ofrecemos modalidad trimestral y descuentos si colaboras de forma recurrente con eventos o escenografia.",
+      "La cuota es de 15 euros al mes. Ofrecemos modalidad trimestral y descuentos si colaboras de forma recurrente con eventos o escenografía.",
     benefits:
       "Acceso al local, armarios comunitarios, material escenico y participacion en ligas internas, campanas narrativas y talleres exclusivos.",
   },

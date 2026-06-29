@@ -81,7 +81,7 @@ export async function POST(request: Request) {
   const session = await auth();
   const contentTypeHeader = request.headers.get("content-type") ?? "";
   if (!contentTypeHeader.includes("application/json")) {
-    return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
   const body = (await request.json()) as {

@@ -27,7 +27,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
   try {
     payload = (await request.json()) as ChroniclePayload;
   } catch {
-    return NextResponse.json({ error: "Cuerpo de la solicitud invalido." }, { status: 400 });
+    return NextResponse.json({ error: "Cuerpo de la solicitud inválido." }, { status: 400 });
   }
 
   const chronicleArticleId = payload?.chronicleArticleId ?? null;

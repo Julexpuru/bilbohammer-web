@@ -2,6 +2,14 @@
 
 Registro cronologico breve de trabajo realizado o contexto consolidado.
 
+## 2026-06-29
+
+- Se mejora el formulario web de envío competitivo: organizador/admin puede seleccionar el jugador reportado entre participantes, el jugador normal ve su inscripción bloqueada, las facciones pasan a desplegables del catálogo del juego y el formato de puntuación se muestra antes de resultado/puntos.
+
+## 2026-06-21
+
+- Se marca `BH-013 - gestión web de reportes de partidas competitivas` como `done` y se retira de próximas candidatas; nuevas incidencias del flujo de revisión se registrarán como tareas separadas.
+
 ## 2026-06-20
 
 - Se registra en `inbox` un bug pendiente del editor de texto complejo: los formatos de lista no se previsualizan durante la edición aunque se aplican al terminar.

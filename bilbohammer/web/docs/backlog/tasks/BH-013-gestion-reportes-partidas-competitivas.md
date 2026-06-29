@@ -1,12 +1,12 @@
 # BH-013 - Gestión web de reportes de partidas competitivas
 
-Estado: in_progress
+Estado: done
 Tipo: feature
 Prioridad: P2
 Area: eventos
 Owner: shared
 Origen: desglose de BH-010/BH-011
-Ultima actualizacion: 2026-06-19
+Ultima actualizacion: 2026-06-21
 
 ## Contexto
 
@@ -49,9 +49,11 @@ No entra:
 
 ## Bugs pendientes
 
-- Validar en producción que aprobar/rechazar/corregir permanece en `/eventos/[slug]/reportes`. Se ha endurecido el flujo para no usar `redirect()` en esas Server Actions y limitarse a revalidar la bandeja.
+- Sin bugs pendientes registrados. La gestión web de reportes queda cerrada; nuevas incidencias deben registrarse como tareas o entradas independientes.
 
 ## Historial
+
+- 2026-06-21: se marca `BH-013` como cerrada. El flujo de revisión web se considera completo y el bug de navegación ya no queda como pendiente activo.
 
 - 2026-06-20: se endurece el bug de navegación eliminando el `redirect()` de aprobar/rechazar/corregir reportes; las acciones revalidan la bandeja y dejan al navegador en la misma página. Se añade página de opciones de reportes para configurar si se muestra la ronda.
 

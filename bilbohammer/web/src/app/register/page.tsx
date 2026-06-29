@@ -9,9 +9,9 @@ export default function RegisterPage() {
   return (
     <section className="mx-auto max-w-lg space-y-6 px-4 py-10">
       <div className="space-y-3 text-center">
-        <h1 className="text-3xl font-semibold text-[var(--text)]">Create tu cuenta</h1>
+        <h1 className="text-3xl font-semibold text-[var(--text)]">Créate tu cuenta</h1>
         <p className="text-sm text-[var(--muted)]">
-          Hasta que sea promocionado por un administrador, los usuarios registrados sin invitacion no tendran permisos
+          Hasta que sea promocionado por un administrador, los usuarios registrados sin invitación no tendrán permisos
           de socio.
         </p>
       </div>
@@ -21,7 +21,7 @@ export default function RegisterPage() {
       </div>
 
       <p className="text-center text-sm text-[var(--muted)]">
-        Ya tienes cuenta? <LoginModalTrigger />
+        ¿Ya tienes cuenta? <LoginModalTrigger />
       </p>
     </section>
   );

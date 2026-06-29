@@ -123,7 +123,7 @@ export async function POST(request: Request) {
 function parseImageUrl(value: unknown) {
   if (value === null || value === undefined) return { url: null as string | null };
   if (typeof value !== "string") {
-    return { error: "URL de imagen invalida." };
+    return { error: "URL de imagen inválida." };
   }
   const trimmed = value.trim();
   if (!trimmed) return { url: null as string | null };

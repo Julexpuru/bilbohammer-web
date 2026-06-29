@@ -7,6 +7,7 @@ import { ChevronIcon } from "@/components/ui/ChevronIcon";
 import type { ColumnConfig, PreparedRow } from "./table-config";
 import { COLUMN_LABELS } from "./table-config";
 import { formatClubDateTime, getClubDateTimeFormatter } from "@/lib/date-format";
+import { getUserDisplayName } from "@/lib/user-display";
 
 type RowData = PreparedRow;
 
@@ -646,7 +647,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
             ? data.inviteUrl
             : "";
         if (!inviteUrlRaw) {
-          throw new Error("El servidor no devolvio la URL de invitacion.");
+          throw new Error("El servidor no devolvió la URL de invitación.");
         }
 
         setInviteResult({
@@ -751,7 +752,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
     return {
       ...info,
       tags: parseTags(currentEditedRow.etiquetas),
-      displayName: currentEditedRow.name || currentEditedRow.nick || currentEditedRow.email || "Usuario sin nombre",
+      displayName: getUserDisplayName(currentEditedRow, "Usuario sin nombre") ?? "Usuario sin nombre",
       email: currentEditedRow.email || "Sin email",
       nick: currentEditedRow.nick || "Sin nick",
       idLabel: getRowId(currentEditedRow) ?? (editedRowIndex != null ? `row-${editedRowIndex}` : "Sin ID"),
@@ -1025,12 +1026,12 @@ export function UserManagementView({ columns, initialRows }: Props) {
     }
     const numericId = Number.parseInt(rowId, 10);
     if (!Number.isFinite(numericId)) {
-      alert("Identificador de usuario invalido.");
+      alert("Identificador de usuario inválido.");
       return;
     }
     setPasswordTarget({
       id: numericId,
-      displayName: row.name || row.nick || row.email || `Usuario ${rowId}`,
+      displayName: getUserDisplayName(row, `Usuario ${rowId}`) ?? `Usuario ${rowId}`,
       email: row.email || "Sin email",
     });
     setPasswordFields({ password: "", confirm: "" });
@@ -1117,10 +1118,10 @@ export function UserManagementView({ columns, initialRows }: Props) {
       if (deleting === rowId) return;
       const numericId = Number.parseInt(rowId, 10);
       if (!Number.isFinite(numericId)) {
-        alert("Identificador de usuario invalido.");
+        alert("Identificador de usuario inválido.");
         return;
       }
-      const label = row.name || row.nick || row.email || `Usuario ${rowId}`;
+      const label = getUserDisplayName(row, `Usuario ${rowId}`) ?? `Usuario ${rowId}`;
       const confirmed = window.confirm(`Eliminar ${label}? Esta accion no se puede deshacer.`);
       if (!confirmed) return;
 
@@ -1419,7 +1420,7 @@ export function UserManagementView({ columns, initialRows }: Props) {
                 <tbody>
                   {sortedEntries.map(({ row, index }) => {
                     const rowKey = getRowId(row) ?? `row-${index}`;
-                    const displayName = row.name || row.nick || row.email || `Usuario ${index + 1}`;
+                    const displayName = getUserDisplayName(row, `Usuario ${index + 1}`) ?? `Usuario ${index + 1}`;
                     const rowId = getRowId(row);
                     return (
                       <tr key={rowKey} className="odd:bg-[var(--card-muted)]">

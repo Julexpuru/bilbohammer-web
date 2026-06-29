@@ -180,7 +180,7 @@ function normalizePlayers(players: CompetitivePlayerInput[]) {
       throw new Error("Cada jugador necesita usuario o nombre visible.");
     }
     if (!factionLabel) {
-      throw new Error("Cada jugador necesita faccion informada.");
+      throw new Error("Cada jugador necesita facción informada.");
     }
 
     return {

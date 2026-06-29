@@ -4,6 +4,7 @@
   GalleryStandalonePhoto,
 } from "@/components/gallery/types";
 import type { Prisma } from "@prisma/client";
+import { getUserDisplayName } from "@/lib/user-display";
 
 const DEFAULT_IMAGE_WIDTH = 1600;
 const DEFAULT_IMAGE_HEIGHT = 1067;
@@ -62,7 +63,7 @@ function toPublicPath(storagePath: string | null | undefined) {
 export function mapImage(record: ImageRecord): GalleryImage {
   const src = toPublicPath(record.storagePath) ?? "";
   const takenAt = record.takenAt ? record.takenAt.toISOString().slice(0, 10) : undefined;
-  const altBase = record.altText ?? record.title ?? "Imagen sin descripcion";
+  const altBase = record.altText ?? record.title ?? "Imagen sin descripción";
 
   return {
     id: record.id,
@@ -119,7 +120,7 @@ export function mapAlbum(record: AlbumWithRelations): GalleryAlbum {
     albumComments: [],
     collaborators: record.collaborators.map((collaboration) => ({
       id: String(collaboration.userId),
-      name: collaboration.user?.name ?? collaboration.user?.nick ?? "Colaborador",
+      name: getUserDisplayName(collaboration.user, "Colaborador") ?? "Colaborador",
     })),
   };
 }
