@@ -445,10 +445,12 @@ export default function EventRegistrationsPanel({
                       }}
                       className="block w-full px-3 py-2 text-left text-sm text-white hover:bg-white/10"
                     >
-                      {member.name}
-                      {member.nick && member.nick !== member.name && (
-                        <span className="ml-2 text-xs text-[var(--muted)]">{member.nick}</span>
-                      )}
+                      <span className="flex flex-col">
+                        <span className="font-semibold text-white">{member.nick || member.name}</span>
+                        {member.nick && member.name !== member.nick && (
+                          <span className="text-xs font-normal text-[var(--muted)]">{member.name}</span>
+                        )}
+                      </span>
                     </button>
                   ))}
                 </div>

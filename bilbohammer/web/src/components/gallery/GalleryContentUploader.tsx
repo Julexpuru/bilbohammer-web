@@ -555,9 +555,9 @@ export function GalleryContentUploader({
               disabled={selectedCollaboratorIds.has(member.id)}
             >
               <span className="flex flex-col">
-                <span className="font-medium text-[var(--text)]">{member.name}</span>
+                <span className="text-sm font-semibold text-[var(--text)]">{member.nick || member.name}</span>
                 {member.nick && member.nick !== member.name && (
-                  <span className="text-xs text-[var(--muted)]">@{member.nick}</span>
+                  <span className="text-xs font-normal text-[var(--muted)]">{member.name}</span>
                 )}
                 {!member.nick && member.email && <span className="text-xs text-[var(--muted)]">{member.email}</span>}
               </span>
@@ -697,7 +697,7 @@ export function GalleryContentUploader({
                   type="search"
                   value={memberQuery}
                   onChange={(event) => setMemberQuery(event.target.value)}
-                  placeholder="Buscar socio por nombre"
+                  placeholder="Buscar socio por nombre o alias"
                   className="w-full rounded-2xl border border-[var(--hairline)] bg-[var(--card)] px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none"
                 />
                 {renderMemberResults()}

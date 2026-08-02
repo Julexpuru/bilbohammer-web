@@ -1,7 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { Rol } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getUserDisplayName } from "@/lib/user-display";
 
 export const runtime = "nodejs";
 
@@ -44,7 +43,9 @@ export async function GET(request: Request) {
 
     const results = members.map((member) => ({
       id: String(member.id),
-      name: getUserDisplayName(member, `Socio ${member.id}`),
+      // El alias se devuelve por separado para que los selectores puedan
+      // priorizarlo visualmente sin ocultar el nombre real de la persona.
+      name: member.name?.trim() || member.nombre?.trim() || member.email,
       nick: member.nick,
       email: member.email,
     }));

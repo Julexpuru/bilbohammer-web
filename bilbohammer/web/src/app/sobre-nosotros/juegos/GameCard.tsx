@@ -478,10 +478,12 @@ export function GameCard(props: GameCardProps) {
                             }}
                             className="w-full rounded-xl border border-[var(--hairline)] bg-[var(--card-muted)] px-3 py-2 text-left hover:border-[var(--accent-200)] hover:text-[var(--accent-600)]"
                           >
-                            <span className="font-semibold">
-                              {member.nick ?? member.name ?? `Socio ${member.id}`}
+                            <span className="flex flex-col">
+                              <span className="font-semibold">{member.nick ?? member.name ?? `Socio ${member.id}`}</span>
+                              {member.nick && member.name && member.name !== member.nick ? (
+                                <span className="text-xs font-normal text-[var(--muted)]">{member.name}</span>
+                              ) : null}
                             </span>
-                            {member.email ? <span className="ml-2 text-xs text-[var(--muted)]">{member.email}</span> : null}
                           </button>
                         </li>
                       ))}

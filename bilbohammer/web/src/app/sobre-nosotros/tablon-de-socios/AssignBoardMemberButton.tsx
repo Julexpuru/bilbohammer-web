@@ -155,9 +155,10 @@ export function AssignBoardMemberButton({
                         onClick={() => handleAssign(result.id)}
                         disabled={saving}
                       >
-                        <p className="text-sm font-semibold text-[var(--text)]">{result.name}</p>
-                        {result.nick && <p className="text-xs text-[var(--muted)]">@{result.nick}</p>}
-                        {result.email && <p className="text-xs text-[var(--muted)]">{result.email}</p>}
+                        <p className="text-sm font-semibold text-[var(--text)]">{result.nick || result.name}</p>
+                        {result.nick && result.name !== result.nick && (
+                          <p className="text-xs font-normal text-[var(--muted)]">{result.name}</p>
+                        )}
                       </button>
                     </li>
                   ))}

@@ -38,7 +38,7 @@ export const COLUMN_LABELS: Record<string, string> = {
   createdAt: "Creado",
   updatedAt: "Modificado",
   __edit: "Editar información",
-  __delete: "Acciones",
+  __delete: "Acceso",
 };
 
 export const COLUMN_WIDTHS: Record<string, number> = {
@@ -87,7 +87,7 @@ export const PRIORITY_ORDER = [
 const BUTTON_LABELS: Record<string, string> = {
   passwordHash: "Cambiar contraseña",
   __edit: "Editar usuario",
-  __delete: "Eliminar",
+  __delete: "Desactivar",
 };
 
 const BUTTON_VARIANTS: Record<string, "accent" | "danger"> = {

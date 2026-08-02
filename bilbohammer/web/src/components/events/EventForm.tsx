@@ -1431,7 +1431,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
           return prev;
         }
         const nextOrganizers = prev.organizers.map((item) =>
-          item.key === targetKey ? { ...item, userId: member.id, displayName: member.name } : item
+          item.key === targetKey ? { ...item, userId: member.id, displayName: member.nick || member.name } : item
         );
         return {
           ...prev,
@@ -2356,16 +2356,20 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
           {memberResults.length > 0 && (
             <div className="grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
               <p className="text-xs text-[var(--muted)]">{memberLoading ? "Buscando..." : "Resultados"}</p>
-              <ul className="flex flex-wrap gap-2">
+              <ul className="grid gap-2">
                 {memberResults.map((member) => (
                   <li key={member.id}>
                     <button
                       type="button"
-                      className="rounded-full border border-white/20 bg-black/10 px-3 py-1 text-xs text-white hover:border-white/40"
+                      className="w-full rounded-xl border border-white/20 bg-black/10 px-3 py-2 text-left hover:border-white/40"
                       onClick={() => handleMemberResultSelect(member)}
                     >
-                      {member.name}
-                      {member.nick && member.nick !== member.name ? " (@" + member.nick + ")" : ""}
+                      <span className="flex flex-col">
+                        <span className="text-sm font-semibold text-white">{member.nick || member.name}</span>
+                        {member.nick && member.name !== member.nick && (
+                          <span className="text-xs font-normal text-[var(--muted)]">{member.name}</span>
+                        )}
+                      </span>
                     </button>
                   </li>
                 ))}

@@ -19,14 +19,19 @@ type PlayerInput = {
   score: number;
 };
 
-function competitiveMatch(id: string, playedAt: string, players: PlayerInput[]): LeagueMatch {
+function competitiveMatch(
+  id: string,
+  playedAt: string,
+  players: PlayerInput[],
+  kind: CompetitiveMatchKind = CompetitiveMatchKind.LEAGUE,
+): LeagueMatch {
   const date = new Date(playedAt);
 
   return {
     id,
     eventId: "event-1",
     gameId: "game-1",
-    kind: CompetitiveMatchKind.LEAGUE,
+    kind,
     status: CompetitiveMatchStatus.APPROVED,
     playedAt: date,
     roundNumber: null,
@@ -100,6 +105,44 @@ describe("competitive standings", () => {
       classificationPoints: 0,
       played: 1,
       won: 0,
+    });
+  });
+
+  it("incluye Liga y Pachanga aprobadas en Paladín", () => {
+    const rows = calculatePaladinStandings([
+      competitiveMatch(
+        "league-match",
+        "2026-06-01T12:00:00.000Z",
+        [
+          { userId: 1, displayName: "Ane", outcome: CompetitiveMatchOutcome.WIN, score: 20 },
+          { userId: 2, displayName: "Beñat", outcome: CompetitiveMatchOutcome.LOSS, score: 0 },
+        ],
+        CompetitiveMatchKind.LEAGUE,
+      ),
+      competitiveMatch(
+        "casual-match",
+        "2026-06-02T12:00:00.000Z",
+        [
+          { userId: 1, displayName: "Ane", outcome: CompetitiveMatchOutcome.LOSS, score: 12 },
+          { userId: 3, displayName: "Carmen", outcome: CompetitiveMatchOutcome.WIN, score: 18 },
+        ],
+        CompetitiveMatchKind.CASUAL,
+      ),
+    ]);
+
+    expect(rows.find((row) => row.displayName === "Ane")).toMatchObject({
+      classificationPoints: 32,
+      played: 2,
+      won: 1,
+      ifr: 1500,
+      elo: 1499.26,
+      adjustedElo: 1499.26,
+      classificationScore: expect.any(Number),
+    });
+    expect(rows.find((row) => row.displayName === "Carmen")).toMatchObject({
+      classificationPoints: 18,
+      played: 1,
+      won: 1,
     });
   });
 

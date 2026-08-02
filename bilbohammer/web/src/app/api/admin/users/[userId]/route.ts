@@ -32,19 +32,21 @@ export async function DELETE(_: Request, { params }: { params: { userId: string 
   }
 
   if (Number(session.user.id) === userId) {
-    return NextResponse.json({ error: "No puedes eliminar tu propia cuenta" }, { status: 400 });
+    return NextResponse.json({ error: "No puedes desactivar tu propia cuenta" }, { status: 400 });
   }
 
   try {
-    await prisma.user.delete({
+    const user = await prisma.user.update({
       where: { id: userId },
+      data: { isActive: false },
+      select: { id: true, isActive: true },
     });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, user });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
     console.error("[api/admin/users] DELETE error", error);
-    return NextResponse.json({ error: "Error eliminando el usuario" }, { status: 500 });
+    return NextResponse.json({ error: "Error desactivando el usuario" }, { status: 500 });
   }
 }

@@ -14,14 +14,17 @@ Estado operativo actual del backlog.
 
 ## Proximas candidatas
 
+- `BH-018`: rediseñar el bloque de redes sociales de la página de Inicio.
+- `BH-019`: permitir noticias breves publicadas solo con hero y resumen, sin detalle vacío.
 - `BH-008`: habilitar vista publica por QR de cada mesa con informacion base y calendario del dia.
 - `BH-001`: corregir el copy desactualizado del panel admin.
 - `BH-002`: definir el alcance funcional de gestion documental.
 - `BH-003`: decidir si novedades y galeria necesitan centralizacion adicional en `/admin`.
-- Revisar el `inbox` para decidir si toca convertir placeholders, secciones de juegos, redes sociales, bloque de socios, limpieza de datos de prueba o revision global en tareas concretas.
+- Revisar el `inbox` para decidir si toca convertir placeholders, secciones de juegos, bloque de socios, limpieza de datos de prueba o revision global en tareas concretas.
 
 ## Bloqueos conocidos
 
+- `BH-017` está en investigación: el código local ya aplica filtros inclusivos en `Partidas`; hay que reproducir la discrepancia de producción o identificar su versión desplegada antes de cambiarlo.
 - `BH-008` requiere decidir el identificador estable de URL para QR (numero de mesa vs ID persistente) antes de imprimir codigos fisicos.
 - `BH-002` depende de una definicion funcional previa: que tipo de documentos, quien los sube y quien los consulta.
 - `BH-003` depende de una decision de producto, no de una limitacion tecnica inmediata.

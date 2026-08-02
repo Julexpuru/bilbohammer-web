@@ -2,6 +2,20 @@
 
 Registro cronologico breve de trabajo realizado o contexto consolidado.
 
+## 2026-08-02
+
+- Se elimina el borrado físico desde gestión de usuarios: ahora desactiva la cuenta, conserva relaciones y bloquea futuras autenticaciones. Las sesiones JWT se resuelven siempre contra el ID canónico y dejan de autorizar si el usuario no existe o está desactivado.
+- Se crea `BH-020` para implementar posteriormente una fusión administrativa segura de cuentas duplicadas, con traslado transaccional de identidades OAuth y datos relacionados.
+
+## 2026-07-23
+
+- Se crean `BH-018` para el rediseño completo del bloque de redes sociales de Inicio y `BH-019` para permitir noticias breves publicadas solo con hero y resumen. La idea de redes sociales queda convertida desde el inbox.
+
+## 2026-07-22
+
+- Se revisa el backlog competitivo y se registran `BH-015`, `BH-016` y `BH-017`: blindaje de Paladín con Liga y Pachanga, orden de la vista técnica para terminar en `Clasif` y filtros inclusivos en la pestaña pública `Partidas`. Se confirma que la consulta actual de Paladín ya incluye ambos tipos de partida aprobada.
+- Se completa `BH-015` con prueba de regresión Liga + Pachanga en Paladín y `BH-016` reordenando la vista técnica para terminar en `Clasif`. `BH-017` queda en investigación porque el código local ya aplica filtros inclusivos y no reproduce la discrepancia observada en producción.
+
 ## 2026-06-29
 
 - Se mejora el formulario web de envío competitivo: organizador/admin puede seleccionar el jugador reportado entre participantes, el jugador normal ve su inscripción bloqueada, las facciones pasan a desplegables del catálogo del juego y el formato de puntuación se muestra antes de resultado/puntos.

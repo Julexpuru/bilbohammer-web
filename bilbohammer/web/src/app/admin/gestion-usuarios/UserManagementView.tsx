@@ -1121,8 +1121,15 @@ export function UserManagementView({ columns, initialRows }: Props) {
         alert("Identificador de usuario inválido.");
         return;
       }
+      const isInactive = ["false", "0", "no"].includes((row.isActive ?? "").trim().toLowerCase());
+      if (isInactive) {
+        alert("Este usuario ya está desactivado. Puedes reactivarlo editando el campo Activo.");
+        return;
+      }
       const label = getUserDisplayName(row, `Usuario ${rowId}`) ?? `Usuario ${rowId}`;
-      const confirmed = window.confirm(`Eliminar ${label}? Esta accion no se puede deshacer.`);
+      const confirmed = window.confirm(
+        `¿Desactivar a ${label}? No podrá iniciar sesión, pero sus datos e inscripciones se conservarán y podrá reactivarse.`,
+      );
       if (!confirmed) return;
 
       try {
@@ -1130,9 +1137,11 @@ export function UserManagementView({ columns, initialRows }: Props) {
         const response = await fetch(`/api/admin/users/${encodeURIComponent(rowId)}`, { method: "DELETE" });
         if (!response.ok) {
           const data = await response.json().catch(() => null);
-          throw new Error((data && data.error) || "No se pudo eliminar el usuario.");
+          throw new Error((data && data.error) || "No se pudo desactivar el usuario.");
         }
-        setRows((prev) => prev.filter((candidate) => getRowId(candidate) !== rowId));
+        setRows((prev) =>
+          prev.map((candidate) => (getRowId(candidate) === rowId ? { ...candidate, isActive: "false" } : candidate)),
+        );
         setPendingChanges((prev) => {
           const map = new Map(prev);
           map.delete(rowId);
@@ -1146,8 +1155,8 @@ export function UserManagementView({ columns, initialRows }: Props) {
           return map;
         });
       } catch (error) {
-        console.error("[gestion-usuarios] delete", error);
-        alert(error instanceof Error ? error.message : "No se pudo eliminar el usuario.");
+        console.error("[gestion-usuarios] deactivate", error);
+        alert(error instanceof Error ? error.message : "No se pudo desactivar el usuario.");
       } finally {
         setDeleting(null);
       }

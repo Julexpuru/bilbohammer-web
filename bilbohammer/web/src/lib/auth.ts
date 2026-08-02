@@ -37,7 +37,7 @@ export const authConfig = {
         const contrasena = (creds as AnyObject)?.contrasena as string | undefined;
         if (!email || !contrasena) return null;
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user?.passwordHash) return null;
+        if (!user?.passwordHash || !user.isActive) return null;
         const ok = await bcrypt.compare(contrasena, user.passwordHash);
         if (!ok) return null;
         const roles = normalizeRoles((user as AnyObject).roles);
@@ -93,112 +93,107 @@ export const authConfig = {
     },
     async session({ session, token }) {
       if (session?.user) {
-        const tokenRoles = normalizeRoles((token as AnyObject).roles ?? (token as AnyObject).rol);
-        (session.user as AnyObject).id = token?.sub ?? null;
-        (session.user as AnyObject).roles = tokenRoles;
-        (session.user as AnyObject).rol = tokenRoles[0] ?? null;
-        (session.user as AnyObject).nick = (token as AnyObject)?.nick ?? (session.user as AnyObject).nick ?? null;
-
-        const fallbackAssignFromToken = () => {
-          const avatarFromToken = (token as AnyObject)?.avatarUrl ?? null;
-          const oauthAvatarFromToken = (token as AnyObject)?.oauthAvatarUrl ?? null;
-          const chosen = avatarFromToken ?? oauthAvatarFromToken ?? null;
-          (session.user as AnyObject).avatarUrl = avatarFromToken;
-          (session.user as AnyObject).image = chosen;
-          (session.user as AnyObject).oauthAvatarUrl = oauthAvatarFromToken;
-        };
-
         try {
           const emailFromToken = (token as AnyObject).email ?? (session.user as AnyObject).email ?? null;
           const userId = token?.sub ? Number(token.sub) : null;
           const numericUserId = Number.isFinite(userId) ? userId : null;
-          const where = emailFromToken ? { email: emailFromToken } : numericUserId != null ? { id: numericUserId } : null;
+          // The token subject is the canonical identity. Looking up by email first can
+          // combine data from one account with the id from another after an email change
+          // or a duplicate-account cleanup.
+          const where = numericUserId != null ? { id: numericUserId } : emailFromToken ? { email: emailFromToken } : null;
 
-          if (where) {
-            let u = await prisma.user.findUnique({
-              where,
-              select: {
-                id: true,
-                avatarUrl: true,
-                oauthAvatarUrl: true,
-                image: true,
-                name: true,
-                nick: true,
-                email: true,
-                roles: true,
-              },
-            });
-
-            if (u) {
-              let remoteCandidate =
-                (token as AnyObject)?.oauthAvatarRemote ??
-                u.image ??
-                null;
-              const needsCache =
-                remoteCandidate &&
-                isHttpUrl(remoteCandidate) &&
-                (!u.oauthAvatarUrl ||
-                  isHttpUrl(u.oauthAvatarUrl) ||
-                  remoteCandidate !== (u.image ?? null));
-              if (needsCache && remoteCandidate) {
-                try {
-                  const cached = await cacheRemoteAvatar({
-                    userId: u.id ?? numericUserId ?? null,
-                    remoteUrl: remoteCandidate,
-                    currentLocalPath: u.oauthAvatarUrl ?? null,
-                  });
-                  if (cached) {
-                    await prisma.user.update({
-                      where,
-                      data: {
-                        oauthAvatarUrl: cached,
-                        image: remoteCandidate,
-                      },
-                    });
-                    u = {
-                      ...u,
-                      oauthAvatarUrl: cached,
-                      image: remoteCandidate,
-                    };
-                  }
-                } catch {
-                  // ignoramos fallos de cache; se reintentara mas tarde
-                }
-              }
-
-              const oauthAvatar = u.oauthAvatarUrl ?? null;
-              const chosen = u.avatarUrl ?? oauthAvatar ?? null;
-              (session.user as AnyObject).avatarUrl = u.avatarUrl ?? null;
-              (session.user as AnyObject).oauthAvatarUrl = oauthAvatar;
-              (session.user as AnyObject).image = chosen;
-              (token as AnyObject).avatarUrl = u.avatarUrl ?? null;
-              (token as AnyObject).oauthAvatarUrl = oauthAvatar;
-              (token as AnyObject).oauthAvatarRemote = remoteCandidate ?? null;
-              if (u.nick) (session.user as AnyObject).nick = u.nick;
-              (session.user as AnyObject).name = getUserDisplayName(
-                u,
-                (session.user as AnyObject).name ?? null
-              );
-              if (u.roles) {
-                const dbRoles = normalizeRoles(u.roles);
-                if (dbRoles.length) {
-                  (session.user as AnyObject).roles = dbRoles;
-                  (session.user as AnyObject).rol = dbRoles[0] ?? null;
-                  (token as AnyObject).roles = dbRoles;
-                  (token as AnyObject).rol = dbRoles[0] ?? null;
-                }
-              }
-            } else {
-              fallbackAssignFromToken();
-            }
-          } else {
-            fallbackAssignFromToken();
+          if (!where) {
+            (session as AnyObject).user = undefined;
+            return session;
           }
+
+          let u = await prisma.user.findUnique({
+            where,
+            select: {
+              id: true,
+              avatarUrl: true,
+              oauthAvatarUrl: true,
+              image: true,
+              name: true,
+              nick: true,
+              email: true,
+              roles: true,
+              isActive: true,
+            },
+          });
+
+          // JWTs outlive a database row. Do not let a deleted or deactivated account
+          // retain a usable application identity through an old cookie.
+          if (!u || !u.isActive) {
+            (session as AnyObject).user = undefined;
+            return session;
+          }
+
+          const sessionUser = session.user as AnyObject;
+          sessionUser.id = String(u.id);
+          sessionUser.email = u.email;
+
+          let remoteCandidate = (token as AnyObject)?.oauthAvatarRemote ?? u.image ?? null;
+          const needsCache =
+            remoteCandidate &&
+            isHttpUrl(remoteCandidate) &&
+            (!u.oauthAvatarUrl || isHttpUrl(u.oauthAvatarUrl) || remoteCandidate !== (u.image ?? null));
+          if (needsCache && remoteCandidate) {
+            try {
+              const cached = await cacheRemoteAvatar({
+                userId: u.id,
+                remoteUrl: remoteCandidate,
+                currentLocalPath: u.oauthAvatarUrl ?? null,
+              });
+              if (cached) {
+                await prisma.user.update({
+                  where: { id: u.id },
+                  data: {
+                    oauthAvatarUrl: cached,
+                    image: remoteCandidate,
+                  },
+                });
+                u = {
+                  ...u,
+                  oauthAvatarUrl: cached,
+                  image: remoteCandidate,
+                };
+              }
+            } catch {
+              // Ignoramos fallos de caché; se reintentará más tarde.
+            }
+          }
+
+          const oauthAvatar = u.oauthAvatarUrl ?? null;
+          const chosen = u.avatarUrl ?? oauthAvatar ?? null;
+          sessionUser.avatarUrl = u.avatarUrl ?? null;
+          sessionUser.oauthAvatarUrl = oauthAvatar;
+          sessionUser.image = chosen;
+          sessionUser.nick = u.nick ?? null;
+          sessionUser.name = getUserDisplayName(u, sessionUser.name ?? null);
+          const dbRoles = normalizeRoles(u.roles);
+          sessionUser.roles = dbRoles;
+          sessionUser.rol = dbRoles[0] ?? null;
+          (token as AnyObject).avatarUrl = u.avatarUrl ?? null;
+          (token as AnyObject).oauthAvatarUrl = oauthAvatar;
+          (token as AnyObject).oauthAvatarRemote = remoteCandidate ?? null;
+          (token as AnyObject).roles = dbRoles;
+          (token as AnyObject).rol = dbRoles[0] ?? null;
         } catch {
-          fallbackAssignFromToken();
+          // If the database cannot be checked, avoid authorizing a stale JWT identity.
+          (session as AnyObject).user = undefined;
         }
       }
       return session;
+    },
+    async signIn({ user }) {
+      const userId = Number((user as AnyObject).id);
+      if (!Number.isFinite(userId)) return false;
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isActive: true },
+      });
+      return Boolean(dbUser?.isActive);
     },
   },
   events: {
