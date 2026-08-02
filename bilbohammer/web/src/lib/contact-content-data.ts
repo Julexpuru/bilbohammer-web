@@ -87,7 +87,7 @@ export const CONTACT_CONTENT_DEFAULT: ContactPageContent = {
   },
   email: {
     description: "Para gestiones formales, altas de socios y propuestas de colaboración.",
-    address: "hola@bilbohammer.eus",
+    address: "bilbohammer@gmail.com",
   },
   discord: {
     description:

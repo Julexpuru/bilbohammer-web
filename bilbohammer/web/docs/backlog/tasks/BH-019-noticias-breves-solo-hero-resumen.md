@@ -2,11 +2,11 @@
 
 Estado: todo
 Tipo: bug
-Prioridad: P3
+Prioridad: P1
 Area: novedades
 Owner: codex
 Origen: corrección solicitada el 2026-07-23
-Ultima actualizacion: 2026-07-23
+Ultima actualizacion: 2026-08-02
 
 ## Contexto
 
@@ -32,5 +32,7 @@ Algunas comunicaciones del club son suficientemente breves para publicarse como 
 - Definir si la ausencia de cuerpo se detecta por contenido vacío normalizado o requiere una marca explícita, preservando compatibilidad con artículos existentes.
 
 ## Historial
+
+- 2026-08-02: se eleva a P1 para abordar la publicación de comunicaciones breves como próximo frente de novedades.
 
 - 2026-07-23: tarea creada como corrección menor para comunicaciones breves basadas solo en hero y resumen.

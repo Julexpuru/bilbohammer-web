@@ -90,8 +90,8 @@ export default function CookiePolicyPage() {
         </p>
         <p className="text-sm text-[var(--muted)]">
           Responsable del tratamiento: Junta directiva de Bilbohammer. Puedes escribirnos a{" "}
-          <a href="mailto:hola@bilbohammer.eus" className="underline hover:no-underline">
-            hola@bilbohammer.eus
+          <a href="mailto:bilbohammer@gmail.com" className="underline hover:no-underline">
+            bilbohammer@gmail.com
           </a>{" "}
           para ejercer tus derechos de acceso, rectificación, supresión, oposición o limitación. Última actualización:
           {` ${lastUpdatedLabel}`}.
@@ -161,8 +161,8 @@ export default function CookiePolicyPage() {
           </li>
           <li>
             Si necesitas ayuda, escríbenos a{" "}
-            <a href="mailto:hola@bilbohammer.eus" className="underline hover:no-underline">
-              hola@bilbohammer.eus
+            <a href="mailto:bilbohammer@gmail.com" className="underline hover:no-underline">
+              bilbohammer@gmail.com
             </a>{" "}
             indicando el dispositivo y navegador para que podamos guiarte.
           </li>

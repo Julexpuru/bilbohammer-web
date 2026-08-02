@@ -25,7 +25,7 @@ export default function EnConstruccionPage() {
           <a href="/" className="btn btn-accent px-4 py-2 text-sm">
             Volver al inicio
           </a>
-          <a href="mailto:info@bilbohammer.es" className="link text-sm text-[var(--muted)]">
+          <a href="mailto:bilbohammer@gmail.com" className="link text-sm text-[var(--muted)]">
             ¿Necesitas acceso? Escríbenos
           </a>
         </div>

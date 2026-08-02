@@ -1,22 +1,21 @@
 # BH-003 - Decidir si novedades y galeria requieren centralizacion adicional en admin
 
-Estado: todo
+Estado: done
 Tipo: decision
 Prioridad: P2
 Area: admin
 Owner: shared
 Origen: analisis del repo
-Ultima actualizacion: 2026-05-09
+Ultima actualizacion: 2026-08-02
 
 ## Contexto
 
-Novedades y galeria ya disponen de flujos de gestion operativos en sus propias secciones. La duda no es si existen, sino si tambien deben tener un punto de entrada centralizado dentro de `/admin`.
+Novedades y galería ya disponen de flujos de gestión operativos en sus propias secciones. Se decide no centralizarlos en `/admin`: esa ruta se reserva para agrupar módulos administrativos que lo necesitan, no como portada o hub general.
 
 ## Alcance
 
-- Evaluar si el modelo distribuido actual es suficiente.
-- Decidir si `/admin` debe ser solo portada, indice o hub funcional.
-- Si se decide centralizar, definir de forma minima que accesos directos o vistas deberian existir.
+- Mantener el modelo distribuido actual de Novedades y Galería.
+- Usar `/admin/*` únicamente para módulos administrativos específicos, como usuarios y gestión documental.
 
 No entra:
 
@@ -25,16 +24,16 @@ No entra:
 
 ## Criterios de aceptacion
 
-- Hay una decision explicita sobre el papel de `/admin`.
-- Queda registrado si esta tarea se cierra como `done` o `wont_do`.
-- Si procede, se generan subtareas concretas.
+- Hay una decisión explícita sobre el papel de `/admin`.
+- Novedades y Galería conservan sus flujos propios, sin duplicación administrativa.
 
 ## Notas tecnicas
 
-- Archivos probables: `src/app/admin/page.tsx`, navegacion admin.
-- Riesgos: duplicar flujos ya existentes sin aportar valor.
+- Riesgo evitado: duplicar flujos ya existentes sin aportar valor.
 - Dependencias: ninguna tecnica inmediata; depende de criterio de producto.
 
 ## Historial
+
+- 2026-08-02: se decide no crear un hub ni centralizar Novedades y Galería. La página raíz `/admin` se elimina; las rutas hijas administrativas se mantienen bajo el prefijo común.
 
 - 2026-05-09: tarea creada a partir del analisis del modelo de administracion actual.

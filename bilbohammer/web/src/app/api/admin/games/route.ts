@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     const defaults = GAME_DEFAULT_CONTENT[slug] ?? {
       summary: "Resumen pendiente de completar.",
       contentHtml:
-        "<p>Estamos preparando la información de este juego. Si quieres liderarlo, contacta con la junta a través de hola@bilbohammer.eus.</p>",
+        "<p>Estamos preparando la información de este juego. Si quieres liderarlo, contacta con la junta a través de bilbohammer@gmail.com.</p>",
       investment: "Pendiente",
       playtime: "Pendiente",
       learning: "Media",

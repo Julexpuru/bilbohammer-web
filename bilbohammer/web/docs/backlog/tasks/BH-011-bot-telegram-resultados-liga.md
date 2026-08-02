@@ -2,11 +2,11 @@
 
 Estado: in_progress
 Tipo: feature
-Prioridad: P2
+Prioridad: P3
 Area: eventos
 Owner: shared
 Origen: desglose de BH-010
-Ultima actualizacion: 2026-06-16
+Ultima actualizacion: 2026-08-02
 
 ## Contexto
 
@@ -88,6 +88,8 @@ notas: opcional
   - Coordinarse con `BH-013` para que los reportes pendientes tengan revisión web.
 
 ## Historial
+
+- 2026-08-02: se baja a P3. El flujo funcional ya está implementado y las pruebas reales/pulido de presentación no son prioritarios por ahora.
 
 - 2026-06-04: primera fase implementada con vinculación por código temporal, webhook seguro y comando `/resultado` que crea reportes pendientes mediante `createCompetitiveMatchReport`.
 - 2026-06-05: se añade botón `Conectar Telegram` en `Mi Perfil` para generar el enlace de vinculación sin consola del navegador.

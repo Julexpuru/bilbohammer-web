@@ -73,7 +73,7 @@ const leagueColumns: CompetitiveTableColumn[] = [
 const paladinColumns: CompetitiveTableColumn[] = [
   { id: "rank", label: "Rank", numeric: true },
   { id: "displayName", label: "Jugador" },
-  { id: "classificationPoints", label: "P. Clasificación", numeric: true, help: "Suma de puntos de batalla en partidas aprobadas." },
+  { id: "classificationPoints", label: "P. Totales", numeric: true, help: "Suma de puntos de batalla en partidas aprobadas." },
   { id: "pointsPerGame", label: "PpP", numeric: true, help: "Puntos de batalla por partida." },
   { id: "played", label: "PJ", numeric: true },
   { id: "won", label: "G", numeric: true, help: "Partidas ganadas." },
@@ -85,7 +85,7 @@ const paladinColumns: CompetitiveTableColumn[] = [
 const paladinCalculationColumns: CompetitiveTableColumn[] = [
   { id: "rank", label: "Rank", numeric: true },
   { id: "displayName", label: "Jugador" },
-  { id: "classificationPoints", label: "P. Clasificación", numeric: true, help: "Suma de puntos de batalla en partidas aprobadas." },
+  { id: "classificationPoints", label: "P. Totales", numeric: true, help: "Suma de puntos de batalla en partidas aprobadas." },
   { id: "pointsPerGame", label: "PpP", numeric: true, help: "Puntos de batalla por partida." },
   { id: "played", label: "PJ", numeric: true },
   { id: "won", label: "G", numeric: true, help: "Partidas ganadas." },

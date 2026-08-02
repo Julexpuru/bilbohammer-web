@@ -4,6 +4,8 @@ Registro cronologico breve de trabajo realizado o contexto consolidado.
 
 ## 2026-08-02
 
+- Se elimina el placeholder de `/admin`: no tenía uso funcional ni enlaces internos. Se conserva `/admin/*` como espacio común para módulos administrativos concretos, sin panel general. Con ello se cierran `BH-001` y `BH-003`; Novedades y Galería mantienen sus flujos propios.
+- Se baja `BH-011` (bot de Telegram) a P3: el flujo está implementado y su prueba real/pulido visual queda diferido. Se cierra `BH-017` tras comprobación manual de los filtros competitivos. `BH-019` (noticias breves solo con hero y resumen) pasa a P1.
 - Se elimina el borrado físico desde gestión de usuarios: ahora desactiva la cuenta, conserva relaciones y bloquea futuras autenticaciones. Las sesiones JWT se resuelven siempre contra el ID canónico y dejan de autorizar si el usuario no existe o está desactivado.
 - Se crea `BH-020` para implementar posteriormente una fusión administrativa segura de cuentas duplicadas, con traslado transaccional de identidades OAuth y datos relacionados.
 

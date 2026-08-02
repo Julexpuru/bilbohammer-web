@@ -129,7 +129,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       { formula: settings.paladinFormula },
     );
     csv = toCsv(
-      ["Rank", "Jugador", "P. Clasificación", "Clasif", "PpP", "PJ", "G", "E", "Win rate", "IFR", "Elo", "Elo ajustado"],
+      ["Rank", "Jugador", "P. Totales", "Clasif", "PpP", "PJ", "G", "E", "Win rate", "IFR", "Elo", "Elo ajustado"],
       rows.map((row) => [
         row.rank,
         row.displayName,

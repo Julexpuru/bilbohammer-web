@@ -11,9 +11,9 @@ Captura rapida de ideas todavia no refinadas.
 ## Entradas
 
 - [ ] Convertido en `BH-008`: vista publica de mesa por QR con informacion de juego, escenografia, layout y calendario diario.
-- [ ] Convertido en `BH-001`: limpiar copy desactualizada del dashboard admin.
+- [x] Cerrado como `BH-001`: se elimina el placeholder de `/admin`.
 - [ ] Convertido en `BH-002`: definir alcance de gestion documental.
-- [ ] Convertido en `BH-003`: decidir si `/admin` debe centralizar mejor novedades y galeria.
+- [x] Cerrado como `BH-003`: Novedades y Galería mantienen sus flujos propios, sin centralización adicional.
 - [ ] Sustituir placeholders de textos e imagenes provisionales repartidos por la web.
 - [ ] Completar adecuadamente las secciones de juegos: contenido, textos y materiales pendientes.
 - [ ] Convertido en `BH-018`: rediseñar el bloque de redes sociales de Inicio.

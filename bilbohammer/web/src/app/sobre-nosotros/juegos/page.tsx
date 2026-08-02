@@ -292,11 +292,11 @@ function resolveDefaults(slug: string, name: string): GameDefaultContent {
   if (defaults) return defaults;
   return {
     summary: `Información de ${name} pendiente de configuración.`,
-    contentHtml: `<p>Estamos recopilando detalles sobre ${name}. Si quieres impulsar este sistema, escribe a hola@bilbohammer.eus.</p>`,
+    contentHtml: `<p>Estamos recopilando detalles sobre ${name}. Si quieres impulsar este sistema, escribe a bilbohammer@gmail.com.</p>`,
     investment: "Pendiente",
     playtime: "Pendiente",
     learning: "Media",
     contactDisplay: "Junta · Coordinación",
-    contactNote: "Escribe a hola@bilbohammer.eus para proponer actividades.",
+    contactNote: "Escribe a bilbohammer@gmail.com para proponer actividades.",
   };
 }

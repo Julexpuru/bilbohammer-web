@@ -1,12 +1,12 @@
 # BH-017 - Hacer inclusivos los filtros de la pestaña Partidas competitivas
 
-Estado: in_progress
+Estado: done
 Tipo: bug
 Prioridad: P2
 Area: eventos
 Owner: codex
 Origen: revisión funcional de 2026-07-22
-Ultima actualizacion: 2026-07-22
+Ultima actualizacion: 2026-08-02
 
 ## Contexto
 
@@ -36,6 +36,8 @@ No entra:
 - Antes de cambiar comportamiento hay que identificar si el problema está en la consulta, en la serialización de parámetros o en el filtrado del cliente.
 
 ## Historial
+
+- 2026-08-02: comprobado manualmente; el comportamiento de filtros es correcto y la tarea se cierra sin cambios adicionales.
 
 - 2026-07-22: se revisa la implementación local. Cada filtro se aplica solo si contiene valor y los criterios informados se combinan para refinar; con todos vacíos devuelve todas las partidas aprobadas. Queda pendiente reproducir la discrepancia observada en producción o contrastar el commit desplegado antes de modificar la lógica.
 - 2026-07-22: tarea creada para corregir el comportamiento de filtrado observado en la pestaña pública `Partidas`.

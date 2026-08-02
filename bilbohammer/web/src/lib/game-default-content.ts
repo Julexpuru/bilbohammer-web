@@ -163,7 +163,7 @@ export const GAME_DEFAULT_CONTENT: Record<string, GameDefaultContent> = {
     playtime: "Según juego",
     learning: "Variable",
     contactDisplay: "Junta · Coordinación",
-    contactNote: "Escribe a hola@bilbohammer.eus para proponer tu sistema.",
+    contactNote: "Escribe a bilbohammer@gmail.com para proponer tu sistema.",
   },
 };
 
